@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% load static %}
+<!doctype html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}" />
+    
+</head>
+<body>
+
+<div class="page-wrap narrow">
+
+    <div class="page-header">
+        <div>
+            <h1>{{ title }}</h1>
+            <p class="page-sub">Fill in the category details below</p>
+        </div>
+        <a href="{% url 'category_list' %}" class="btn btn-clear">&larr; Back to list</a>
+    </div>
+
+    <div class="form-card">
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label for="{{ form.category_name.id_for_label }}">Name</label>
+                    {{ form.category_name }}
+                    {% if form.category_name.errors %}
+                        <span class="field-error">{{ form.category_name.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.natation.id_for_label }}">Notation</label>
+                    {{ form.notation }}
+                    {% if form.notation.errors %}
+                        <span class="field-error">{{ form.notation.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Description</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <span class="field-error">{{ form.description.errors.0 }}</span>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="{% url 'category_list' %}" class="btn btn-clear">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>
+
+{% endblock  %}

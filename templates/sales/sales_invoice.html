@@ -1,0 +1,706 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sales Invoice{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Invoice</title>
+    <link rel="stylesheet" href="{% static 'css/sales.css' %}">
+    <style>
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            max-height: 180px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .search-dropdown-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .search-dropdown-item:hover {
+            background-color: #eef7f2;
+            color: #15803d;
+        }
+
+        .tbl-input {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .tbl-input:focus {
+            outline: none;
+            border-color: #15803d;
+        }
+
+        .row-p {
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+
+        .row-l {
+            font-weight: 600;
+            color: #4b5563;
+            background-color: #f8fafc;
+        }
+
+        .subtotal-grid-row {
+            font-weight: 700;
+            background-color: #f1f5f9;
+        }
+
+        .text-right-bold {
+            text-align: right;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="invoice-container">
+        <!-- Invoice Header / Form Meta Controls -->
+        <div class="invoice-header-bar">
+            <div class="title-section">
+                <i class="fa-regular fa-file-lines invoice-icon"></i>
+                <h2>Sales Invoice</h2>
+            </div>
+
+            <div class="fiscal-year-selector">
+                <label for="fiscal_year">For Year<span class="required">*</span></label>
+                <select id="fiscal_year" name="fiscal_year">
+                    <option value="2082/083" selected>2082/083</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Form Details Grid -->
+        <div class="invoice-meta-grid">
+            <div class="form-group">
+                <label for="invoice_no">Invoice No.<span class="required">*</span></label>
+                <input type="text" id="invoice_no" value="" class="readonly-input" readonly />
+            </div>
+
+            <div class="form-group">
+                <label for="ref_no">Ref. No.</label>
+                <input type="text" id="ref_no" name="ref_no" placeholder="" />
+            </div>
+
+            <div class="form-group">
+                <label for="counter_user">Counter User<span class="required">*</span></label>
+                <input type="text" id="counter_user" value="{{ request.user.username }}" class="readonly-input"
+                    readonly />
+            </div>
+
+            <div class="form-group">
+                <label for="party_ac">Party A/C<span class="required">*</span></label>
+                <select id="party_ac" name="party_ac">
+                    <option value="1" selected>CASH</option>
+                    <option value="2">CREDIT</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+            <label for="invoice_date">Date<span class="required">*</span></label>
+            <div class="date-picker-wrapper">
+                <input type="text" id="invoice_date" name="invoice_date" value="{{ today_date }}" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="sales_ac">Sales A/C<span class="required">*</span></label>
+            <select id="sales_ac" name="sales_ac">
+                <option value="SALES A/C" selected>SALES A/C</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Barcode Search Toolbar -->
+    <div class="product-toolbar">
+        <div class="toolbar-item barcode-item">
+            <label for="barcode_scan">Bar Code</label>
+            <div class="input-with-barcode">
+                <input type="text" id="barcode_scan" placeholder="Scan barcode..." />
+                <i class="fa-solid fa-barcode barcode-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <div class="table-responsive">
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" class="col-sn">S.N.</th>
+                    <th rowspan="2" class="col-particulars">Particulars</th>
+                    <th rowspan="2" class="col-stock">Closing Stock</th>
+                    <th rowspan="2" class="col-batch">Batch No.</th>
+                    <th colspan="2" class="col-quantity">Quantity</th>
+                    <th colspan="2" class="col-alt-unit">Alt. Unit 1</th>
+                    <th rowspan="2" class="col-rate">Rate</th>
+                    <th colspan="2" class="col-discount">Discount</th>
+                    <th rowspan="2" class="col-tax">Tax (%)</th>
+                    <th rowspan="2" class="col-amount">Amount</th>
+                    <th rowspan="2" class="col-action">Action</th>
+                </tr>
+                <tr>
+                    <th>Actual</th>
+                    <th>Unit</th>
+                    <th>Qty.</th>
+                    <th>Unit</th>
+                    <th>Amount</th>
+                    <th>%</th>
+                </tr>
+            </thead>
+            <tbody id="cart_tbody">
+                <!-- Dynamic Product Rows & Subtotal / Ledger Rows populate here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Lower Details & Calculation Section -->
+    <div class="invoice-bottom-section">
+        <div class="left-pane">
+            <div class="form-group narration-group">
+                <label for="narration">Narration</label>
+                <textarea id="narration" rows="3" placeholder="Additional notes..."></textarea>
+            </div>
+
+            <div class="tender-group">
+                <label for="tender_input">Tender</label>
+                <input type="text" id="tender_input" value="0.00" oninput="validateNumericInput(this)" />
+            </div>
+        </div>
+
+        <div class="right-pane summary-card">
+            <div class="summary-row">
+                <span>Sub Total</span>
+                <span class="summary-val highlight-green" id="lbl_subtotal">0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Discount Total</span>
+                <span class="summary-val" id="lbl_discount">0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Tax Total (13% VAT)</span>
+                <span class="summary-val" id="lbl_tax">0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Round Off</span>
+                <span class="summary-val" id="lbl_round_off">0.00</span>
+            </div>
+            <div class="summary-row grand-total-row">
+                <span class="grand-total-label">Grand Total</span>
+                <span class="grand-total-val" id="lbl_grand_total">0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Received Amount</span>
+                <input type="text" id="received_input" value="0.00" oninput="validateNumericInput(this)"
+                    class="summary-input text-right highlight-green" />
+            </div>
+            <div class="summary-row">
+                <span>Change</span>
+                <span class="summary-val highlight-green" id="lbl_change">0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="invoice-footer-actions">
+        <div class="left-actions">
+            <button type="button" class="btn btn-outline"><i class="fa-solid fa-qrcode"></i> Show QR</button>
+        </div>
+
+        <div class="right-actions">
+            <button type="button" class="btn btn-outline" id="btn_reset"><i class="fa-solid fa-rotate"></i>
+                Reset</button>
+            <button type="button" class="btn btn-primary" id="btn_save_sale"><i class="fa-solid fa-floppy-disk"></i>
+                Save & Checkout (F5)</button>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        // Enforce numeric-only input (digits and single decimal point)
+        function validateNumericInput(input) {
+            input.value = input.value.replace(/[^0-9.]/g, '');
+            if ((input.value.match(/\./g) || []).length > 1) {
+                input.value = input.value.replace(/\.+$/, "");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            let items = [];
+            let overallDiscountPercent = 0.00;
+            let overallDiscountAmount = 0.00;
+
+            function fetchNextInvoiceNumber() {
+                fetch('/api/next-invoice-no/')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.invoice_no) {
+                            document.getElementById('invoice_no').value = data.invoice_no;
+                        }
+                    })
+                    .catch(() => {
+                        document.getElementById('invoice_no').value = "INV-2082/083-000001";
+                    });
+            }
+            fetchNextInvoiceNumber();
+
+            function initRows() {
+                items = [{product_id: null}]; // Initialize with one search row
+                overallDiscountPercent = 0.00;
+                overallDiscountAmount = 0.00;
+                renderTable();
+            }
+
+            function renderTable() {
+                const tbody = document.getElementById('cart_tbody');
+                tbody.innerHTML = '';
+
+                let subtotalSum = 0;
+                let totalItemQty = 0;
+
+                // 1. Render Product Rows (P)
+                items.forEach((item, index) => {
+                    const tr = document.createElement('tr');
+
+                    if (!item.product_id) {
+                        // Empty row for database search
+                        tr.innerHTML = `
+                            <td class="text-center row-p">${index + 1}(P)</td>
+                            <td>
+                                <div class="search-container">
+                                    <input type="text" class="tbl-input grid-search-input" placeholder="** Select Product **" data-index="${index}" />
+                                    <div class="search-dropdown" id="dropdown-${index}"></div>
+                                </div>
+                            </td>
+                            <td class="text-center">-</td>
+                            <td class="text-center">-</td>
+                            <td class="text-center">0</td>
+                            <td class="text-center">-</td>
+                            <td class="text-center"></td>
+                            <td class="text-center"></td>
+                            <td class="text-right">0.00</td>
+                            <td class="text-right">0.00</td>
+                            <td class="text-center">0</td>
+                            <td class="text-center">0%</td>
+                            <td class="text-right font-bold">0.00</td>
+                            <td class="text-center"></td>
+                        `;
+                    } else {
+                        // Product item row
+                        const lineGross = item.price * item.quantity;
+                        const lineAfterDiscount = Math.max(0, lineGross - item.discount);
+                        subtotalSum += lineAfterDiscount;
+                        totalItemQty += item.quantity;
+
+                        tr.innerHTML = `
+                            <td class="text-center row-p">${index + 1}(P)</td>
+                            <td><strong>${item.product_name}</strong></td>
+                            <td class="text-center">${item.stock} ${item.unit}</td>
+                            <td class="text-center">${item.batch || '-'}</td>
+                            <td class="text-center">
+                                <input type="text" value="${item.quantity}" oninput="validateNumericInput(this)" class="tbl-input qty-input text-center" data-index="${index}" />
+                            </td>
+                            <td class="text-center">${item.unit}</td>
+                            <td class="text-center"></td>
+                            <td class="text-center"></td>
+                            <td class="text-right">
+                                <input type="text" value="${item.price.toFixed(2)}" oninput="validateNumericInput(this)" class="tbl-input price-input text-right" data-index="${index}" />
+                            </td>
+                            <td class="text-right">
+                                <input type="text" value="${item.discount.toFixed(2)}" oninput="validateNumericInput(this)" class="tbl-input discount-input text-right" data-index="${index}" />
+                            </td>
+                            <td class="text-center">0</td>
+                            <td class="text-center">${item.tax_percent}%</td>
+                            <td class="text-right font-bold">${lineAfterDiscount.toFixed(2)}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn-action edit" data-index="${index}"><i class="fa-solid fa-pen"></i></button>
+                                <button type="button" class="btn-action delete" data-index="${index}"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                            
+                        `;
+                    }
+                    tbody.appendChild(tr);
+                });
+
+                // Calculate Overall Subtotal Discount
+                let billDiscount = overallDiscountAmount;
+                if (overallDiscountPercent > 0) {
+                    billDiscount = (subtotalSum * overallDiscountPercent) / 100;
+                }
+                const taxableSubtotal = Math.max(0, subtotalSum - billDiscount);
+                const vatAmount = taxableSubtotal * 0.13; // 13% VAT
+                const rawGrandTotal = taxableSubtotal + vatAmount;
+                const grandTotal = Math.round(rawGrandTotal);
+                const roundOff = grandTotal - rawGrandTotal;
+
+                // 2. SUB TOTAL ROW (Always Visible)
+                const trSubtotal = document.createElement('tr');
+                trSubtotal.className = 'subtotal-grid-row';
+                trSubtotal.innerHTML = `
+                    <td colspan="2" class="text-right font-bold">SUB TOTAL :-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center font-bold">${totalItemQty}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center"></td>
+                    <td class="text-center"></td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right-bold" id="grid_subtotal_val">${subtotalSum.toFixed(2)}</td>
+                    <td></td>
+                `;
+                tbody.appendChild(trSubtotal);
+
+                // 3. DISCOUNT ROW (1(L) - Subtotal Level Discount)
+                const trDiscount = document.createElement('tr');
+                trDiscount.className = 'row-l';
+                trDiscount.innerHTML = `
+                    <td class="text-center row-l">1(L)</td>
+                    <td><strong>DISCOUNT</strong></td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center"></td>
+                    <td class="text-center"></td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">
+                        <input type="text" id="bill_discount_amt_input" value="${overallDiscountAmount.toFixed(2)}" oninput="validateNumericInput(this)" class="tbl-input text-right" placeholder="Amt" />
+                    </td>
+                    <td class="text-center">
+                        <input type="text" id="bill_discount_pct_input" value="${overallDiscountPercent}" oninput="validateNumericInput(this)" class="tbl-input text-center" placeholder="%" />
+                    </td>
+                    <td class="text-center">-</td>
+                    <td class="text-right-bold" id="grid_discount_val">${billDiscount.toFixed(2)}</td>
+                    <td></td>
+                `;
+                tbody.appendChild(trDiscount);
+
+                // 4. VAT ROW (2(L) - 13% VAT)
+                const trVat = document.createElement('tr');
+                trVat.className = 'row-l';
+                trVat.innerHTML = `
+                    <td class="text-center row-l">2(L)</td>
+                    <td><strong>VAT (13%)</strong></td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center"></td>
+                    <td class="text-center"></td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">13%</td>
+                    <td class="text-right-bold" id="grid_vat_val">${vatAmount.toFixed(2)}</td>
+                    <td></td>
+                `;
+                tbody.appendChild(trVat);
+
+                // 5. ROUND OFF ROW (3(L))
+                const trRoundOff = document.createElement('tr');
+                trRoundOff.className = 'row-l';
+                trRoundOff.innerHTML = `
+                    <td class="text-center row-l">3(L)</td>
+                    <td><strong>ROUND OFF</strong></td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center"></td>
+                    <td class="text-center"></td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right-bold" id="grid_roundoff_val">${roundOff.toFixed(2)}</td>
+                    <td></td>
+                `;
+                tbody.appendChild(trRoundOff);
+
+                attachGridEvents();
+                calculateBottomTotals(subtotalSum, billDiscount, vatAmount, roundOff, grandTotal);
+            }
+
+            function attachGridEvents() {
+                // Real-time product search inside active row
+                document.querySelectorAll('.grid-search-input').forEach(input => {
+                    input.addEventListener('input', function () {
+                        const idx = this.dataset.index;
+                        const query = this.value.trim();
+                        const dropdown = document.getElementById(`dropdown-${idx}`);
+
+                        if (query.length < 1) {
+                            dropdown.style.display = 'none';
+                            return;
+                        }
+
+                        fetch(`/api/product-search/?q=${encodeURIComponent(query)}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                dropdown.innerHTML = '';
+                                if (!data.results || data.results.length === 0) {
+                                    dropdown.style.display = 'none';
+                                    return;
+                                }
+
+                                data.results.forEach(product => {
+                                    const div = document.createElement('div');
+                                    div.className = 'search-dropdown-item';
+                                    div.innerHTML = `<strong>${product.product_name}</strong> (Stock: ${product.stock} ${product.unit})`;
+                                    div.addEventListener('click', function () {
+                                        items[idx] = {
+                                            product_id: product.product_id,
+                                            product_name: product.product_name,
+                                            stock: parseFloat(product.stock),
+                                            unit: product.unit,
+                                            batch: product.batch || '',
+                                            price: parseFloat(product.price),
+                                            quantity: 1,
+                                            discount: 0.00,
+                                            tax_percent: parseFloat(product.tax_percent || 13)
+                                        };
+
+                                        if (parseInt(idx) === items.length - 1) {
+                                            items.push({product_id: null});
+                                        }
+
+                                        renderTable();
+                                    });
+                                    dropdown.appendChild(div);
+                                });
+                                dropdown.style.display = 'block';
+                            });
+                    });
+                });
+
+                // Per-Item Quantity changes
+                document.querySelectorAll('.qty-input').forEach(input => {
+                    input.addEventListener('change', function () {
+                        const idx = this.dataset.index;
+                        const val = parseFloat(this.value) || 1;
+                        items[idx].quantity = val > 0 ? val : 1;
+                        renderTable();
+                    });
+                });
+
+                // Per-Item Price changes
+                document.querySelectorAll('.price-input').forEach(input => {
+                    input.addEventListener('change', function () {
+                        const idx = this.dataset.index;
+                        const val = parseFloat(this.value) || 0;
+                        items[idx].price = val >= 0 ? val : 0;
+                        renderTable();
+                    });
+                });
+
+                // Per-Item Discount changes
+                document.querySelectorAll('.discount-input').forEach(input => {
+                    input.addEventListener('change', function () {
+                        const idx = this.dataset.index;
+                        const val = parseFloat(this.value) || 0;
+                        items[idx].discount = val >= 0 ? val : 0;
+                        renderTable();
+                    });
+                });
+
+                // Subtotal Discount Amount Change
+                const billAmtInput = document.getElementById('bill_discount_amt_input');
+                if (billAmtInput) {
+                    billAmtInput.addEventListener('change', function () {
+                        overallDiscountAmount = parseFloat(this.value) || 0;
+                        overallDiscountPercent = 0;
+                        renderTable();
+                    });
+                }
+
+                // Subtotal Discount Percentage Change
+                const billPctInput = document.getElementById('bill_discount_pct_input');
+                if (billPctInput) {
+                    billPctInput.addEventListener('change', function () {
+                        overallDiscountPercent = parseFloat(this.value) || 0;
+                        overallDiscountAmount = 0;
+                        renderTable();
+                    });
+                }
+
+                // Delete Product Row
+                document.querySelectorAll('.btn-action.delete').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const idx = this.dataset.index;
+                        items.splice(idx, 1);
+                        if (items.length === 0 || items[items.length - 1].product_id !== null) {
+                            items.push({product_id: null});
+                        }
+                        renderTable();
+                    });
+                });
+            }
+
+            // Barcode Direct Scanning
+            const barcodeInput = document.getElementById('barcode_scan');
+            barcodeInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const code = this.value.trim();
+                    if (!code) return;
+
+                    fetch(`/api/product-search/?q=${encodeURIComponent(code)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.results && data.results.length > 0) {
+                                const product = data.results[0];
+                                const emptyIdx = items.findIndex(i => i.product_id === null);
+
+                                const newItem = {
+                                    product_id: product.product_id,
+                                    product_name: product.product_name,
+                                    stock: parseFloat(product.stock),
+                                    unit: product.unit,
+                                    batch: product.batch || '',
+                                    price: parseFloat(product.price),
+                                    quantity: 1,
+                                    discount: 0.00,
+                                    tax_percent: parseFloat(product.tax_percent || 13)
+                                };
+
+                                if (emptyIdx !== -1) {
+                                    items[emptyIdx] = newItem;
+                                } else {
+                                    items.push(newItem);
+                                }
+                                items.push({product_id: null});
+                                barcodeInput.value = '';
+                                renderTable();
+                            } else {
+                                alert('Product not found!');
+                            }
+                        });
+                }
+            });
+
+            // Update Summary Card View
+            function calculateBottomTotals(subtotal, discount, vat, roundOff, grandTotal) {
+                document.getElementById('lbl_subtotal').innerText = subtotal.toFixed(2);
+                document.getElementById('lbl_discount').innerText = discount.toFixed(2);
+                document.getElementById('lbl_tax').innerText = vat.toFixed(2);
+                document.getElementById('lbl_round_off').innerText = roundOff.toFixed(2);
+                document.getElementById('lbl_grand_total').innerText = grandTotal.toFixed(2);
+
+                const received = parseFloat(document.getElementById('received_input').value) || 0;
+                const change = received - grandTotal;
+                document.getElementById('lbl_change').innerText = (change > 0 ? change : 0).toFixed(2);
+            }
+
+            document.getElementById('received_input').addEventListener('input', renderTable);
+            document.getElementById('tender_input').addEventListener('input', function () {
+                document.getElementById('received_input').value = this.value;
+                renderTable();
+            });
+
+            // Reset
+            document.getElementById('btn_reset').addEventListener('click', function () {
+                initRows();
+                fetchNextInvoiceNumber();
+            });
+
+            // Save Sale
+            document.getElementById('btn_save_sale').addEventListener('click', function () {
+                const validItems = items.filter(i => i.product_id !== null);
+                if (validItems.length === 0) {
+                    alert('Please select at least one product!');
+                    return;
+                }
+
+                const payload = {
+                    idempotency_key: 'IDEM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                    fiscal_year: document.getElementById('fiscal_year').value,
+                    customer_id: document.getElementById('party_ac').value,
+                    narration: document.getElementById('narration').value,
+                    overall_discount_amount: overallDiscountAmount,
+                    overall_discount_percent: overallDiscountPercent,
+                    items: validItems.map(i => ({
+                        product_id: i.product_id,
+                        quantity: i.quantity,
+                        discount: i.discount,
+                        tax_percent: i.tax_percent
+                    })),
+                    payments: [{
+                        method: 'CASH',
+                        amount: parseFloat(document.getElementById('received_input').value) || 0
+                    }]
+                };
+
+                fetch('/api/checkout/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(payload)
+                })
+                    .then(res => res.json().then(data => ({status: res.status, body: data})))
+                    .then(res => {
+                        if (res.status === 200 || res.status === 201) {
+                            alert(`Sale Saved Successfully! Invoice: ${res.body.invoice_no}`);
+                            initRows();
+                            fetchNextInvoiceNumber();
+                        } else {
+                            alert(`Error: ${res.body.error}`);
+                        }
+                    });
+            });
+
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            initRows();
+        });
+    </script>
+</body>
+
+</html>
+{% endblock %}

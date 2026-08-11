@@ -1,0 +1,59 @@
+<html>
+    <body>
+        {% for customer in customers %}
+<tr>
+    <td>
+        <span class="truncate-cell" data-full="{{ customer.customer_code }}">{{ customer.customer_code }}</span>
+    </td>
+    <td>
+        <span class="truncate-cell" data-full="{{ customer.customer_name }}">{{ customer.customer_name }}</span>
+    </td>
+    <td>
+        <span class="truncate-cell" data-full="{{ customer.phone|default:'-' }}">{{ customer.phone|default:"-" }}</span>
+    </td>
+    <td>
+        {% if customer.has_active_membership %}
+            <span class="badge badge-member">Member</span>
+        {% else %}
+            <span class="badge badge-regular">Regular</span>
+        {% endif %}
+    </td>
+    <td><span class="badge {{ customer.status|lower }}">{{ customer.status }}</span></td>
+    <td class="action-links">
+        <a href="{% url 'customer_profile' customer.pk %}" class="action-link view">View</a>
+        <a href="{% url 'customer_edit' customer.pk %}" class="action-link edit">Edit</a>
+        <a href="{% url 'membership_add' customer.pk %}" class="action-link membership">+ Membership</a>
+        <a href="{% url 'customer_deactivate' customer.pk %}" class="action-link deactivate"
+           onclick="return confirm('Change status for {{ customer.customer_name }}?');">
+           {% if customer.status == 'ACTIVE' %}Deactivate{% else %}Activate{% endif %}
+        </a>
+    </td>
+</tr>
+{% empty %}
+<tr><td colspan="6" class="empty-row">No customers found.</td></tr>
+{% endfor %}
+
+<script>
+    // Click-to-toggle tooltip for touch devices (hover already works for desktop)
+document.getElementById('customer-rows').addEventListener('click', function (e) {
+    const cell = e.target.closest('.truncate-cell');
+    if (!cell) return;
+
+    // close any other open tooltip first
+    document.querySelectorAll('.truncate-cell.show-tip').forEach(el => {
+        if (el !== cell) el.classList.remove('show-tip');
+    });
+
+    cell.classList.toggle('show-tip');
+});
+
+// close tooltip when clicking outside
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('.truncate-cell')) {
+        document.querySelectorAll('.truncate-cell.show-tip').forEach(el => el.classList.remove('show-tip'));
+    }
+});
+</script>
+
+    </body>
+</html>

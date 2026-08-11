@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block content %}
+<main>
+    <div class="page-header">
+        <h1>{{ customer.customer_name }} <small>({{ customer.customer_code }})</small></h1>
+        <a href="{% url 'customer_edit' customer.pk %}" class="btn btn-secondary">Edit</a>
+    </div>
+
+    <section class="profile-summary">
+        <p><strong>Phone:</strong> {{ customer.phone|default:"-" }}</p>
+        <p><strong>Email:</strong> {{ customer.email|default:"-" }}</p>
+        <p><strong>Address:</strong> {{ customer.address|default:"-" }}</p>
+        <p><strong>Status:</strong> {{ customer.status }}</p>
+        <p><strong>Member:</strong> {% if is_member %}Yes{% else %}No{% endif %}</p>
+        <p><strong>Transaction Count:</strong> {{ transaction_count }}</p>
+        <p><strong>Current Scheme:</strong>
+            {% if current_scheme %}{{ current_scheme.scheme_name }} ({{ current_scheme.discount_value }}% off)
+            {% else %}No scheme applied{% endif %}
+        </p>
+    </section>
+
+    <section class="membership-history">
+        <div class="page-header">
+            <h2>Membership History</h2>
+            <a href="{% url 'membership_add' customer.pk %}" class="btn btn-primary">+ Register Membership</a>
+        </div>
+        <table class="table">
+            <thead><tr><th>Type</th><th>Start</th><th>Expiry</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+            {% for m in memberships %}
+                <tr>
+                    <td>{{ m.membership_type }}</td>
+                    <td>{{ m.start_date }}</td>
+                    <td>{{ m.expiry_date }}</td>
+                    <td>{{ m.membership_fee }}</td>
+                    <td>{{ m.status }}</td>
+                    <td>
+                        {% if m.status == 'ACTIVE' %}
+                        <a href="{% url 'membership_update_status' m.pk 'EXPIRED' %}">Expire</a>
+                        <a href="{% url 'membership_update_status' m.pk 'CANCELLED' %}">Cancel</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6">No membership records yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Purchase history table will plug in once the Sales app exists:
+         {% for sale in customer.sales_set.all %} ... {% endfor %} -->
+</main>
+{% endblock %}

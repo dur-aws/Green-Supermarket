@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block dashboard_active %}active{% endblock %}
+
+{% block content %}
+<div class="content" id="content">
+    <!-- widget cards injected by dashboard.js -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Tells dashboard.js "this page owns #content — auto-load the
+    // widget cards here." Other pages that extend base.html should
+    // NOT set this, so their own content is never overwritten.
+    window.isDashboardPage = true;
+</script>
+{{ block.super }}
+{% endblock %}

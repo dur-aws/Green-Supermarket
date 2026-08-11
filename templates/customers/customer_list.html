@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/customers.css' %}">
+
+<main class="customers-page">
+    <div class="page-header">
+        <h1>Customers</h1>
+        <div class="header-actions">
+            <a href="{% url 'customer_add' %}" class="btn btn-primary">+ Add Customer</a>
+        </div>
+    </div>
+
+    
+    <!-- Submodule toolbar -->
+    <nav class="submodule-toolbar">
+        <a href="{% url 'customer_list' %}" class="tool-link active">All Customers</a>
+        <a href="{% url 'customer_add' %}" class="tool-link">Add Customer</a>
+        <a href="{% url 'customer_list' %}?member=member" class="tool-link">Members</a>
+        <a href="{% url 'customer_list' %}?member=non_member" class="tool-link">Non-Members</a>
+        <a href="{% url 'customer_list' %}?status=INACTIVE" class="tool-link">Inactive</a>
+        <a href="{% url 'customer_search_api' %}" class="tool-link disabled" title="Used internally by Sales module">Search API</a>
+    </nav>
+
+    <!-- Search + filter row -->
+    <div class="filter-row">
+        <input type="text" id="customer-search" class="form-control search-input"
+               placeholder="Search by code, name or phone..." value="{{ query }}">
+
+        <select id="status-select" class="form-control filter-select">
+            <option value="" {% if not status_filter %}selected{% endif %}>All Status</option>
+            <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
+            <option value="INACTIVE" {% if status_filter == 'INACTIVE' %}selected{% endif %}>Inactive</option>
+        </select>
+
+        <select id="member-select" class="form-control filter-select">
+            <option value="" {% if not member_filter %}selected{% endif %}>All Types</option>
+            <option value="member" {% if member_filter == 'member' %}selected{% endif %}>Members</option>
+            <option value="non_member" {% if member_filter == 'non_member' %}selected{% endif %}>Non-Members</option>
+        </select>
+    </div>
+    
+    <!-- Quick stats -->
+    {% comment %} <section class="stats-row">
+        <div class="stat-card">
+            <span class="stat-value">{{ total_count }}</span>
+            <span class="stat-label">Total Customers</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ active_count }}</span>
+            <span class="stat-label">Active Customers</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">{{ member_count }}</span>
+            <span class="stat-label">Active Members</span>
+        </div>
+    </section> {% endcomment %}
+    <div class="stat-strip">
+        <span>Total Customerds: <strong id="stat-total">{{total_count }}</strong></span>
+        <span>Active: <strong class="stat-green" id="stat-active">{{ active_count }}</strong></span>
+        <span>active Members: <strong class="stat-orange" id="stat-low">{{ member_count }}</strong></span>
+    </div>
+    
+    <table class="table customer-table" id="customer-table">
+        <thead>
+            <tr>
+                <th>Code</th><th>Name</th><th>Phone</th><th>Type</th><th>Status</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="customer-rows">
+            {% include 'customers/customer_rows.html' %}
+        </tbody>
+    </table>
+</main>
+
+<script>
+const searchInput = document.getElementById('customer-search');
+const statusSelect = document.getElementById('status-select');
+const memberSelect = document.getElementById('member-select');
+let debounceTimer;
+
+function refreshRows() {
+    const params = new URLSearchParams({
+        q: searchInput.value,
+        status: statusSelect.value,
+        member: memberSelect.value
+    });
+    fetch(`{% url 'customer_list' %}?${params.toString()}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('customer-rows').innerHTML = data.rows_html;
+    });
+}
+
+searchInput.addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(refreshRows, 350);
+});
+
+statusSelect.addEventListener('change', refreshRows);
+memberSelect.addEventListener('change', refreshRows);
+</script>
+{% endblock %}

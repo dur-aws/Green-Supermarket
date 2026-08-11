@@ -1,0 +1,323 @@
+/* ===== Page header ===== */
+.customers-page .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.customers-page .page-header h1 {
+    font-size: 22px;
+    color: #1f3a2f;
+    margin-bottom: 4px;
+}
+
+/* ===== Buttons ===== */
+.btn {
+    display: inline-block;
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background-color: #2f5c33;   /* green — matches "Green Supermarket" branding */
+    color: #ffffff;
+}
+.btn-primary:hover { background-color: #274b2a }
+
+.btn-secondary { background: #eef3ee; color: #2f5c33; }
+.btn-secondary:hover { background: #dde8dd; }
+
+/* ===== Stat strip ===== */
+
+.stat-strip {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+    color: #6b756e;
+    margin-bottom: 4px;
+}
+.stat-strip strong { font-size: 14px; color: #333; }
+/* ===== Submodule toolbar ===== */
+.submodule-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.75rem;
+}
+
+.tool-link {
+    padding: 0.4rem 0.85rem;
+    border-radius: 9px;
+    font-size: 0.825rem;
+    font-weight: 500;
+    color: #374151;
+    background-color: #f3f4f6;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+}
+
+.tool-link:hover {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.tool-link.active {
+    background-color: #16a34a;
+    color: #fff;
+}
+
+.tool-link.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* ===== Filter row ===== */
+.filter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.search-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.search-row .search-input { padding-left: 34px; min-width: 240px; }
+
+.filter-select {
+    flex: 1 1 160px;
+}
+
+.form-control {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #1f2937;
+    background-color: #ffffff;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+/* ===== Table ===== */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.table thead {
+    background-color: #f9fafb;
+}
+
+.table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: #f5f7f5;
+    color: #6b756e;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1px solid #e2e6e2;
+}
+
+.table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #eef1ee;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table td .action-links{
+    flex-direction: row;
+}
+
+
+.table tbody tr:hover {
+    background-color: #eef5ee;
+}
+
+.empty-row {
+    text-align: center;
+    color: #9aa39c;
+    padding: 30px !important;
+}
+
+.table thead th {
+    background: #309c44;
+    color: #fff;
+    text-transform: none;
+    font-size: 13px;
+    letter-spacing: 0;
+    padding: 4px 6px;
+}
+
+
+/* ===== Truncate long table text (no 2-line wrap) ===== */
+.table td {
+    max-width: 160px;   /* adjust per column if needed */
+}
+
+.truncate-cell {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    cursor: pointer;
+    position: relative;
+}
+
+/* Tooltip bubble shown on hover (desktop) */
+.truncate-cell:hover::after,
+.truncate-cell.show-tip::after {
+    content: attr(data-full);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 4px;
+    background-color: #1f2937;
+    color: #ffffff;
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: normal;
+    max-width: 260px;
+    width: max-content;
+    z-index: 50;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Small arrow on tooltip */
+.truncate-cell:hover::before,
+.truncate-cell.show-tip::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 100%;
+    margin-top: -1px;
+    border: 5px solid transparent;
+    border-bottom-color: #1f2937;
+    z-index: 51;
+}
+
+/* Responsive: shrink column width further on small screens */
+@media (max-width: 768px) {
+    .table td {
+        max-width: 100px;
+    }
+}
+/* ===== Badges ===== */
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge.active { background-color: #dcfce7; color: #15803d; }
+.badge.inactive { background-color: #fee2e2; color: #b91c1c; }
+
+.badge-member { background-color: #fef3c7; color: #92400e; }
+.badge-regular { background-color: #e0e7ff; color: #3730a3; }
+
+/* ===== Action links in table rows ===== */
+.action-links {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.action-link {
+    font-size: 0.8rem;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.action-link.view { color: #2563eb; }
+.action-link.edit { color: #d97706; }
+.action-link.membership { color: #16a34a; }
+.action-link.deactivate { color: #dc2626; }
+
+.action-link:hover { text-decoration: underline; }
+
+/* ===== Forms (Add/Edit Customer, Membership) ===== */
+form p {
+    margin-bottom: 1rem;
+}
+
+form label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.3rem;
+}
+
+form input,
+form select,
+form textarea {
+    width: 100%;
+    max-width: 420px;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+form input:focus,
+form select:focus,
+form textarea:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+/* ===== Customer profile page ===== */
+.profile-summary {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.profile-summary p {
+    margin: 0.4rem 0;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.membership-history .page-header {
+    margin-bottom: 0.75rem;
+}
+
+.membership-history h2 {
+    font-size: 1.1rem;
+    color: #1f2937;
+    margin: 0;
+}

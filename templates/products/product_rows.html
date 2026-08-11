@@ -1,0 +1,66 @@
+{% load static %}
+
+<html>
+  <head>
+    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
+  </head>
+  <body>
+    {% for product in products %}
+    <tr>
+      <td class="mono">{{ product.code }}</td>
+      <td class="product-name">{{ product.product_name }}</td>
+      <td>{{ product.category.category_name }}</td>
+      <td>{{ product.brand|default:"—" }}</td>
+      <td>{{ product.unit.unit_name }}</td>
+      <td>
+        {% if product.inventory %}
+        <span class="stock-value stock-{{ product.stock_status }}"
+          >{{ product.inventory.quantity }}</span
+        >
+        {% else %}
+        <span class="stock-value">—</span>
+        {% endif %}
+      </td>
+      <td class="muted">{{ product.inventory.reorder_level|default:"—" }}</td>
+      <td>{{ product.purchase_price }}</td>
+      <td class="sale-price">{{ product.selling_price }}</td>
+      <td class="muted">{{ product.vat_percent }}%</td>
+      <td>
+        {% if product.stock_status == "out-of-stock" %}
+        <span class="badge badge-out">Out of Stock</span>
+        {% elif product.stock_status == "low-stock" %}
+        <span class="badge badge-low">Low Stock</span>
+        {% elif product.stock_status == "active" %}
+        <span class="badge badge-active">Active</span>
+        {% elif product.stock_status == "disabled" %}
+        <span class="badge badge-inactive">Disabled</span>
+        {% else %}
+        <span class="badge badge-inactive">No Inventory</span>
+        {% endif %}
+      </td>
+
+      <td class="actions">
+        <div class="actions-inner">
+          <a
+            href="{% url 'product_edit' product.product_id %}"
+            class="icon-btn icon-edit"
+            title="Edit"
+            >&#9998;</a
+          >
+          <a
+            href="{% url 'product_deactivate' product.pk %}"
+            class="action-link deactivate"
+            onclick="return confirm('Change status for {{ product.product_name }}?');"
+          >
+            {% if product.status == 1 %}disable{% else %}Active{% endif %}
+          </a>
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="11" class="empty-row">No products found.</td>
+    </tr>
+    {% endfor %}
+  </body>
+</html>

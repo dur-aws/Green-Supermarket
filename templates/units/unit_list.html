@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static  %}
+
+{% block content %}
+
+<html>
+    <head>
+        <title>{{ title }}</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
+    </head>
+    <body>
+    <div class="page-wrap">
+
+    <div class="page-header">
+        <div>
+            <h1>Units
+            <p class="page-sub">Manage your unit log</p>
+        </div>
+        <a href="{% url 'unit_add' %}" class = "btn btn-primary">+ Add Unit
+    </div>
+
+    <div class="filter-bar">
+        <form method="get" class="search-form">
+            <input
+                type="text"
+                name="q"
+                placeholder="Search by unit name or id..."
+                value="{{ query }}"
+                class="search-input"
+            />
+
+            <button type="submit" class="btn btn-secondary">Search</button>
+            {% if query %}
+                <a href="{% url 'unit' %}" class="btn btn-clear">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>name</th>
+                    <th>notaion</th>
+                    <th>actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for unit in page_obj %}
+                <tr>
+                    <td>{{ unit.unit_id }}</td>
+                    <td>{{ unit.unit_name }}</td>
+                    <td>{{ unit.notation }}</td>
+
+                    <td class="actions">
+                        <a href="{% url 'unit_edit' unit.unit_id %}" class="link-edit">&#9998;</a>
+                        <form method="post" action="{% url 'unit_toggle_status' unit.unit_id %}" class="inline-form">
+                            {% csrf_token %}
+                            <button type="submit" class="link-toggle"></button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="empty-row">No units found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </body>
+</html>
+
+{% endblock %}

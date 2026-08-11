@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% load static  %}
+
+<html>
+    <head>
+        <title>{{ title }}</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
+    </head>
+    <body>
+    <div class="page-wrap">
+
+    <div class="page-header">
+        <div>
+            <h1>Categories
+            <p class="page-sub">Manage your category>
+        </div>
+        <a href="{% url 'category_add' %}" class = "btn btn-primary">+ Add Category
+    </div>
+
+    <div class="filter-bar">
+        <form method="get" class="search-form">
+            <input
+                type="text"
+                name="q"
+                placeholder="Search by category name or id..."
+                value="{{ query }}"
+                class="search-input"
+            />
+
+            <button type="submit" class="btn btn-secondary">Search</button>
+            {% if query %}
+                <a href="{% url 'category' %}" class="btn btn-clear">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>name</th>
+                    <th>notation</th>
+                    <th>description</th>
+                    <th>actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in page_obj %}
+                <tr>
+                    <td>{{ category.category_id }}</td>
+                    <td>{{ category.category_name }}</td>
+                    <td>{{ category.notation }}</td>
+                    <td>{{ category.description }}</td>
+
+                    <td class="actions">
+                        <a href="{% url 'category_edit' category.category_id %}" class="link-edit">Edit</a>
+                        <form method="post" action="{% url 'category_toggle_status' category.category_id %}" class="inline-form">
+                            {% csrf_token %}
+                            <button type="submit" class="link-toggle"></button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="empty-row">No categories found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </body>
+</html>
+
+{% endblock %}

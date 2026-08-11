@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+
+{% load static %}
+<!doctype html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
+</head>
+<body>
+
+
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Product Name</label>
+                {{ form.product_name }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Barcode</label>
+                {{ form.barcode }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Category</label>
+                {{ form.category }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Brand</label>
+                {{ form.brand }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Unit</label>
+                {{ form.unit }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Purchase Price (Rs)</label>
+                {{ form.purchase_price }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Selling Price (Rs)</label>
+                {{ form.selling_price }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>VAT (%)</label>
+                {{ form.vat_percent }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Initial Stock Quantity</label>
+                {{ form.initial_stock }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Reorder Level</label>
+                {{ form.reorder_level }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Expiry Date</label>
+                {{ form.expiry_date }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Status</label>
+                {{ form.status }}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success">Save Product</button>
+        <a href="{% url 'product_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+</body>
+</html>
+
+{% endblock  %}
