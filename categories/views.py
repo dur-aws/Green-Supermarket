@@ -50,7 +50,7 @@ class CategorySearchView(LoginRequiredMixin, ListView):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest' or self.request.GET.get('format') == 'json':
             queryset = self.get_queryset()
             rows_html = render_to_string(
-                'categories/partials/_category_table_rows.html', 
+                'categories/category_rows.html', 
                 {'categories': queryset}, 
                 request=self.request
             )
