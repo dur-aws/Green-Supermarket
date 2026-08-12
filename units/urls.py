@@ -1,9 +1,10 @@
 from django.urls import path
-from . import views
+from .views import UnitOfMeasureListView, UnitOfMeasureCreateView, UnitOfMeasureUpdateView, UnitOfMeasureDeleteView, UnitOfMeasureSearchView
 
-urlpatterns=[
-    path('', views.unit_list, name='unit_list'),
-    path('add/', views.unit_add, name='unit_add'),
-    path('<int:pk>/edit/', views.unit_edit, name='unit_edit'),
-    path('<int:pk>/toggle-status/', views.unit_toggle_status, name='unit_toggle_status'),
+urlpatterns = [
+    path('', UnitOfMeasureListView.as_view(), name='uom_list'),
+    path('search/', UnitOfMeasureSearchView.as_view(), name='uom_search'),
+    path('add/',UnitOfMeasureCreateView.as_view(), name='uom_add'),
+    path('<int:pk>/edit/',UnitOfMeasureUpdateView.as_view(), name='uom_edit'),
+    path('<int:pk>/deactive/',UnitOfMeasureDeleteView.as_view(), name='uom_deactive'),
 ]

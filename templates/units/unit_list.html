@@ -1,76 +1,146 @@
 {% extends "base.html" %}
 {% load static  %}
-
+<title>{{ title }}</title>
 {% block content %}
-
 <html>
     <head>
-        <title>{{ title }}</title>
-    <link rel="stylesheet" href="{% static 'css/base.css' %}" />
+    <title>{{ title }}</title>
     <link rel="stylesheet" href="{% static 'css/products.css' %}" />
     </head>
     <body>
-    <div class="page-wrap">
-
-    <div class="page-header">
-        <div>
-            <h1>Units
-            <p class="page-sub">Manage your unit log</p>
-        </div>
-        <a href="{% url 'unit_add' %}" class = "btn btn-primary">+ Add Unit
-    </div>
-
+    <div class="container">
+        <!-- Filter Bar -->
     <div class="filter-bar">
-        <form method="get" class="search-form">
+        <div class="search-box">
+            <span class="search-icon">&#128269;</span>
             <input
                 type="text"
-                name="q"
-                placeholder="Search by unit name or id..."
+                id="unit-search"
+                placeholder="Search by name or code..."
                 value="{{ query }}"
                 class="search-input"
+                autocomplete="off"
             />
-
-            <button type="submit" class="btn btn-secondary">Search</button>
-            {% if query %}
-                <a href="{% url 'unit' %}" class="btn btn-clear">Clear</a>
-            {% endif %}
-        </form>
+        </div>
+         <div class="filter-right">
+            <a href="{% url 'uom_add' %}" class="btn btn-primary btn-add">+ Add Unit</a>
+            <a href="#" class="btn btn-export">&#8595; Export</a>
+        </div>
+    </div>
+     <!-- Summary Stat Strip -->
+    <div class="stat-strip">
+        <div class="stat-item">
+            <span class="stat-label">Total Units
+            <strong id="showing-count">{{ uoms|length}}</strong>
+        </div>
     </div>
 
     <div class="table-card">
-        <table class="data-table">
+        <div class="table-responsive">
+                 <table class="data-table styled-table">
             <thead>
                 <tr>
                     <th>id</th>
                     <th>name</th>
                     <th>notaion</th>
+                    <th>Weight-Based</th>
+                    <th>is-active</th>
                     <th>actions</th>
                 </tr>
             </thead>
-            <tbody>
-                {% for unit in page_obj %}
-                <tr>
-                    <td>{{ unit.unit_id }}</td>
-                    <td>{{ unit.unit_name }}</td>
-                    <td>{{ unit.notation }}</td>
-
-                    <td class="actions">
-                        <a href="{% url 'unit_edit' unit.unit_id %}" class="link-edit">&#9998;</a>
-                        <form method="post" action="{% url 'unit_toggle_status' unit.unit_id %}" class="inline-form">
-                            {% csrf_token %}
-                            <button type="submit" class="link-toggle"></button>
-                        </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="9" class="empty-row">No units found.</td>
-                </tr>
-                {% endfor %}
+            <tbody id="uom-table-body">
+                {% include 'units/unit_rows.html' %}
             </tbody>
         </table>
+        </div>
+       
     </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("unit-search");
+    const showingCountEl = document.getElementById("showing-count");
+    const tableBody = document.getElementById("uom-table-body");
+
+    let debounceTimer = null;
+    const searchApiUrl = "{% url 'uom_search' %}";
+
+    function runSearch() {
+        const params = new URLSearchParams();
+        if (searchInput.value.trim()) {
+            params.set('q', searchInput.value.trim());
+        }
+
+        // Send request with JSON format flag
+        fetch(searchApiUrl + '?' + params.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function (res) { 
+            return res.json(); 
+        })
+        .then(function (data) {
+            tableBody.innerHTML = data.rows_html;
+            showingCountEl.textContent = data.showing_count;
+        })
+        .catch(function (error) {
+            console.error("AJAX Search Error:", error);
+        });
+    }
+
+    // Debounced keystroke input listener
+    searchInput.addEventListener("input", function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runSearch, 250);
+    });
+});
+</script>
+
+
+{% comment %} <script>
+document.addEventListener("DOMContentLoaded", function () {
+ 
+    const searchInput = document.getElementById("unit-search");
+    const totalCountEl = document.getElementById("showing-count");
+ 
+    let debounceTimer = null;
+    const searchApiUrl = "{% url 'uom_search' %}";
+ 
+    function runSearch() {
+        const params = new URLSearchParams();
+        if (searchInput.value.trim()) params.set('q', searchInput.value.trim());
+        
+ 
+        fetch(searchApiUrl + '?' + params.toString())
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                tableBody.innerHTML = data.rows_html;
+                showingCountEl.textContent = data.showing_count;
+            })
+            .catch(function () {
+                // network hiccup — leave the current table as-is rather
+                // than wiping it out on a failed request
+            });
+    }
+ 
+    // Live search: fires on every keystroke, debounced so a fast typer
+    // doesn't fire 10 requests per second. No search button needed —
+    // typing "a" alone already triggers a search.
+    searchInput.addEventListener("input", function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runSearch, 250);
+    });
+ 
+ 
+</script>
+}); {% endcomment %}
     </body>
+
+    
 </html>
 
 {% endblock %}
+
+

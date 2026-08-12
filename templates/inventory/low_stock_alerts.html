@@ -30,14 +30,14 @@
             </thead>
             <tbody>
                 {% for product in products %}
-                <tr class="{% if product.inventory.quantity == 0 %}row-critical{% endif %}">
+                <tr class="{% if product.inventory_batch.quantity == 0 %}row-critical{% endif %}">
                     <td class="mono">{{ product.code }}</td>
                     <td class="product-name">{{ product.product_name }}</td>
                     <td>{{ product.category.category_name }}</td>
                     <td>
-                        <span class="stock-value stock-{{ product.stock_status }}">{{ product.inventory.quantity }}</span>
+                        <span class="stock-value stock-{{ product.stock_status }}">{{ product.inventory_batch.quantity }}</span>
                     </td>
-                    <td class="muted">{{ product.inventory.reorder_level }}</td>
+                    <td class="muted">{{ product.inventory_batch.reorder_level }}</td>
                     <td>
                         {% if product.stock_status == "out-of-stock" %}
                             <span class="badge badge-out">Out of Stock</span>

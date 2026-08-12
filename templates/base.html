@@ -84,19 +84,19 @@
           </a>
           <div class="submenu" id="submenu-masterdata">
             <a href="{% url 'category_list' %}" data-module="categories">Categories</a>
-            <a href="{% url 'unit_list' %}" data-module="units">Units</a>
+            <a href="{% url 'uom_list' %}" data-module="uoms">Units</a>
             <a href="{% url 'product_list' %}" data-module="products">Products</a>
             <a href="{% url 'customer_list' %}" data-module="customers">Customers</a>
           </div>
         </div>
 
         <div class="menu-item has-children">
-          <a href="#" class="menu-link parent-link" data-toggle="inventory">
+          <a href="#" class="menu-link parent-link" data-toggle="inventory_batch">
             <i class="menu-icon fa-solid fa-boxes-stacked"></i>
             <span class="label">Inventory</span>
             <i class="chevron fa-solid fa-chevron-down"></i>
           </a>
-          <div class="submenu" id="submenu-inventory">
+          <div class="submenu" id="submenu-inventory_batch">
             <a href="{% url 'stock_in' %}" data-module="stock-in">Stock In</a>
             <a href="{% url 'stock_out' %}" data-module="stock-out">Stock Out</a>
             <a href="{% url 'stock_adjustment' %}" data-module="stock-adjustment">Stock Adjustment</a>
@@ -157,7 +157,7 @@
           <div class="submenu" id="submenu-reports">
             <a href="#" data-module="sales-report">Sales Report</a>
             <a href="#" data-module="purchase-report">Purchase Report</a>
-            <a href="#" data-module="inventory-report">Inventory Report</a>
+            <a href="#" data-module="inventory_batch-report">Inventory Report</a>
             <a href="#" data-module="low-stock-report">Low Stock Report</a>
           </div>
         </div>

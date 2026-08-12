@@ -1,0 +1,44 @@
+{% load static %}
+
+<html>
+  <head>
+    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
+  </head>
+  <body>
+    {% for uom in uoms %}
+    <tr>
+      <td class="mono">{{ uom.uom_id }}</td>
+      <td class="unit-name">{{ uom.unit_name }}</td>
+      <td class="notaion">{{ uom.notation }}</td>
+      <td>{{ uom.is_weight_based }}</td>
+      <td>  {% if uom.is_active %}
+        active
+    {% else %}
+        desabled
+    {% endif %}</td>
+    
+      <td class="actions">
+        <div class="actions-inner">
+          <a
+            href="{% url 'uom_edit' uom.uom_id %}"
+            class="icon-btn icon-edit"
+            title="Edit"
+            >&#9998;</a
+          >
+          <a
+            href="{% url 'uom_deactive' uom.uom_id %}"
+            class="action-link deactivate"
+            onclick="return confirm('Change status for {{ uom.unit_name }}?');"
+          >
+            {% if product.status == 1 %}deactive{% else %}Active{% endif %}
+          </a>
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="11" class="empty-row">No units found.</td>
+    </tr>
+    {% endfor %}
+  </body>
+</html>

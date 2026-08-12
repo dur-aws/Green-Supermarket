@@ -13,15 +13,15 @@
       <td>{{ product.brand|default:"—" }}</td>
       <td>{{ product.unit.unit_name }}</td>
       <td>
-        {% if product.inventory %}
+        {% if product.inventory_batch %}
         <span class="stock-value stock-{{ product.stock_status }}"
-          >{{ product.inventory.quantity }}</span
+          >{{ product.inventory_batch.quantity }}</span
         >
         {% else %}
         <span class="stock-value">—</span>
         {% endif %}
       </td>
-      <td class="muted">{{ product.inventory.reorder_level|default:"—" }}</td>
+      <td class="muted">{{ product.inventory_batch.reorder_level|default:"—" }}</td>
       <td>{{ product.purchase_price }}</td>
       <td class="sale-price">{{ product.selling_price }}</td>
       <td class="muted">{{ product.vat_percent }}%</td>
