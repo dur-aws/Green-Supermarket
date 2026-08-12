@@ -1,15 +1,9 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
 
-{% load static %}
-<!doctype html>
-<html>
-<head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{% static 'css/base.css' %}" />
-    
-</head>
-<body>
+<title>{{ title }}</title>
+<link rel="stylesheet" href="{% static 'css/base.css' %}" />
 
 <div class="page-wrap narrow">
 
@@ -34,24 +28,48 @@
             <div class="form-grid">
 
                 <div class="form-group">
-                    <label for="{{ form.category_name.id_for_label }}">Name</label>
+                    <label for="{{ form.category_name.id_for_label }}">Category Name</label>
                     {{ form.category_name }}
                     {% if form.category_name.errors %}
                         <span class="field-error">{{ form.category_name.errors.0 }}</span>
                     {% endif %}
                 </div>
+
                 <div class="form-group">
-                    <label for="{{ form.natation.id_for_label }}">Notation</label>
-                    {{ form.notation }}
-                    {% if form.notation.errors %}
-                        <span class="field-error">{{ form.notation.errors.0 }}</span>
+                    <label for="{{ form.parent.id_for_label }}">Parent Category</label>
+                    {{ form.parent }}
+                    {% if form.parent.errors %}
+                        <span class="field-error">{{ form.parent.errors.0 }}</span>
                     {% endif %}
                 </div>
-                <div class="form-group">
-                    <label for="{{ form.description.id_for_label }}">Description</label>
-                    {{ form.description }}
-                    {% if form.description.errors %}
-                        <span class="field-error">{{ form.description.errors.0 }}</span>
+
+                <div class="form-group form-check-group">
+                    <label for="{{ form.requires_expiry_tracking.id_for_label }}">
+                        {{ form.requires_expiry_tracking }}
+                        Requires Expiry Tracking
+                    </label>
+                    {% if form.requires_expiry_tracking.errors %}
+                        <span class="field-error">{{ form.requires_expiry_tracking.errors.0 }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="form-group form-check-group">
+                    <label for="{{ form.requires_batch_tracking.id_for_label }}">
+                        {{ form.requires_batch_tracking }}
+                        Requires Batch Tracking
+                    </label>
+                    {% if form.requires_batch_tracking.errors %}
+                        <span class="field-error">{{ form.requires_batch_tracking.errors.0 }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="form-group form-check-group">
+                    <label for="{{ form.requires_catch_weight.id_for_label }}">
+                        {{ form.requires_catch_weight }}
+                        Requires Catch Weight
+                    </label>
+                    {% if form.requires_catch_weight.errors %}
+                        <span class="field-error">{{ form.requires_catch_weight.errors.0 }}</span>
                     {% endif %}
                 </div>
 
@@ -67,7 +85,4 @@
 
 </div>
 
-</body>
-</html>
-
-{% endblock  %}
+{% endblock %}

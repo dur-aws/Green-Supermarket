@@ -2,12 +2,12 @@
 {% load static  %}
 <title>{{ title }}</title>
 {% block content %}
-<html>
-    <head>
+
+
     <title>{{ title }}</title>
     <link rel="stylesheet" href="{% static 'css/products.css' %}" />
-    </head>
-    <body>
+    
+   
     <div class="container">
         <!-- Filter Bar -->
     <div class="filter-bar">
@@ -99,47 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 
-{% comment %} <script>
-document.addEventListener("DOMContentLoaded", function () {
- 
-    const searchInput = document.getElementById("unit-search");
-    const totalCountEl = document.getElementById("showing-count");
- 
-    let debounceTimer = null;
-    const searchApiUrl = "{% url 'uom_search' %}";
- 
-    function runSearch() {
-        const params = new URLSearchParams();
-        if (searchInput.value.trim()) params.set('q', searchInput.value.trim());
-        
- 
-        fetch(searchApiUrl + '?' + params.toString())
-            .then(function (res) { return res.json(); })
-            .then(function (data) {
-                tableBody.innerHTML = data.rows_html;
-                showingCountEl.textContent = data.showing_count;
-            })
-            .catch(function () {
-                // network hiccup — leave the current table as-is rather
-                // than wiping it out on a failed request
-            });
-    }
- 
-    // Live search: fires on every keystroke, debounced so a fast typer
-    // doesn't fire 10 requests per second. No search button needed —
-    // typing "a" alone already triggers a search.
-    searchInput.addEventListener("input", function () {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(runSearch, 250);
-    });
- 
- 
-</script>
-}); {% endcomment %}
-    </body>
 
-    
-</html>
 
 {% endblock %}
 

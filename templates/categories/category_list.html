@@ -1,78 +1,98 @@
 {% extends "base.html" %}
-
+{% load static %}
+<title>{{ title }}</title>
 {% block content %}
-{% load static  %}
 
-<html>
-    <head>
-        <title>{{ title }}</title>
-    <link rel="stylesheet" href="{% static 'css/base.css' %}" />
+    <title>{{ title }}</title>
     <link rel="stylesheet" href="{% static 'css/products.css' %}" />
-    </head>
-    <body>
-    <div class="page-wrap">
 
-    <div class="page-header">
-        <div>
-            <h1>Categories
-            <p class="page-sub">Manage your category>
+    <div class="container">
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="search-box">
+                <span class="search-icon">&#128269;</span>
+                <input
+                    type="text"
+                    id="category-search"
+                    placeholder="Search by category name..."
+                    value="{{ query }}"
+                    class="search-input"
+                    autocomplete="off"
+                />
+            </div>
+            <div class="filter-right">
+                <a href="{% url 'category_add' %}" class="btn btn-primary btn-add">+ Add Category</a>
+                <a href="#" class="btn btn-export">&#8595; Export</a>
+            </div>
         </div>
-        <a href="{% url 'category_add' %}" class = "btn btn-primary">+ Add Category
+
+        <!-- Summary Stat Strip -->
+        <div class="stat-strip">
+            <div class="stat-item">
+                <span class="stat-label">Total Categories
+                <strong id="showing-count">{{ categories|length }}</strong>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="data-table styled-table">
+                    <thead>
+                        <tr>
+                            <th>id</th>
+                            <th>category name</th>
+                            <th>parent</th>
+                            <th>expiry tracking</th>
+                            <th>batch tracking</th>
+                            <th>catch weight</th>
+                            <th>actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="category-table-body">
+                        {% include 'categories/category_rows.html' %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <div class="filter-bar">
-        <form method="get" class="search-form">
-            <input
-                type="text"
-                name="q"
-                placeholder="Search by category name or id..."
-                value="{{ query }}"
-                class="search-input"
-            />
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("category-search");
+        const showingCountEl = document.getElementById("showing-count");
+        const tableBody = document.getElementById("category-table-body");
 
-            <button type="submit" class="btn btn-secondary">Search</button>
-            {% if query %}
-                <a href="{% url 'category' %}" class="btn btn-clear">Clear</a>
-            {% endif %}
-        </form>
-    </div>
+        let debounceTimer = null;
+        const searchApiUrl = "{% url 'category_search' %}";
 
-    <div class="table-card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>id</th>
-                    <th>name</th>
-                    <th>notation</th>
-                    <th>description</th>
-                    <th>actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for category in page_obj %}
-                <tr>
-                    <td>{{ category.category_id }}</td>
-                    <td>{{ category.category_name }}</td>
-                    <td>{{ category.notation }}</td>
-                    <td>{{ category.description }}</td>
+        function runSearch() {
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) {
+                params.set('q', searchInput.value.trim());
+            }
 
-                    <td class="actions">
-                        <a href="{% url 'category_edit' category.category_id %}" class="link-edit">Edit</a>
-                        <form method="post" action="{% url 'category_toggle_status' category.category_id %}" class="inline-form">
-                            {% csrf_token %}
-                            <button type="submit" class="link-toggle"></button>
-                        </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="9" class="empty-row">No categories found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    </body>
-</html>
+            fetch(searchApiUrl + '?' + params.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(function (res) {
+                return res.json();
+            })
+            .then(function (data) {
+                tableBody.innerHTML = data.rows_html;
+                showingCountEl.textContent = data.showing_count;
+            })
+            .catch(function (error) {
+                console.error("AJAX Search Error:", error);
+            });
+        }
+
+        searchInput.addEventListener("input", function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, 250);
+        });
+    });
+    </script>
 
 {% endblock %}
