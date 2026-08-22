@@ -1,8 +1,16 @@
-# accounts/models.py
+
+from datetime import datetime
 from django.db import models
 from django.conf import settings
-from django.utils import timezone
-import zoneinfo
+from zoneinfo import ZoneInfo
+import nepali_datetime
+
+KATHMANDU_TZ = ZoneInfo("Asia/Kathmandu")
+
+
+def kathmandu_now():
+    return datetime.now(KATHMANDU_TZ).replace(tzinfo=None)
+
 
 class ActivityLog(models.Model):
     ACTION_TYPES = [
@@ -31,19 +39,23 @@ class ActivityLog(models.Model):
     status_code = models.IntegerField(null=True, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    timestamp = models.DateTimeField(default=timezone.now)
+    timestamp = models.DateTimeField(default=kathmandu_now)
+    nepali_time = models.CharField(max_length=19, blank=True, editable=False)
 
     class Meta:
         db_table = 'activity_log'
         ordering = ['-timestamp']
 
-    # Helper method to get formatted Nepali DateTime string
+    def save(self, *args, **kwargs):
+        local_dt = self.timestamp.replace(tzinfo=KATHMANDU_TZ)
+        nepali_dt = nepali_datetime.datetime.from_datetime_datetime(local_dt)
+        self.nepali_time = nepali_dt.strftime("%Y-%m-%d %H:%M:%S")
+        super().save(*args, **kwargs)
+
     @property
     def nepali_timestamp(self):
-        kathmandu_tz = zoneinfo.ZoneInfo("Asia/Kathmandu")
-        local_dt = self.timestamp.astimezone(kathmandu_tz)
-        return local_dt.strftime('%Y-%m-%d %I:%M:%S %p')
+        return self.nepali_time
 
-    def __str__(self):
-        user_str = self.user.username if self.user else "Anonymous"
-        return f"[{self.nepali_timestamp}] {user_str} - {self.action_type} ({self.status_code})"
+    @property
+    def kathmandu_timestamp(self):
+        return self.timestamp.strftime("%Y-%m-%d %H:%M:%S")

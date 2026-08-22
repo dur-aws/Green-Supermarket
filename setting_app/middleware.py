@@ -2,7 +2,6 @@
 import re
 import logging
 from django.contrib import messages
-from django.utils import timezone
 from .models import ActivityLog
 
 logger = logging.getLogger(__name__)
@@ -15,7 +14,7 @@ class AuditLogMiddleware:
         response = self.get_response(request)
 
         # 1. Ignore static, media, admin assets, and the audit log itself
-        ignored_paths = ['/static/', '/media/', '/admin/', '/activity-log']
+        ignored_paths = ['/static/', '/media/', '/admin/', '/activity-log','/purchase/calculate/']
         if any(request.path.startswith(path) for path in ignored_paths):
             return response
 
@@ -88,8 +87,7 @@ class AuditLogMiddleware:
                 status_code=response.status_code,
                 ip_address=ip,
                 description=desc,
-                alert_message=alert_text,
-                timestamp=timezone.now()
+                alert_message=alert_text
             )
         except Exception as e:
             logger.error(f"Failed to save activity log: {e}")

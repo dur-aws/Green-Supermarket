@@ -7,7 +7,8 @@ from django.shortcuts import redirect, get_object_or_404, render
 from django.urls import reverse_lazy
 from django.views.generic import ListView, View, DetailView, CreateView, UpdateView, DeleteView, FormView
 from django.db.models import Q
-
+from django.http import JsonResponse
+from django.template.loader import render_to_string
 from .forms import CustomLoginForm, AdminUserCreationForm, AdminUserUpdateForm, AdminResetPasswordForm
 from .mixins import RBACPermissionMixin
 from django.contrib.auth import update_session_auth_hash
@@ -94,6 +95,43 @@ class AdminUserDetailView(RBACPermissionMixin, DetailView):
     # RBAC permission
     module_name = 'accounts'
     required_permission = 'view'
+
+class AdminUserSearchView(RBACPermissionMixin, ListView):
+    model = User
+    template_name = 'users/user_list.html'
+    context_object_name = 'users'
+    paginate_by = 10
+
+    # RBAC Mixin Settings
+    module_name = 'users'
+    required_permission = 'view'
+
+    def get_queryset(self):
+        queryset = User.objects.all()
+        query = self.request.GET.get('q', '').strip()
+
+        if query:
+            queryset = queryset.filter(
+                Q(user_name__icontains=query) | Q(email__icontains=query)
+            )
+
+        return queryset.order_by('user_name')
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest' or self.request.GET.get('format') == 'json':
+            queryset = self.get_queryset()
+            rows_html = render_to_string(
+                'accounts/admin/user_rows.html', 
+                {'users': queryset}, 
+                request=self.request
+            )
+            return JsonResponse({
+                'rows_html': rows_html,
+                'showing_count': queryset.count(),
+            })
+
+        return super().render_to_response(context, **response_kwargs)
+
 
 class AdminUserCreateView(RBACPermissionMixin, CreateView):
     model = User

@@ -3,7 +3,7 @@ from django.contrib.auth.views import LoginView
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.contrib.auth import login
-from django.utils import timezone
+
 from .models import ActivityLog
 from django.views.generic import ListView
 from django.db.models import Q
@@ -27,8 +27,7 @@ class UserLoginView(LoginView):
                 path=self.request.path,
                 method='POST',
                 status_code=403,
-                description=f"Inactive account login attempt by username: {user.username}",
-                timestamp=timezone.now()
+                description=f"Inactive account login attempt by username: {user.username}"
             )
             return self.form_invalid(form)
 
@@ -41,8 +40,7 @@ class UserLoginView(LoginView):
             path=self.request.path,
             method='POST',
             status_code=200,
-            description=f"User {user.username} logged in successfully.",
-            timestamp=timezone.now()
+            description=f"User {user.username} logged in successfully."
         )
 
         messages.success(self.request, f"Welcome back, {user.first_name or user.username}!")

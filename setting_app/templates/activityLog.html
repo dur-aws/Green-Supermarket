@@ -4,7 +4,7 @@
 {% block title %}System Audit Logs{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/accounts.css' %}">
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -16,6 +16,26 @@
         <a href="{% url 'user_list' %}" class="btn btn-export">← Back to Users</a>
     </div>
 
+    <!-- Filter Bar -->
+    <form method="get" class="filter-bar">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" name="q" class="search-input" placeholder="Search by username or details..." value="{{ request.GET.q }}">
+        </div>
+
+        <div class="filter-select-group">
+            <select name="action" class="filter-select" onchange="this.form.submit()">
+                <option value="">All Action Types</option>
+                {% for code, label in action_choices %}
+                    <option value="{{ code }}" {% if request.GET.action == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-right">
+            <span class="showing-text">Showing <strong>{{ activity_logs|length }}</strong> entries</span>
+        </div>
+    </form>
     <!-- Stat Strip -->
     <div class="stat-strip">
         <div class="stat-item">
@@ -34,26 +54,6 @@
         </div>
     </div>
 
-    <!-- Filter Bar -->
-    <form method="get" class="filter-bar">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" name="q" class="search-input" placeholder="Search by username, IP, path, or details..." value="{{ request.GET.q }}">
-        </div>
-
-        <div class="filter-select-group">
-            <select name="action" class="filter-select" onchange="this.form.submit()">
-                <option value="">All Action Types</option>
-                {% for code, label in action_choices %}
-                    <option value="{{ code }}" {% if request.GET.action == code %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-right">
-            <span class="showing-text">Showing <strong>{{ activity_logs|length }}</strong> entries</span>
-        </div>
-    </form>
 
     <!-- Styled Table Card -->
     <div class="table-card">
@@ -65,7 +65,7 @@
                         <th>Date-Time</th>
                         <th>User</th>
                         <th>Action</th>
-                        <th>Alert Message</th>
+                        <th>Description</th>
                         <th>Method & Path</th>
                         <th>HTTP Status</th>
                         <th>IP Address</th>
@@ -83,7 +83,7 @@
                                 <strong>{{ log.user.username }}</strong>
                                 <small style="display: block; color: #888888;">{{ log.user.role.role_name|default:"No Role" }}</small>
                             {% else %}
-                                <span style="color: #888888; font-style: italic;">-/span>
+                                <span style="color: #888888; font-style: italic;">-</span>
                             {% endif %}
                         </td>
                         <td>
@@ -102,7 +102,7 @@
                             {% endif %}
                         </td>
                         <td>
-                        {{log.alert_message}}
+                        {{log.description}}
                         </td>
                         <td>
                             <code style="background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.8rem; color: #2e7d32;">

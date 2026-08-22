@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import (
     UserLoginView, UserLogoutView, UserProfileView,
-    AdminUserListView, AdminUserDetailView, AdminUserCreateView,
+    AdminUserListView, AdminUserSearchView, AdminUserDetailView, AdminUserCreateView,
     AdminUserUpdateView, AdminUserDeleteView, AdminUserPasswordResetView, manage_role_permissions
 )
 
@@ -15,7 +15,9 @@ urlpatterns = [
 
     # Admin User Management
     path('', AdminUserListView.as_view(), name='user_list'),
+
     path('add/', AdminUserCreateView.as_view(), name='user_create'),
+    path('search/', AdminUserSearchView.as_view(), name = 'user_search'),
     path('<int:user_id>/', AdminUserDetailView.as_view(), name='user_detail'),
     path('<int:user_id>/edit/', AdminUserUpdateView.as_view(), name='user_edit'),
     path('<int:user_id>/delete/', AdminUserDeleteView.as_view(), name='user_delete'),
