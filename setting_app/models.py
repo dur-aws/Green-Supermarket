@@ -22,6 +22,7 @@ class ActivityLog(models.Model):
         ('DATA_ACCESS', 'Resource/Data Viewed'),
         ('ACCESS_DENIED', 'Access Denied / Permission Error'),
         ('SYSTEM_ERROR', 'System / Server Error'),
+        ('VIEW', 'Page Access'),
     ]
 
     log_id = models.BigAutoField(primary_key=True)

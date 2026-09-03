@@ -1,0 +1,17 @@
+{% for item in data %}
+<tr>
+    <td> <strong>{{ item.product }} {{item.variant}}</strong><br>
+       <small> Reorder qty: {{item.reorder_level}} {{item.unit}}</small>
+    </td>
+    <td></td>
+    <td>
+        {% if item.stock_status == "out-of-stock" %}
+            <span class="badge badge-red">OUT OF STOCK</span>
+        {% else %}
+            <span class="badge badge-amber">{{ item.total_active_stock }} {{item.unit}}</span>
+        {% endif %}
+    </td>
+</tr>
+{% empty %}
+<tr><td colspan="4" class="dash-table-empty">All stock levels are healthy.</td></tr>
+{% endfor %}

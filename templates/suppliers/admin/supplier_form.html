@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{% if object %}Edit Supplier: {{ object.supplier_name }}{% else %}Add New Supplier{% endif %}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <h5>Basic Information</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Supplier Name *</label>
+                            {{ form.supplier_name }}
+                            {{ form.supplier_name.errors }}
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Contact Person</label>
+                                {{ form.contact_person }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email Address *</label>
+                                {{ form.email }}
+                                {{ form.email.errors }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Phone Number</label>
+                                {{ form.phone }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">PAN / VAT Number</label>
+                                {{ form.pan_vat_number }}
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h5>Organic / Eco Certification</h5>
+                        <div class="form-check mb-2">
+                            {{ form.is_organic_certified }}
+                            <label class="form-check-label" for="{{ form.is_organic_certified.id_for_label }}">Is Organic / Eco Certified Supplier?</label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Certification Details</label>
+                            {{ form.certification_details }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            {{ form.address }}
+                        </div>
+
+                        {% if not portal_account_exists %}
+                        <hr>
+                        <h5>Portal Access (Optional)</h5>
+                        <div class="form-check mb-3">
+                            {{ form.create_portal_account }}
+                            <label class="form-check-label" for="{{ form.create_portal_account.id_for_label }}">Generate User Account for Supplier Portal Access</label>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Username</label>
+                                {{ form.username }}
+                                {{ form.username.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Portal Role</label>
+                                <div class="form-control-plaintext"><strong>SUPPLIER</strong> <small>(fixed)</small></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Password</label>
+                                {{ form.password }}
+                                {{ form.password.errors }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'supplier_list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-success">Save Supplier</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

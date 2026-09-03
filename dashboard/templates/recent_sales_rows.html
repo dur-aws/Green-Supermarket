@@ -1,0 +1,10 @@
+{% for sale in sales %}
+<tr>
+    <td>{{ sale.invoice_number }}</td>
+    <td>{{ sale.customer.name|default:"Walk-in" }}</td>
+    <td>Rs {{ sale.total_amount }}</td>
+    <td>{{ sale.created_at|time:"H:i" }}</td>
+</tr>
+{% empty %}
+<tr><td colspan="4" class="dash-table-empty">No sales recorded today.</td></tr>
+{% endfor %}

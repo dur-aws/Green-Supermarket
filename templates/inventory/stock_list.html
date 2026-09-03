@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+<div class="container">
+    <div class="filter-bar">
+        <div class="search-box">
+            <span class="search-icon">&#128269;</span>
+            <input type="text" id="po-search" placeholder="Search by Invoice No or Supplier..." value="{{ query }}"
+                class="search-input" autocomplete="off" />
+        </div>
+        <div>
+            <a href="{% url 'po_list' %}" class="btn btn-primary">
+                &larr; Back to Purchases
+            </a>
+        </div>
+        
+    </div>
+    <!-- Summary Stat Strip -->
+    <div class="stat-strip">
+        <div class="stat-item">
+            <span class="stat-label">Total inventroy Batches:</span>
+            <strong id="showing-count">{{ batches|length }}</strong>
+        </div>
+    </div>
+
+
+    <!-- Stock Table Card -->
+    <div class="table-card">
+        <div class=table-responsive>
+            
+                <table class="data-table styled-table">
+                    <thead>
+                        <tr>
+                            <th>Batch #</th>
+                            <th>Product Variant</th>
+                            <th>Supplier</th>
+                            <th>MFG Date</th>
+                            <th>Harvest Date</th>
+                            <th>Expiry Date</th>
+                            <th>Unit Cost</th>
+                            <th>Received Qty</th>
+                            <th>Current Stock</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                     <tbody id="po-table-body">
+                        {% for batch in batches %}
+                        <tr>
+                            <td>
+                                <strong>{{ batch.batch_number }}</strong>
+                            </td>
+                            <td>
+                                {{ batch.variant.product.product_name }} - {{ batch.variant.variant_name }}
+                            </td>
+                           
+                            <td>{{ batch.supplier.supplier_name|default:"--" }}</td>
+                            <td>
+                                {{ batch.manufacture_date|date:"Y-m-d" }}
+                            </td>
+                            <td>
+                               {{ batch.harvest_date|date:"Y-m-d" }}
+                            </td>
+                            <td>
+                                {{ batch.expiry_date|date:"Y-m-d" }}
+                            </td>
+                            <td class="text-end">Rs. {{ batch.unit_cost_price|floatformat:2 }}</td>
+                            <td class="text-end">{{ batch.received_quantity|floatformat:3 }}</td>
+                            <td class="text-end fw-bold text-dark">
+                                {{ batch.current_quantity|floatformat:3 }}
+                            </td>
+                            <td class="text-center">
+                                {% if batch.batch_status == 'ACTIVE' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif batch.batch_status == 'EXHAUSTED' %}
+                                    <span class="badge bg-secondary">Exhausted</span>
+                                {% elif batch.batch_status == 'EXPIRED' %}
+                                    <span class="badge bg-danger">Expired</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">{{ batch.batch_status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-5">
+                                <i class="bi bi-box-seam display-6 d-block mb-2"></i>
+                                No active inventory batches found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

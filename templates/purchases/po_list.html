@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
+
+<div class="container">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="search-box">
+            <span class="search-icon">&#128269;</span>
+            <input type="text" id="po-search" placeholder="Search by Invoice No or Supplier..." value="{{ query }}"
+                class="search-input" autocomplete="off" />
+        </div>
+        <div class="filter-right">
+            <a href="{% url 'po_create' %}" class="btn btn-primary btn-add">+ Create PO</a>
+            <a href="#" class="btn btn-export">&#8595; Export</a>
+        </div>
+    </div>
+
+    <!-- Summary Stat Strip -->
+    <div class="stat-strip">
+        <div class="stat-item">
+            <span class="stat-label">Total Orders:</span>
+            <strong id="showing-count">{{ orders|length }}</strong>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="data-table styled-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Supplier</th>
+                        <th>Invoice No</th>
+                        <th>Order Date</th>
+                        <th>Subtotal (NPR)</th>
+                        <th>VAT (13%)</th>
+                        <th>TDS (1.5%)</th>
+                        <th>Net Payable</th>
+                        <th>Order Status</th>
+                        <th>Payment</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="po-table-body">
+                    {% include 'purchases/po_rows.html' %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("po-search");
+        const showingCountEl = document.getElementById("showing-count");
+        const tableBody = document.getElementById("po-table-body");
+
+        let debounceTimer = null;
+        const searchApiUrl = "{% url 'po_search' %}";
+
+        function runSearch() {
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) {
+                params.set('q', searchInput.value.trim());
+            }
+
+            fetch(searchApiUrl + '?' + params.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(function (res) {
+                return res.json();
+            })
+            .then(function (data) {
+                tableBody.innerHTML = data.rows_html;
+                showingCountEl.textContent = data.showing_count;
+            })
+            .catch(function (error) {
+                console.error("AJAX Search Error:", error);
+            });
+        }
+
+        searchInput.addEventListener("input", function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, 250);
+        });
+    });
+</script>
+{% endblock %}

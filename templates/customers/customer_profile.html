@@ -36,8 +36,8 @@
                     <td>{{ m.status }}</td>
                     <td>
                         {% if m.status == 'ACTIVE' %}
-                        <a href="{% url 'membership_update_status' m.pk 'EXPIRED' %}">Expire</a>
-                        <a href="{% url 'membership_update_status' m.pk 'CANCELLED' %}">Cancel</a>
+                        <form method="post" action="{% url 'membership_update_status' m.pk 'EXPIRED' %}" style="display: inline;">{% csrf_token %}<button type="submit">Expire</button></form>
+                        <form method="post" action="{% url 'membership_update_status' m.pk 'CANCELLED' %}" style="display: inline;">{% csrf_token %}<button type="submit">Cancel</button></form>
                         {% endif %}
                     </td>
                 </tr>

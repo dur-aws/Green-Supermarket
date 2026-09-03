@@ -1,13 +1,22 @@
 from django.urls import path
-from . import views
+from .views import (
+    SalesInvoiceView,
+    SalesInvoiceDetailView,
+    generate_fonepay_qr,
+    get_next_invoice_no,
+    product_search_api,
+    checkout_api,
+    SalesHistoryView
+)
 
 urlpatterns = [
-    path('', views.sales_invoice, name='sales_invoice'),
-    # path('product-search/', views.product_search, name='product_search'),
-    path('api/customer-search/', views.customer_search_api, name='sale_customer_search'),
-    path('checkout/', views.checkout_view, name='sale_checkout'),
-    path('history/', views.sale_history_view, name='sale_history'),
-    path('<int:pk>/', views.sale_detail_view, name='sale_detail'),
-    path('<int:pk>/invoice/', views.invoice_print_view, name='sale_invoice_print'),
-    path('<int:pk>/cancel/', views.sale_cancel_view, name='sale_cancel'),
+    path('invoice/', SalesInvoiceView.as_view(), name='sales_invoice'),
+    path('invoice/<int:sales_id>/', SalesInvoiceDetailView.as_view(), name='sale_detail'),
+    path('report/',SalesHistoryView.as_view(), name='sales_list'),
+    
+    # Internal JSON APIs consumed by saleinterface JavaScript
+    path('api/next-invoice-no/', get_next_invoice_no, name='sales_next_invoice_no'),
+    path('api/product-search/', product_search_api, name='sales_product_search'),
+    path('api/generate-fonepay-qr/', generate_fonepay_qr, name='fonepay_qr'),
+    path('api/checkout/', checkout_api, name='sales_checkout'),
 ]

@@ -1,11 +1,8 @@
 from django.urls import path
-from . import views
- 
+from .views import InventoryStockListView, StockAdjustmentCreateView, StockAdjustmentHistoryListView 
+
 urlpatterns = [
-    path('stock-in/', views.stock_in, name='stock_in'),
-    path('stock-out/', views.stock_out, name='stock_out'),
-    path('stock-adjustment/', views.stock_adjustment, name='stock_adjustment'),
-    path('stock-history/', views.stock_history, name='stock_history'),
-    path('low-stock/', views.low_stock_alerts, name='low_stock_alerts'),
+    path('', InventoryStockListView.as_view(), name='stock_list'),
+    path('batch/<int:batch_id>/adjust/', StockAdjustmentCreateView.as_view(), name='adjust_stock'),
+    path('adjustments/history/', StockAdjustmentHistoryListView.as_view(), name='adjustment_history'),
 ]
- 

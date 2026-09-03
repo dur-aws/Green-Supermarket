@@ -1,10 +1,8 @@
 {% load static %}
 
-<html>
-  <head>
-    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
-  </head>
-  <body>
+
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
+
     {% for uom in uoms %}
     <tr>
       <td class="mono">{{ uom.uom_id }}</td>
@@ -25,13 +23,10 @@
             title="Edit"
             >&#9998;</a
           >
-          <a
-            href="{% url 'uom_deactive' uom.uom_id %}"
-            class="action-link deactivate"
-            onclick="return confirm('Change status for {{ uom.unit_name }}?');"
-          >
-            {% if product.status == 1 %}deactive{% else %}Active{% endif %}
-          </a>
+          <form method="post" action="{% url 'uom_status' uom.uom_id %}" style="display: inline;" onsubmit="return confirm('Change status for {{ uom.unit_name|escapejs }}?');">
+            {% csrf_token %}
+            <button type="submit" class="action-link deactivate">Change status</button>
+          </form>
         </div>
       </td>
     </tr>

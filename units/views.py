@@ -121,7 +121,7 @@ class UnitOfMeasureToggleStatusView(RBACPermissionMixin, View):
     module_name = 'units'
     required_permission = 'edit'
 
-    def get(self, request, pk):
+    def post(self, request, pk):
         uom = get_object_or_404(UnitOfMeasure, pk=pk)
         uom.is_active = not uom.is_active
         uom.save()

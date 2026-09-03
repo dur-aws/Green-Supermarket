@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Details{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/accounts.css' %}">{% endblock %}
+
+{% block content %}
+<div class="container role-page">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">User account</p>
+            <h2>{{ user_obj.username }}</h2>
+            <p class="page-muted">Account details and access status.</p>
+        </div>
+        <a href="{% url 'user_list' %}" class="btn btn-export">Back to Users</a>
+    </div>
+    <div class="table-card profile-card">
+        <dl class="profile-list">
+            <dt>Username</dt><dd>{{ user_obj.username }}</dd>
+            <dt>Name</dt><dd>{{ user_obj.first_name }} {{ user_obj.last_name }}</dd>
+            <dt>Email</dt><dd>{{ user_obj.email }}</dd>
+            <dt>Phone</dt><dd>{{ user_obj.phone|default:'-' }}</dd>
+            <dt>Role</dt><dd>{{ user_obj.role.get_role_name_display|default:'-' }}</dd>
+            <dt>Account status</dt><dd>{% if user_obj.status == 1 and user_obj.is_active %}Active{% else %}Inactive{% endif %}</dd>
+            <dt>Staff access</dt><dd>{% if user_obj.is_staff %}Enabled{% else %}Disabled{% endif %}</dd>
+            <dt>Superuser access</dt><dd>{% if user_obj.is_superuser %}Enabled{% else %}Disabled{% endif %}</dd>
+        </dl>
+        <a href="{% url 'user_edit' user_obj.id %}" class="btn btn-primary btn-add">Edit User</a>
+    </div>
+</div>
+{% endblock %}

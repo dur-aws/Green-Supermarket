@@ -30,26 +30,30 @@ class Role(models.Model):
         return self.role_name
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, username, email, role_name, password=None, **extra_fields):
+    def create_user(self, username, email=None, password=None, role_name=None, **extra_fields):
         if not username:
             raise ValueError("The Username must be set")
         if not email:
             raise ValueError("The Email must be set")
-        if not role_name:
-            raise ValueError("The Role must be set")
 
         email = self.normalize_email(email)
-        user = self.model(username=username, email=email, role=role_name, **extra_fields)
+        user = self.model(username=username, email=email, **extra_fields)
+
+        if role_name:
+            user.role = role_name   # assuming role_name is a Role instance (FK)
+        
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, username, email, password=None, **extra_fields):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
 
-        return self.create_user(username, email, password, **extra_fields)
+        # force ADMIN role - all superusers to be ADMIN
+        admin_role = Role.objects.get(role_name="ADMIN")
+        return self.create_user(username, email, password=password, role_name=admin_role, **extra_fields)
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
@@ -81,8 +85,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
-
-    role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True)
 
     # Helper properties for ENUM checks
     @property

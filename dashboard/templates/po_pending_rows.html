@@ -1,0 +1,10 @@
+{% for po in orders %}
+<tr>
+    <td>{{ po.po_number|default:po.pk }}</td>
+    <td>{{ po.supplier.name }}</td>
+    <td>Rs {{ po.total_amount }}</td>
+    <td><span class="badge badge-blue">{{ po.status }}</span></td>
+</tr>
+{% empty %}
+<tr><td colspan="4" class="dash-table-empty">No pending purchase orders.</td></tr>
+{% endfor %}

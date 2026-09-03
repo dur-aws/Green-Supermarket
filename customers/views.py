@@ -100,6 +100,8 @@ def customer_edit(request, pk):
 # ---------- Deactivate (soft delete — keeps Sales history intact) ----------
 @login_required
 def customer_deactivate(request, pk):
+    if request.method != 'POST':
+        return redirect('customer_list')
     customer = get_object_or_404(Customer, pk=pk)
     customer.status = 'INACTIVE' if customer.status == 'ACTIVE' else 'ACTIVE'
     customer.save()
@@ -145,6 +147,10 @@ def membership_add(request, customer_id):
 # ---------- Membership: change status (expire/cancel) ----------
 @login_required
 def membership_update_status(request, pk, new_status):
+    if request.method != 'POST':
+        return redirect('customer_list')
+    if new_status not in {'ACTIVE', 'EXPIRED', 'CANCELLED'}:
+        return redirect('customer_list')
     membership = get_object_or_404(Membership, pk=pk)
     membership.status = new_status
     membership.save()

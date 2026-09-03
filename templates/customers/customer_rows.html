@@ -23,10 +23,12 @@
         <a href="{% url 'customer_profile' customer.pk %}" class="action-link view">View</a>
         <a href="{% url 'customer_edit' customer.pk %}" class="action-link edit">Edit</a>
         <a href="{% url 'membership_add' customer.pk %}" class="action-link membership">+ Membership</a>
-        <a href="{% url 'customer_deactivate' customer.pk %}" class="action-link deactivate"
-           onclick="return confirm('Change status for {{ customer.customer_name }}?');">
+          <form method="post" action="{% url 'customer_deactivate' customer.pk %}" style="display: inline;" onsubmit="return confirm('Change status for {{ customer.customer_name|escapejs }}?');">
+              {% csrf_token %}
+              <button type="submit" class="action-link deactivate">
            {% if customer.status == 'ACTIVE' %}Deactivate{% else %}Activate{% endif %}
-        </a>
+              </button>
+          </form>
     </td>
 </tr>
 {% empty %}

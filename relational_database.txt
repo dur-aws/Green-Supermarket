@@ -48,13 +48,13 @@ CREATE TABLE product (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
-CREATE TABLE inventory (
-    inventory_id INT PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE inventory_batch (
+    inventory_batch_id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT NOT NULL UNIQUE,
     quantity INT NOT NULL DEFAULT 0 CHECK (quantity >= 0),
     reorder_level INT NOT NULL DEFAULT 0 CHECK (reorder_level >= 0),
     last_updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_inventory_product FOREIGN KEY (product_id) REFERENCES product(product_id)
+    CONSTRAINT fk_inventory_batch_product FOREIGN KEY (product_id) REFERENCES product(product_id)
         ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

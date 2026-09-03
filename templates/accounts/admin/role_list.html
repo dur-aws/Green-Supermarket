@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Roles{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/accounts.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container role-page">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Settings</p>
+            <h2>Roles &amp; permissions</h2>
+            <p class="page-muted">Manage module access for every account role.</p>
+        </div>
+        <a href="{% url 'user_list' %}" class="btn btn-export">View Users</a>
+    </div>
+
+    <div class="role-grid">
+        {% for role in roles %}
+        <article class="role-card">
+            <div class="role-card-heading">
+                <div class="role-mark"><i class="fa-solid fa-shield-halved"></i></div>
+                <div>
+                    <h3>{{ role.get_role_name_display }}</h3>
+                    <span class="role-code">{{ role.role_name }}</span>
+                </div>
+            </div>
+            <p class="role-user-count"><strong>{{ role.user_count }}</strong> assigned user{{ role.user_count|pluralize }}</p>
+            <div class="role-card-actions">
+                <a href="{% url 'manage_role_permissions' role.role_id %}" class="btn btn-primary btn-add">
+                    <i class="fa-solid fa-key"></i> Check permissions
+                </a>
+                <a href="{% url 'user_list' %}?role={{ role.role_name }}" class="btn btn-export">
+                    <i class="fa-solid fa-users"></i> View users
+                </a>
+            </div>
+        </article>
+        {% empty %}
+        <p class="page-muted">No roles have been configured.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %} Users {% endblock %}
+{% block content %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+{% endblock %}
+
+<div class="container">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="search-box">
+            <span class="search-icon">&#128269;</span>
+            <input type="text" id="user-search" placeholder="Search by name or email..." value="{{ query|default:'' }}"
+                class="search-input" autocomplete="off">
+        </div>
+        <select id="role-filter" class="filter-select">
+            <option value="">All Roles</option>
+            {% for role in roles %}
+            <option value="{{ role.role_id }}" {% if selected_role == role.role_id|stringformat:"s" %} selected {% endif %}>
+                {{ role.role_name }}
+            </option>
+            {% endfor %}
+        </select>
+
+
+
+        <div class="filter-right">
+            <span class="showing-text">Showing <strong>{{ users|length }}</strong> accounts</span>
+            <a href="{% url 'user_create' %}" class="btn btn-primary btn-add">+ Add User</a>
+        </div>
+</div>
+        <!-- Stat Strip -->
+        <div class="stat-strip">
+            <div class="stat-item">
+                <span class="stat-label">Total Users:</span>
+                <span class="stat-green">{{ users.paginator.count|default:users|length }}</span>
+            </div>
+        </div>
+
+    <!-- Styled Table Card -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class=" data-table styled-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Email </th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="user-table-body">
+                    {% include 'accounts/admin/user_rows.html' %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function confirmDelete(username) {
+        return confirm("⚠️ Are you sure you want to delete user '" + username + "'?");
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const searchInput = document.getElementById("user-search");
+        const userFilter = document.getElementById("role-filter");
+        const tableBody = document.getElementById("user-table-body");
+        const showingCountEl = document.getElementById("showing-count");
+        const totalCountEl = document.getElementById("total-count");
+
+        let debounceTimer = null;
+        const searchApiUrl = "{% url 'user_search' %}";
+
+        function runSearch() {
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) params.set('q', searchInput.value.trim());
+            if (userFilter.value) params.set('role', userFilter.value);
+
+
+            fetch(searchApiUrl + '?' + params.toString())
+                .then(function (res) {return res.json();})
+                .then(function (data) {
+                    tableBody.innerHTML = data.rows_html;
+                    showingCountEl.textContent = data.showing_count;
+                    totalCountEl.textContent = data.total_filtered;
+                })
+                .catch(function () {
+                    // Keep table as-is on network error
+                });
+        }
+
+
+        // Debounce typing input search
+        searchInput.addEventListener("input", function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, 250);
+        });
+
+        // Dropdown filters trigger search immediately
+        userFilter.addEventListener("change", runSearch);
+        stockFilter.addEventListener("change", runSearch);
+
+    });
+</script>
+{% endblock %}

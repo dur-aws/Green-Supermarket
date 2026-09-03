@@ -2,33 +2,13 @@
 {% load static %}
 
 {% block title %}Product and Stocks{% endblock %}
-{% block content %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product and Stocks</title>
-    {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/products.css' %}" />
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
 {% endblock %}
-</head>
-<body>
 
+{% block content %}
 <div class="container">
-
-    <!-- Flash Messages -->
-    {% if messages %}
-        <div class="messages-wrapper">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
 
     <!-- Filter Bar -->
     <div class="filter-bar">
@@ -38,7 +18,7 @@
                 type="text"
                 id="product-search"
                 placeholder="Search by name or code..."
-                value="{{ query }}"
+                value="{{ query|default:'' }}"
                 class="search-input"
                 autocomplete="off"
             />
@@ -54,19 +34,19 @@
                 {% endfor %}
             </select>
 
-            <select id="stock-filter" class="filter-select">
+            <select id="stock-filter" name="stock_status" class="filter-select" onchange="this.form.submit()">
                 <option value="">All Stock Status</option>
                 <option value="active" {% if selected_stock_status == "active" %}selected{% endif %}>Active</option>
                 <option value="low-stock" {% if selected_stock_status == "low-stock" %}selected{% endif %}>Low Stock</option>
                 <option value="out-of-stock" {% if selected_stock_status == "out-of-stock" %}selected{% endif %}>Out of Stock</option>
-                <option value="disabled" {% if selected_stock_status == "disabled" %}selected{% endif %}>Disabled</option>
+                <option value="disable" {% if selected_stock_status == "disable" %}selected{% endif %}>Disabled</option>
             </select>
         </div>
 
         <div class="filter-right">
             <span class="showing-text">
                 Showing <strong id="showing-count">{{ products|length }}</strong>
-                of <strong id="total-count">{{ total_filtered }}</strong> products
+                of <strong id="total-count">{{ total_filtered|default:products|length }}</strong> products
             </span>
             <a href="{% url 'product_add' %}" class="btn btn-primary btn-add">+ Add Product</a>
             <a href="#" class="btn btn-export">&#8595; Export</a>
@@ -77,22 +57,22 @@
     <div class="stat-strip">
         <div class="stat-item">
             <span class="stat-label">Total Products:</span>
-            <strong id="stat-total">{{ stats.total }}</strong>
+            <strong id="stat-total">{{ stats.total|default:0 }}</strong>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
             <span class="stat-label">Active:</span>
-            <strong class="stat-green" id="stat-active">{{ stats.active }}</strong>
+            <strong class="stat-green" id="stat-active">{{ stats.active|default:0 }}</strong>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
             <span class="stat-label">Low Stock:</span>
-            <strong class="stat-orange" id="stat-low">{{ stats.low_stock }}</strong>
+            <strong class="stat-orange" id="stat-low">{{ stats.low_stock|default:0 }}</strong>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
             <span class="stat-label">Out of Stock:</span>
-            <strong class="stat-red" id="stat-out">{{ stats.out_of_stock }}</strong>
+            <strong class="stat-red" id="stat-out">{{ stats.out_of_stock|default:0 }}</strong>
         </div>
     </div>
 
@@ -103,15 +83,17 @@
                 <thead>
                     <tr>
                         <th>Code</th>
-                        <th>Product Name</th>
+                        <th>Name</th>
+                        <th>SKU</th>
                         <th>Category</th>
                         <th>Brand</th>
-                        <th>Unit</th>
+                        <th>UOM</th>
                         <th>Stock</th>
                         <th>Reorder</th>
-                        <th>Purchase Rs</th>
-                        <th>Sale Rs</th>
+                        <th>Cost NPR</th>
+                        <th>Sale NPR</th>
                         <th>VAT %</th>
+                        <th>ABC</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -127,26 +109,23 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
- 
+
     const searchInput = document.getElementById("product-search");
     const categoryFilter = document.getElementById("category-filter");
     const stockFilter = document.getElementById("stock-filter");
     const tableBody = document.getElementById("product-table-body");
     const showingCountEl = document.getElementById("showing-count");
     const totalCountEl = document.getElementById("total-count");
- 
-    // stat strip stays global (all products), doesn't need to refresh
-    // per-filter — matches the dashboard-style overview behaviour.
- 
+
     let debounceTimer = null;
     const searchApiUrl = "{% url 'product_search' %}";
- 
+
     function runSearch() {
         const params = new URLSearchParams();
         if (searchInput.value.trim()) params.set('q', searchInput.value.trim());
         if (categoryFilter.value) params.set('category', categoryFilter.value);
         if (stockFilter.value) params.set('stock_status', stockFilter.value);
- 
+
         fetch(searchApiUrl + '?' + params.toString())
             .then(function (res) { return res.json(); })
             .then(function (data) {
@@ -155,27 +134,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 totalCountEl.textContent = data.total_filtered;
             })
             .catch(function () {
-                // network hiccup — leave the current table as-is rather
-                // than wiping it out on a failed request
+                // Keep table as-is on network error
             });
     }
- 
-    // Live search: fires on every keystroke, debounced so a fast typer
-    // doesn't fire 10 requests per second. No search button needed —
-    // typing "a" alone already triggers a search.
+
+    // Debounce typing input search
     searchInput.addEventListener("input", function () {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(runSearch, 250);
     });
- 
-    // Dropdown filters apply instantly, no debounce needed (one event per choice)
+
+    // Dropdown filters trigger search immediately
     categoryFilter.addEventListener("change", runSearch);
     stockFilter.addEventListener("change", runSearch);
- 
+
 });
 </script>
-
-
-</body>
-</html>
-{% endblock  %}
+{% endblock %}

@@ -1,0 +1,12 @@
+asgiref==3.12.1
+bikram-sambat==0.2.0
+Django==6.1
+html5lib==1.1
+nepali-datetime==1.0.8.5
+pillow==12.3.0
+PyMySQL==1.2.0
+pytz==2026.3.post1
+six==1.17.0
+sqlparse==0.5.5
+tzdata==2026.3
+webencodings==0.5.1

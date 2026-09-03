@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/accounts.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container role-page">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Role access</p>
+            <h2>Permissions for <strong>{{ role.get_role_name_display }}</strong></h2>
+            <p class="page-muted">Choose which actions this role can perform in each module.</p>
+        </div>
+        <a href="{% url 'role_list' %}" class="btn btn-export">Back to Roles</a>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="table-card role-permission-table">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>Module Name</th>
+                    <th>Can View</th>
+                    <th>Can Add</th>
+                    <th>Can Edit</th>
+                    <th>Can Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for perm in permissions %}
+                <tr>
+                    <td><strong>{{ perm.get_module_name_display }}</strong></td>
+                    <td><input type="checkbox" name="can_view_{{ perm.id }}" {% if perm.can_view %}checked{% endif %}></td>
+                    <td><input type="checkbox" name="can_add_{{ perm.id }}" {% if perm.can_add %}checked{% endif %}></td>
+                    <td><input type="checkbox" name="can_edit_{{ perm.id }}" {% if perm.can_edit %}checked{% endif %}></td>
+                    <td><input type="checkbox" name="can_delete_{{ perm.id }}" {% if perm.can_delete %}checked{% endif %}></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="role-actions">
+            <a href="{% url 'role_list' %}" class="btn btn-export">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-add">Save Permissions</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,22 +1,209 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard - Green Supermarket{% endblock %}
 
-{% block dashboard_active %}active{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="content" id="content">
-    <!-- widget cards injected by dashboard.js -->
+<div class="page-wrap dashboard-page">
+
+    <div class="dashboard-topbar">
+        <div>
+            <h1 class="dashboard-title">Dashboard</h1>
+            <p class="dashboard-subtitle" id="dashLastUpdated">Loading latest data…</p>
+        </div>
+        <button type="button" class="btn btn-clear" id="dashRefreshBtn">
+            <span class="refresh-icon" aria-hidden="true">&#8635;</span> Refresh
+        </button>
+    </div>
+
+    <!-- ============ KPI STRIP ============ -->
+    <div class="stat-strip" id="kpiStrip">
+
+        <div class="stat-card" data-stat="today_sales">
+            <div class="stat-icon stat-icon-green">Rs</div>
+            <div class="stat-body">
+                <span class="stat-label">Today's Sales</span>
+                <span class="stat-value">Rs {{ today_sales|default:"0.00" }}</span>
+                <span class="stat-delta" data-delta></span>
+            </div>
+        </div>
+
+        <div class="stat-card" data-stat="invoices_today">
+            <div class="stat-icon stat-icon-blue">#</div>
+            <div class="stat-body">
+                <span class="stat-label">Invoices Today</span>
+                <span class="stat-value">{{ invoices_today|default:"0" }}</span>
+                <span class="stat-delta" data-delta></span>
+            </div>
+        </div>
+
+        <div class="stat-card" data-stat="net_profit">
+            <div class="stat-icon stat-icon-teal">&#9650;</div>
+            <div class="stat-body">
+                <span class="stat-label">Net Profit (Today)</span>
+                <span class="stat-value">Rs {{ net_profit|default:"0.00" }}</span>
+                <span class="stat-delta" data-delta></span>
+            </div>
+        </div>
+
+        <div class="stat-card" data-stat="total_products">
+            <div class="stat-icon stat-icon-purple">&#9633;</div>
+            <div class="stat-body">
+                <span class="stat-label">Total Products</span>
+                <span class="stat-value">{{ total_products|default:"0" }}</span>
+                <a href="{% url 'product_list' %}" class="stat-link">View all &rarr;</a>
+            </div>
+        </div>
+
+        <div class="stat-card stat-card-alert" data-stat="low_stock_count">
+            <div class="stat-icon stat-icon-amber">!</div>
+            <div class="stat-body">
+                <span class="stat-label">Low Stock Items</span>
+                <span class="stat-value">{{ low_stock_count|default:"0" }}</span>
+                <a href="{% url 'stock_list' %}?filter=low" class="stat-link">View all &rarr;</a>
+            </div>
+        </div>
+
+        <div class="stat-card" data-stat="total_customers">
+            <div class="stat-icon stat-icon-pink">&#9787;</div>
+            <div class="stat-body">
+                <span class="stat-label">Total Customers</span>
+                <span class="stat-value">{{ total_customers|default:"0" }}</span>
+                <a href="{% url 'customer_list' %}" class="stat-link">View all &rarr;</a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============ CHART ROW ============ -->
+    <div class="dashboard-grid">
+
+        <div class="form-card chart-card">
+            <div class="card-head">
+                <div class="card-head-text">
+                    <h2 class="card-title" id="salesTrendTitle">MONTHLY SALES (Rs. THOUSANDS)</h2>
+                    <span class="sales-trend-subtitle" id="salesTrendSubtitle">Baisakh - Chaitra</span>
+                </div>
+                <div class="filter-bar filter-bar-compact">
+                    <button type="button" class="btn btn-clear period-btn is-active" data-period="weekly">Weekly</button>
+                    <button type="button" class="btn btn-clear period-btn" data-period="monthly">Monthly</button>
+                </div>
+            </div>
+
+            <!-- Custom bar chart — bars are injected here by dashboard.js -->
+            <div class="bar-chart-container" id="barChartContainer">
+                <div class="bar-list-empty">Loading chart…</div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <div class="card-head">
+                <h2 class="card-title">Sales by Category</h2>
+                <a href="{% url 'category_list' %}" class="card-link">View all &rarr;</a>
+            </div>
+            <ul class="bar-list" id="topCategoriesList">
+                <li class="bar-list-empty">Loading…</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- ============ RECENT SALES / LOW STOCK ============ -->
+    <div class="dashboard-grid two-col">
+
+        <div class="form-card">
+            <div class="card-head">
+                <h2 class="card-title">Recent Sales</h2>
+                <a href="{% url 'sales_list' %}" class="card-link">View all &rarr;</a>
+            </div>
+            <div class="table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentSalesRows">
+                        <tr><td colspan="4" class="dash-table-empty">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <div class="card-head">
+                <h2 class="card-title">Low Stock Alerts</h2>
+                <div class="card-head-links">
+                    <a href="{% url 'product_list' %}?stock_status=low-stock" class="card-link">Low stock</a>
+                    <a href="{% url 'product_list' %}?stock_status=out-of-stock" class="card-link">Out of stock</a>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Current</th>
+                            <th>Reorder Level</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="lowStockRows">
+                        <tr><td colspan="4" class="dash-table-empty">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============ PENDING POs / TOP SELLING PRODUCTS ============ -->
+    <div class="dashboard-grid two-col">
+
+        <div class="form-card">
+            <div class="card-head">
+                <h2 class="card-title">Pending Purchase Orders</h2>
+                <a href="{% url 'po_list' %}?status=pending" class="card-link">View all &rarr;</a>
+            </div>
+            <div class="table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>PO #</th>
+                            <th>Supplier</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingPoRows">
+                        <tr><td colspan="4" class="dash-table-empty">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <div class="card-head">
+                <h2 class="card-title">Top Selling Products</h2>
+                <a href="{% url 'product_list' %}" class="card-link">View all &rarr;</a>
+            </div>
+            <ul class="bar-list" id="topProductsList">
+                <li class="bar-list-empty">Loading…</li>
+            </ul>
+        </div>
+
+    </div>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // Tells dashboard.js "this page owns #content — auto-load the
-    // widget cards here." Other pages that extend base.html should
-    // NOT set this, so their own content is never overwritten.
-    window.isDashboardPage = true;
-</script>
-{{ block.super }}
+<script src="{% static 'js/dashboard.js' %}"></script>
 {% endblock %}

@@ -396,6 +396,74 @@
   background-color: #166534;
 }
 
+.search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            max-height: 180px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .search-dropdown-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .search-dropdown-item:hover {
+            background-color: #eef7f2;
+            color: #15803d;
+        }
+
+        .tbl-input {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .tbl-input:focus {
+            outline: none;
+            border-color: #15803d;
+        }
+
+        .row-p {
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+
+        .row-l {
+            font-weight: 600;
+            color: #4b5563;
+            background-color: #f8fafc;
+        }
+
+        .subtotal-grid-row {
+            font-weight: 700;
+            background-color: #f1f5f9;
+        }
+
+        .text-right-bold {
+            text-align: right;
+            font-weight: 700;
+        }
+
+        
 /* Mobile Adjustments */
 @media (max-width: 992px) {
   .invoice-meta-grid {

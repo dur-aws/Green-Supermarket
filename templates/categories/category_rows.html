@@ -1,10 +1,8 @@
+  
 {% load static %}
+<div class="container">
 
-<html>
-  <head>
-    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
-  </head>
-  <body>
+    <link rel="stylesheet" href="{% static 'css/master.css' %}" />
     {% for cat in categories %}
     <tr>
       <td class="mono">{{ cat.category_id }}</td>
@@ -38,6 +36,10 @@
             &#9998;
 
             </a>
+          <form method="post" action="{% url 'category_status' cat.category_id %}" style="display: inline;" onsubmit="return confirm('Change status for {{ cat.category_name|escapejs }}?');">
+            {% csrf_token %}
+            <button type="submit" class="action-link deactivate">Change status</button>
+          </form>
         </div>
       </td>
     </tr>
@@ -45,6 +47,5 @@
     <tr>
       <td colspan="11" class="empty-row">No categories found.</td>
     </tr>
-    {% endfor %}
-  </body>
-</html>
+  </div>
+  {% endfor %}

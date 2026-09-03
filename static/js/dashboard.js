@@ -206,90 +206,9 @@ document.addEventListener("DOMContentLoaded", function () {
     /* ============================================================
        3. CONTENT: widget cards — ONLY runs on the dashboard page
        ============================================================ */
-    const moduleWidgets = {
-        dashboard: [
-            { id: "w-today-sales", label: "TODAY'S SALES", endpoint: "/api/dashboard/today-sales/",
-              demo: { value: "₹ 48,320", sub: "+12.4% vs yesterday" } },
-            { id: "w-total-products", label: "TOTAL PRODUCTS", endpoint: "/api/dashboard/total-products/",
-              demo: { value: "2,847", sub: "34 low stock alerts" } },
-            { id: "w-invoices-today", label: "INVOICES TODAY", endpoint: "/api/dashboard/invoices-today/",
-              demo: { value: "163", sub: "12 pending payment" } },
-            { id: "w-net-profit", label: "NET PROFIT (MONTH)", endpoint: "/api/dashboard/net-profit/",
-              demo: { value: "₹ 1,24,580", sub: "Target: ₹ 1,50,000" } },
-            { id: "w-top-categories", label: "TOP CATEGORIES", endpoint: "/api/dashboard/top-categories/",
-              span2: true, isBarList: true,
-              demo: { items: [
-                  { name: "Biscuits & Cookies", count: 842, pct: 90 },
-                  { name: "Beverages", count: 634, pct: 70 },
-                  { name: "Dairy Products", count: 521, pct: 58 },
-                  { name: "Personal Care", count: 410, pct: 46 }
-              ] } }
-        ]
-    };
+   
 
-    function renderWidgetCard(widget) {
-        const card = document.createElement("div");
-        card.className = "widget-card" + (widget.span2 ? " span-2" : "");
-        card.id = widget.id;
-        card.innerHTML =
-            '<div class="w-label">' + widget.label + '</div>' +
-            '<div class="w-loading">Loading...</div>';
-        return card;
-    }
-
-    function renderModule(moduleKey) {
-        const contentEl = document.getElementById("content");
-        if (!contentEl) return;
-
-        const widgets = moduleWidgets[moduleKey];
-        contentEl.innerHTML = "";
-
-        if (!widgets) {
-            contentEl.innerHTML = '<div class="widget-card span-2"><div class="w-label">' +
-                moduleKey.toUpperCase().replace(/-/g, " ") +
-                '</div><div class="w-sub">This module\'s widgets are not configured yet.</div></div>';
-            return;
-        }
-
-        widgets.forEach(function (widget) {
-            const card = renderWidgetCard(widget);
-            contentEl.appendChild(card);
-            loadWidgetData(widget, card);
-        });
-    }
-
-    function loadWidgetData(widget, card) {
-        fetch(widget.endpoint)
-            .then(function (res) {
-                if (!res.ok) throw new Error("API not ready");
-                return res.json();
-            })
-            .then(function (data) {
-                renderWidgetContent(widget, card, data);
-            })
-            .catch(function () {
-                renderWidgetContent(widget, card, widget.demo);
-            });
-    }
-
-    function renderWidgetContent(widget, card, data) {
-        if (widget.isBarList) {
-            let html = '<div class="w-label">' + widget.label + '</div>';
-            data.items.forEach(function (item) {
-                html +=
-                    '<div class="bar-row"><span>' + item.name + '</span>' +
-                    '<span class="w-sub">' + item.count + ' sold</span></div>' +
-                    '<div class="bar-track"><div class="bar-fill" style="width:' + item.pct + '%;"></div></div>';
-            });
-            card.innerHTML = html;
-        } else {
-            card.innerHTML =
-                '<div class="w-label">' + widget.label + '</div>' +
-                '<div class="w-value">' + data.value + '</div>' +
-                '<div class="w-sub">' + data.sub + '</div>';
-        }
-    }
-
+    
     function loadModule(moduleKey) {
         renderModule(moduleKey);
     }
@@ -300,3 +219,347 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 });
+/* ==========================================================
+   dashboard.js
+   Vanilla JS, MPA-friendly. Pulls live numbers from the
+   dashboard app's JSON/partial endpoints and refreshes them
+   on an interval, matching the project's existing AJAX
+   pattern (JSON for numbers, rendered HTML for row lists).
+   ========================================================== */
+
+(function () {
+    "use strict";
+
+    const ENDPOINTS = {
+        kpis: "/dashboard/api/kpis/",
+        salesTrend: "/dashboard/api/sales-trend/",
+        topCategories: "/dashboard/api/top-categories/",
+        recentSales: "/dashboard/api/recent-sales/",
+        lowStock: "/dashboard/api/low-stock/",
+        pendingPO: "/dashboard/api/pending-po/",
+        topProducts: "/dashboard/api/top-products/",
+    };
+
+    const REFRESH_MS = 60000; // auto-refresh every 60s
+    let currentPeriod = "weekly";
+    let salesChart = null;
+
+    function fmtMoney(n) {
+        const num = Number(n || 0);
+        return "Rs " + num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function setLastUpdated() {
+        const el = document.getElementById("dashLastUpdated");
+        if (!el) return;
+        const now = new Date();
+        el.textContent = "Last updated at " + now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    async function getJSON(url) {
+        const res = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+        if (!res.ok) throw new Error("Request failed: " + url);
+        return res.json();
+    }
+
+    async function getHTML(url) {
+        const res = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+        if (!res.ok) throw new Error("Request failed: " + url);
+        return res.text();
+    }
+
+    /* ---------------- KPI strip ---------------- */
+    function renderDelta(el, pct) {
+        if (pct === null || pct === undefined || isNaN(pct)) {
+            el.textContent = "";
+            el.className = "stat-delta";
+            return;
+        }
+        const rounded = Math.round(pct * 10) / 10;
+        el.textContent = (rounded >= 0 ? "▲ " : "▼ ") + Math.abs(rounded) + "% vs yesterday";
+        el.className = "stat-delta " + (rounded >= 0 ? "up" : "down");
+    }
+
+    async function loadKpis() {
+        const strip = document.getElementById("kpiStrip");
+        if (!strip) return;
+        strip.querySelectorAll(".stat-card").forEach((c) => c.classList.add("is-loading"));
+        try {
+            const data = await getJSON(ENDPOINTS.kpis);
+
+            setStat("today_sales", fmtMoney(data.today_sales), data.today_sales_change_pct);
+            setStat("invoices_today", data.invoices_today, data.invoices_change_pct);
+            setStat("net_profit", fmtMoney(data.net_profit), data.net_profit_change_pct);
+            setStat("total_products", data.total_products);
+            setStat("low_stock_count", data.low_stock_count);
+            setStat("total_customers", data.total_customers);
+
+            setLastUpdated();
+        } catch (err) {
+            console.error("KPI load failed:", err);
+        } finally {
+            strip.querySelectorAll(".stat-card").forEach((c) => c.classList.remove("is-loading"));
+        }
+    }
+
+    function setStat(key, value, deltaPct) {
+        const card = document.querySelector('.stat-card[data-stat="' + key + '"]');
+        if (!card) return;
+        const valueEl = card.querySelector(".stat-value");
+        if (valueEl) valueEl.textContent = typeof value === "number" ? value.toLocaleString() : value;
+        const deltaEl = card.querySelector("[data-delta]");
+        if (deltaEl && deltaPct !== undefined) renderDelta(deltaEl, deltaPct);
+    }
+//---------- SALES TRENDS/ SALES DAYBYDAY
+    async function loadSalesTrend(period) {
+    try {
+        const data = await getJSON(
+            ENDPOINTS.salesTrend + "?period=" + period
+        );
+
+        const container =
+            document.getElementById("barChartContainer");
+
+        const titleEl =
+            document.getElementById("salesTrendTitle");
+
+        const subtitleEl =
+            document.getElementById("salesTrendSubtitle");
+
+        if (!container) return;
+
+
+        // ==========================================
+        // UPDATE TITLE
+        // ==========================================
+
+        if (period === "weekly") {
+
+            titleEl.innerText =
+                "WEEKLY SALES (Rs. THOUSANDS)";
+
+            subtitleEl.innerText =
+                "Last 7 Days";
+
+        } else {
+
+            titleEl.innerText =
+                "MONTHLY SALES (Rs. THOUSANDS)";
+
+            subtitleEl.innerText =
+                "Baisakh - Chaitra";
+        }
+
+
+        // ==========================================
+        // FIND MAX VALUE
+        // ==========================================
+
+        const maxVal =
+            Math.max(...data.values, 1);
+
+
+        // ==========================================
+        // CLEAR OLD BARS
+        // ==========================================
+
+        container.innerHTML = "";
+
+
+        // ==========================================
+        // CREATE BARS
+        // ==========================================
+
+        data.labels.forEach((label, index) => {
+
+            const rawVal =
+                Number(data.values[index] || 0);
+
+
+            // Format displayed value
+            const displayVal =
+                rawVal >= 1000
+                    ? rawVal.toLocaleString()
+                    : rawVal.toFixed(0);
+
+
+            // Calculate bar height
+            const fillHeight =
+                (rawVal / maxVal) * 100;
+
+
+            // Last item = current day/month
+            const isLastItem =
+                index === data.labels.length - 1;
+
+
+            // Create bar item
+            const itemDiv =
+                document.createElement("div");
+
+
+            itemDiv.className =
+                `bar-item ${isLastItem ? "is-current" : ""}`;
+
+
+            // Store value for CSS
+            itemDiv.dataset.value =
+                rawVal;
+
+
+            // Create HTML
+            itemDiv.innerHTML = `
+                <span class="bar-value">
+                    ${displayVal}
+                </span>
+
+                <div class="bar-track">
+                    <div
+                        class="bar-fill"
+                        style="height: ${fillHeight}%;">
+                    </div>
+                </div>
+
+                <span class="bar-label">
+                    ${label}
+                </span>
+            `;
+
+
+            // IMPORTANT:
+            // Add the generated bar to the chart
+            container.appendChild(itemDiv);
+
+        });
+
+
+    } catch (err) {
+
+        console.error(
+            "Sales trend load failed:",
+            err
+        );
+
+    }
+}
+
+    function initPeriodToggle() {
+        const buttons = document.querySelectorAll(".period-btn");
+        buttons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                buttons.forEach((b) => b.classList.remove("is-active"));
+                btn.classList.add("is-active");
+                currentPeriod = btn.dataset.period;
+                loadSalesTrend(currentPeriod);
+            });
+        });
+    }
+
+
+    /* ---------------- Top categories (bar list) ---------------- */
+    async function loadTopCategories() {
+        const list = document.getElementById("topCategoriesList");
+        if (!list) return;
+        try {
+            const data = await getJSON(ENDPOINTS.topCategories);
+            if (!data.length) {
+                list.innerHTML = '<li class="bar-list-empty">No sales recorded yet.</li>';
+                return;
+            }
+            list.innerHTML = data
+                .map(
+                    (cat) => `
+                <li class="bar-list-item">
+                    <div class="bar-list-row">
+                        <span class="bar-list-name">${escapeHtml(cat.name)}</span>
+                        <span class="bar-list-value">${fmtMoney(cat.total_sales)} · ${cat.pct}%</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" style="width:${cat.pct}%"></div></div>
+                </li>`
+                )
+                .join("");
+        } catch (err) {
+            list.innerHTML = '<li class="bar-list-empty">Could not load categories.</li>';
+            console.error(err);
+        }
+    }
+
+    /* ---------------- Top products (bar list) ---------------- */
+    async function loadTopProducts() {
+        const list = document.getElementById("topProductsList");
+        if (!list) return;
+        try {
+            const data = await getJSON(ENDPOINTS.topProducts);
+            if (!data.length) {
+                list.innerHTML = '<li class="bar-list-empty">No sales recorded yet.</li>';
+                return;
+            }
+            list.innerHTML = data
+                .map(
+                    (p) => `
+                <li class="bar-list-item">
+                    <div class="bar-list-row">
+                        <span class="bar-list-name">${escapeHtml(p.name)}</span>
+                        <span class="bar-list-value">${p.units_sold} units</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" style="width:${p.pct}%"></div></div>
+                </li>`
+                )
+                .join("");
+        } catch (err) {
+            list.innerHTML = '<li class="bar-list-empty">Could not load products.</li>';
+            console.error(err);
+        }
+    }
+
+    /* ---------------- Row-partial widgets (server-rendered HTML) ---------------- */
+    async function loadPartial(endpoint, targetId, emptyColspan) {
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        try {
+            const html = await getHTML(endpoint);
+            target.innerHTML = html && html.trim() ? html : rowEmpty(emptyColspan, "Nothing to show.");
+        } catch (err) {
+            target.innerHTML = rowEmpty(emptyColspan, "Could not load data.");
+            console.error(err);
+        }
+    }
+
+    function rowEmpty(colspan, text) {
+        return `<tr><td colspan="${colspan}" class="dash-table-empty">${text}</td></tr>`;
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    /* ---------------- Refresh orchestration ---------------- */
+    function refreshAll() {
+        loadKpis();
+        loadSalesTrend(currentPeriod);
+        loadTopCategories();
+        loadTopProducts();
+        loadPartial(ENDPOINTS.recentSales, "recentSalesRows", 4);
+        loadPartial(ENDPOINTS.lowStock, "lowStockRows", 4);
+        loadPartial(ENDPOINTS.pendingPO, "pendingPoRows", 4);
+    }
+
+    function initRefreshButton() {
+        const btn = document.getElementById("dashRefreshBtn");
+        if (!btn) return;
+        btn.addEventListener("click", () => {
+            btn.classList.add("is-spinning");
+            refreshAll();
+            setTimeout(() => btn.classList.remove("is-spinning"), 600);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        initPeriodToggle();
+        initRefreshButton();
+        refreshAll();
+        setInterval(refreshAll, REFRESH_MS);
+    });
+})();

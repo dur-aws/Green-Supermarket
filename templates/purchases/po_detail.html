@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
+
+<div class="container">
+    <!-- Action Header -->
+    <div class="po-header ">
+        <div>
+            <h2>Purchase Order Details (PO-{{ order.purchase_id }})</h2>
+            <span class="badge {% if order.order_status == 'RECEIVED' %}bg-success{% elif order.order_status == 'PENDING' %}bg-warning text-dark{% else %}bg-danger{% endif %} fs-6">
+                Status: {{ order.get_order_status_display|default:order.order_status }}
+            </span>
+            <span class="badge {% if order.payment_status == 'PAID' %}bg-success{% elif order.payment_status == 'PARTIAL' %}bg-info text-dark{% else %}bg-secondary{% endif %} fs-6 ms-2">
+                Payment: {{ order.get_payment_status_display|default:order.payment_status }}
+            </span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'po_list' %}" class="btn btn-secondary">Back to List</a>
+            <a href="{% url 'po_update' order.purchase_id %}" class="btn btn-primary">&#9998; </a>
+            <button onclick="window.print()" class="btn btn-outline-dark">&#128438; </button>
+        </div>
+    </div>
+
+    <!-- Header Metadata Info Card -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Supplier & Order Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <strong>Supplier Name:</strong>
+                    <p class="mb-0 text-muted fs-5">{{ order.supplier.supplier_name }}</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>Invoice / Bill Number:</strong>
+                    <p class="mb-0 text-muted">{{order.invoice_number|default:"N/A" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>Order Date:</strong>
+                    <p class="mb-0 text-muted">{{ order.order_date|date:"Y-m-d" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>Delivery Date:</strong>
+                    <p class="mb-0 text-muted">{{ order.delivery_date|date:"Y-m-d"|default:"Not set" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>Received Date (GRN):</strong>
+                    <p class="mb-0 text-muted">{{ order.received_date|date:"Y-m-d"|default:"Not Received Yet" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <strong>Received By User:</strong>
+                    <p class="mb-0 text-muted">{{ order.received_by_user.get_full_name|default:order.received_by_user.username }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Detail Table -->
+    <div class="card shadow-sm mb-4">
+        
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="data-table styled-table">
+                    <thead>
+                        <tr>
+                            <th>code</th>
+                           
+                            <th>Variant</th>
+                            <th>Ordered Qty</th>
+                            <th>Agreed Price</th>
+                            
+                            <th>Taxable</th>
+                            <th>Received Qty</th>
+                            <th>Actual Price</th>
+                            <th>MFG Date</th>
+                            <th>Harvest Date</th>
+                            <th>Expiry Date</th>
+                            <th class="text-end">Subtotal (NPR)</th>
+                        </tr>
+                    </thead>
+                    <tbody id ="po-table-body">
+                        {% for item in order.purchasedetail_set.all %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            
+                            <td>{{ item.variant }}</td>
+                            <td>{{ item.ordered_quantity|default:"0.00" }}</td>
+                            <td>Rs. {{ item.agreed_unit_price|default:"0.00" }}</td>
+                            <td>{% if item.variant.is_vatable %}Taxable{% else %}Non-taxable{% endif %}</td>
+                            <td>{{ item.received_quantity|default:"0.00" }}</td>
+                            <td>Rs. {{ item.actual_unit_price|default:"0.00" }}</td>
+                            <td>{{ item.manufacture_date|date:"Y-m-d"|default:"--" }}</td>
+                            <td>{{ item.harvest_date|date:"Y-m-d"|default:"--" }}</td>
+                            <td>{{ item.expiry_date|date:"Y-m-d"|default:"--" }}</td>
+                            <td class="text-end fw-bold">Rs. {{ item.subtotal|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-3">No line items recorded for this order.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary & Tax Calculation Section -->
+    <div class="row">
+        <div class="col-md-6 offset-md-6">
+            <div class="card shadow-sm mb-4 border-primary">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 text-primary">Aayakar & Summary Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal Amount:</span>
+                        <strong>Rs. {{ order.subtotal|floatformat:2 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Input VAT:</span>
+                        <strong>Rs. {{ order.vat_amount|floatformat:2 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 border-bottom pb-2">
+                        <span>Gross Total Amount:</span>
+                        <strong>Rs. {{ order.total_amount|floatformat:2 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-danger">
+                        <span>Less: TDS Amount ({{ order.tds_rate|default:"0.00" }}%):</span>
+                        <strong>- Rs. {{ order.tds_amount|floatformat:2 }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold fs-5 text-success">
+                        <span>Net Payable to Vendor:</span>
+                        <span>Rs. {{ order.net_payable_amount|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
+
+<div class="container">
+    
+    
+    <div class="filter-bar">
+        <div class="search-box">
+            <span class="search-icon">&#128269</span>
+            <input type="text" class="search-input" id="supplier-search" placeholder="Search supplier..."
+            value="{{ query|default:''}}" autocomplete="off">
+        </div>
+        <select id="organic-filter" class="filter-select">
+            <option value="">All Certifications</option>
+            <option value="yes">Organic Certified Only</option>
+            <option value="no">Standard Suppliers</option>
+        </select>
+        <div class="filter-right">
+                <a href="{% url 'supplier_add' %}" class="btn btn-primary btn-add">+ Add Supplier</a>
+        </div>
+    </div>
+
+    <div class="stat-strip">
+        <div class="stat-item">
+            <span class="stat-label">Total Suppliers
+                <strong id="showing-count">{{ suppliers|length}}</strong>
+        </div>
+    </div>
+
+
+    <!-- Supplier Table -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="data-table styled-table">
+                <thead>
+                    <tr>
+                        <th>Supplier Name</th>
+                        <th>Contact Person</th>
+                        <th>Email</th>
+                        <th>PAN / VAT</th>
+                        <th>Portal Status</th>
+                        <th>Is_active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="supplier-table-body">
+                    {% include 'suppliers/admin/supplier_rows.html' %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("supplier-search");
+        const organicFilter = document.getElementById("organic-filter");
+        const showingCountEl = document.getElementById("showing-count");
+        const tableBody = document.getElementById("supplier-table-body");
+
+        let debounceTimer = null;
+        const searchApiUrl = "{% url 'supplier_search' %}";
+
+        function runSearch() {
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) {
+                params.set('q', searchInput.value.trim());
+            }
+            if (organicFilter.value) {
+                params.set('organic', organicFilter.value);
+            }
+
+            fetch(searchApiUrl + '?' + params.toString(), {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then(res => res.json())
+                .then(data => {
+                    tableBody.innerHTML = data.rows_html;
+                    showingCountEl.textContent = data.showing_count;
+                })
+                .catch(err => console.error("Supplier Search Error:", err));
+        }
+
+        searchInput.addEventListener("input", function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, 250);
+        });
+
+        organicFilter.addEventListener("change", runSearch);
+    });
+</script>
+{% endblock %}

@@ -15,11 +15,17 @@ class Customer(models.Model):
     phone = models.CharField(unique=True, max_length=20, blank=True, null=True)
     email = models.CharField(unique=True, max_length=100, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(max_length=8, blank=True, null=True)
+    status = models.CharField(
+        max_length=8,
+        choices=[('ACTIVE', 'Active'), ('INACTIVE', 'Inactive')],
+        default='ACTIVE',
+        blank=True,
+        null=True,
+    )
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'customer'
 
     
@@ -58,7 +64,7 @@ class CustomerScheme(models.Model):
     status = models.CharField(max_length=8, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'customer_scheme'
         
     def __str__(self):
@@ -66,7 +72,7 @@ class CustomerScheme(models.Model):
 
 class Membership(models.Model):
     membership_id = models.AutoField(primary_key=True)
-    customer = models.ForeignKey(Customer, models.DO_NOTHING)
+    customer = models.ForeignKey('customers.Customer', models.DO_NOTHING)
     membership_type = models.CharField(max_length=50)
     start_date = models.DateField()
     expiry_date = models.DateField()
@@ -74,5 +80,5 @@ class Membership(models.Model):
     status = models.CharField(max_length=9, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'membership'

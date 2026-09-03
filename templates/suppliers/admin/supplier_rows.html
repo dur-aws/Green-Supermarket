@@ -1,0 +1,45 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+{% for supplier in suppliers %}
+<tr>
+    <td class="align-middle font-weight-bold">
+        {{ supplier.supplier_name }}
+        {% if supplier.is_organic_certified %}
+            <span class="badge bg-success ms-1">Organic</span>
+        {% endif %}
+    </td>
+    <td class="align-middle">
+        <div>{{ supplier.contact_person|default:"N/A" }}</div>
+        <small class="text-muted">{{ supplier.phone }}</small>
+    </td>
+    <td class="align-middle">{{ supplier.email }}</td>
+    <td class="align-middle">
+        <code>{{ supplier.pan_vat_number|default:"N/A" }}</code>
+    </td>
+    <td class="align-middle">
+        {% if supplier.portal_username %}
+            <span class="badge bg-primary">Active Portal ({{ supplier.portal_username }})</span>
+        {% else %}
+            <span class="badge bg-secondary">No Account</span>
+        {% endif %}
+    </td>
+    <td class="align-middle">  {% if supplier.is_active %}
+        active
+    {% else %}
+        desabled
+    {% endif %}</td>
+    <td class="align-middle text-end">
+        <a href="{% url 'supplier_edit' supplier.supplier_id %}" class="btn btn-sm btn-outline-primary me-1">Edit</a>
+                <form method="post" action="{% url 'supplier_status' supplier.supplier_id %}" style="display: inline;" onsubmit="return confirm('Change status for {{ supplier.supplier_name|escapejs }}?');">
+                        {% csrf_token %}
+                        <button type="submit" class="action-link status">
+            {% if supplier.is_active == 1 %}deactive{% else %}Active{% endif %}
+                        </button>
+                </form>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="6" class="text-center text-muted py-4">No suppliers found matching your criteria.</td>
+</tr>
+{% endfor %}

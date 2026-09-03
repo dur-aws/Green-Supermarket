@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Supplier Portal — Purchase Orders</h2>
+        <span class="badge bg-info text-dark fs-6">Vendor: {{ request.user.supplier_profile.supplier_name }}</span>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="btn-group mb-3">
+        <a href="{% url 'supplier_po_list' %}" class="btn btn-outline-secondary">All Orders</a>
+        <a href="{% url 'supplier_po_list' %}?payment_status=UNPAID" class="btn btn-outline-warning">Unpaid / Pending</a>
+        <a href="{% url 'supplier_po_list' %}?payment_status=PAID" class="btn btn-outline-success">Completed & Paid</a>
+        <a href="{% url 'supplier_payables' %}" class="btn btn-outline-primary">PO Summary</a>
+    </div>
+
+    <!-- Purchase Orders Table -->
+    <div class="table-responsive bg-white shadow-sm rounded">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>PO Number / Invoice</th>
+                    <th>Date</th>
+                    <th>Order Status</th>
+                    <th>Subtotal</th>
+                    <th>VAT Amount</th>
+                    <th>Total Amount</th>
+                    <th>Payment Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for po in purchase_orders %}
+                <tr>
+                    <td class="font-weight-bold">#PO-{{ po.purchase_id }} {% if po.invoice_number %}({{ po.invoice_number }}){% endif %}</td>
+                    <td>{{ po.order_date|date:"Y-m-d" }}</td>
+                    <td>{{ po.get_order_status_display }}</td>
+                    <td>Rs. {{ po.subtotal }}</td>
+                    <td>Rs. {{ po.vat_amount }}</td>
+                    <td class="fw-bold">Rs. {{ po.total_amount }}</td>
+                    <td>
+                        {% if po.payment_status == 'PAID' %}
+                            <span class="badge bg-success">PAID</span>
+                        {% elif po.payment_status == 'PARTIAL' %}
+                            <span class="badge bg-warning text-dark">PARTIAL</span>
+                        {% else %}
+                            <span class="badge bg-danger">UNPAID</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if po.order_status == 'PENDING' %}
+                        <form method="post" action="{% url 'supplier_po_action' po.pk 'accept' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-primary">Accept</button>
+                        </form>
+                        {% elif po.order_status == 'ACCEPTED' %}
+                        <form method="post" action="{% url 'supplier_po_action' po.pk 'deliver' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success">Mark delivered</button>
+                        </form>
+                        {% elif po.order_status == 'RECEIVED' %}
+                        <span class="text-success">Delivered</span>
+                        {% else %}
+                        <span class="text-muted">No action</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">No purchase orders found for your account.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

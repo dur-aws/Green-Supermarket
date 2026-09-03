@@ -1,10 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
-<title>{{ title }}</title>
 {% block content %}
 
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/master.css' %}" />
 
     <div class="container">
         <!-- Filter Bar -->
@@ -15,7 +13,7 @@
                     type="text"
                     id="category-search"
                     placeholder="Search by category name..."
-                    value="{{ query }}"
+                    value="{{ query|default:'' }}"
                     class="search-input"
                     autocomplete="off"
                 />

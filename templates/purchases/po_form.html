@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/form.css' %}" />
+
+<div class="page-wrap">
+
+    <div class="page-header">
+        <div>
+            <h1>{{ title }}</h1>
+            <p class="page-sub">Enter supplier details and the items received</p>
+        </div>
+        <a href="{% url 'po_list' %}" class="btn btn-clear">&larr; Back to list</a>
+    </div>
+
+    <form method="post" novalidate id="po-form">
+        {% csrf_token %}
+
+        <!-- ================= SUPPLIER / HEADER ================= -->
+        <div class="form-card">
+            <h2 class="section-title">Supplier Information</h2>
+
+            {% if form.non_field_errors %}
+                <div class="alert-item alert-danger">
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label for="{{ form.supplier.id_for_label }}">Supplier *</label>
+                    {{ form.supplier }}
+                    {% if form.supplier.errors %}<span class="field-error">{{ form.supplier.errors.0 }}</span>{% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.invoice_number.id_for_label }}">Invoice Number</label>
+                    {{ form.invoice_number }}
+                </div>
+
+                
+
+                <div class="form-group">
+                    <label for="{{ form.order_date.id_for_label }}">Order Date *</label>
+                    {{ form.order_date }}
+                    {% if form.order_date.errors %}<span class="field-error">{{ form.order_date.errors.0 }}</span>{% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.delivery_date.id_for_label }}">Delivery Date</label>
+                    {{ form.delivery_date }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.received_date.id_for_label }}">Received Date (GRN)</label>
+                    {{ form.received_date }}
+                </div>
+
+                
+                <div class="form-group">
+                    <label for="{{ form.order_status.id_for_label }}">Order Status *</label>
+                    {{ form.order_status }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.payment_status.id_for_label }}">Payment Status *</label>
+                    {{ form.payment_status }}
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= LINE ITEMS ================= -->
+        <div class="form-card">
+            <div class="section-title-row">
+                <h2 class="section-title">Product Details & Quantities</h2>
+                <button type="button" id="add-item" class="btn btn-primary btn-sm">+ Add Item</button>
+            </div>
+            
+            {{ formset.management_form }}
+            
+            {% if formset.non_form_errors %}
+                <div class="alert-item alert-danger">
+                    {% for error in formset.non_form_errors %}{{ error }}{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="data-table styled-table" id="items-table">
+                    <thead>
+                        <tr>
+                            
+                            
+                            <th>product *</th>
+                            <th>Ordered Qty</th>
+                            <th>Agreed Price</th>
+                            <th>Received Qty</th>
+                            <th>Actual Price</th>
+                            <th>Subtotal</th>
+                            <th>MFG Date</th>
+                            <th>Harvest Date</th>
+                            <th>Expiry Date</th>
+                            <th>Remove</th>
+                        </tr>
+                    </thead>
+                    <tbody id="item-rows">
+                        {% for item_form in formset %}
+                        <tr class="item-row{% if item_form.errors %} item-row-error{% endif %}">
+                            <!-- Hidden fields must be included -->
+                            {% for hidden in item_form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+
+                            {{ item_form.id }}
+                           
+                            <td>
+                                {{ item_form.variant }}
+                                {% if item_form.variant.errors %}
+                                    <span class="field-error">{{ item_form.variant.errors.0 }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item_form.ordered_quantity }}</td>
+                            <td>{{ item_form.agreed_unit_price }}</td>
+                            <td>{{ item_form.received_quantity }}</td>
+                            <td>{{ item_form.actual_unit_price }}</td>
+                            <td>{{ item_form.subtotal }}</td>
+                            <td>{{ item_form.manufacture_date }}</td>
+                            <td>{{ item_form.harvest_date }}</td>
+                            <td>{{ item_form.expiry_date }}</td>
+                            <td class="text-center">
+                                {% if item_form.instance.pk %}
+                                    <label class="delete-check">{{ item_form.DELETE }}</label>
+                                {% else %}
+                                    <button type="button" class="btn btn-clear btn-sm remove-item-btn">✕</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                </tbody>
+
+                </table>
+            </div>
+
+            <!-- Empty row template for JS cloning -->
+            <template id="empty-item-template">
+            <tr class="item-row">
+                {% for hidden in formset.empty_form.hidden_fields %}
+                    {{ hidden }}
+                {% endfor %}
+
+                {% for field in formset.empty_form.visible_fields %}
+                    <td>
+                        {{ field }}
+                        {% if field.errors %}
+                            <span class="field-error">{{ field.errors.0 }}</span>
+                        {% endif %}
+                    </td>
+                {% endfor %}
+
+                <td class="text-center">
+                    <button type="button" class="btn btn-clear btn-sm remove-item-btn">✕</button>
+                </td>
+            </tr>
+            </template>
+        </div>
+
+        <!-- ================= TAX & SUMMARY ================= -->
+        <div class="form-card summary-card">
+            <h2 class="section-title">Tax & Payment Summary</h2>
+            <p class="calc-status" id="calc-status"></p>
+
+            <div class="summary-grid">
+                <div class="summary-row">
+                    <span>Subtotal Amount</span>
+                    {{ form.subtotal }}
+                </div>
+                <div class="summary-row">
+                    <span>VAT (13%)</span>
+                    {{ form.vat_amount }}
+                </div>
+                <div class="summary-row summary-divider">
+                    <span>Gross Total</span>
+                    {{ form.total_amount }}
+                </div>
+                <div class="summary-row summary-danger">
+                    <span>TDS Rate (1.5%)</span>
+                    {{ form.tds_rate }}
+                </div>
+                <div class="summary-row summary-danger">
+                    <span>TDS Amount (deducted)</span>
+                    {{ form.tds_amount }}
+                </div>
+                <div class="summary-row summary-total">
+                    <span>Net Payable to Vendor</span>
+                    {{ form.net_payable_amount }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'po_list' %}" class="btn btn-clear">Cancel</a>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+    // po_form.html JS Section
+document.addEventListener("DOMContentLoaded", function () {
+    const addBtn = document.getElementById("add-item");
+    const itemRows = document.getElementById("item-rows");
+    const emptyTemplate = document.getElementById("empty-item-template");
+    const totalFormsInput = document.querySelector("[name$='-TOTAL_FORMS']");
+    const calcStatus = document.getElementById("calc-status");
+    const poForm = document.getElementById("po-form");
+    const calcApiUrl = "{% url 'po_calculate' %}";
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+    let debounceTimer = null;
+
+    // Re-index Django Formset elements when rows are deleted
+        function reindexFormset() {
+        const rows = itemRows.querySelectorAll(".item-row");
+        totalFormsInput.value = rows.length;
+
+        rows.forEach((row, index) => {
+            row.querySelectorAll("input, select, textarea").forEach(input => {
+                if (input.name) {
+                    input.name = input.name.replace(/items-\d+-/, `items-${index}-`);
+                }
+                if (input.id) {
+                    input.id = input.id.replace(/id_items-\d+-/, `id_items-${index}-`);
+                }
+            });
+        });
+    }
+
+    // Call inside your row removal handler:
+    itemRows.addEventListener("click", function (e) {
+        const btn = e.target.closest(".remove-item-btn");
+        if (!btn) return;
+        const row = btn.closest(".item-row");
+        if (row) {
+            row.remove();
+            reindexFormset(); // Fixes missing indices
+            scheduleCalculation();
+        }
+    });
+
+    // Add Row
+    addBtn.addEventListener("click", function () {
+        const formIndex = parseInt(totalFormsInput.value, 10);
+        const newRowHtml = emptyTemplate.innerHTML.replace(/__prefix__/g, formIndex);
+
+        const wrapper = document.createElement("tbody");
+        wrapper.innerHTML = newRowHtml.trim();
+        itemRows.appendChild(wrapper.firstElementChild);
+
+        totalFormsInput.value = formIndex + 1;
+        scheduleCalculation();
+    });
+
+    // Remove Row
+    itemRows.addEventListener("click", function (e) {
+        const btn = e.target.closest(".remove-item-btn");
+        if (!btn) return;
+        const row = btn.closest(".item-row");
+        if (row) {
+            row.remove();
+            reindexFormset();
+            scheduleCalculation();
+        }
+    });
+
+    // Listen for inputs to schedule AJAX validation/calculation
+    poForm.addEventListener("input", function (e) {
+        if (e.target.matches("input[name*='quantity'], input[name*='unit_price'], [name='tds_rate']")) {
+            scheduleCalculation();
+        }
+    });
+
+    function scheduleCalculation() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runCalculation, 250);
+    }
+
+    function setStatus(kind, text) {
+        if (!calcStatus) return;
+        calcStatus.className = "calc-status" + (kind ? " " + kind : "");
+        calcStatus.textContent = text || "";
+    }
+
+    function runCalculation() {
+        const formData = new FormData();
+        let index = 0;
+
+        itemRows.querySelectorAll(".item-row").forEach(function (row) {
+            const deleteCheckbox = row.querySelector("input[name$='-DELETE']");
+            if (deleteCheckbox && deleteCheckbox.checked) return;
+
+            const qty = row.querySelector("input[name$='-received_quantity']")?.value ||
+                        row.querySelector("input[name$='-ordered_quantity']")?.value || "0";
+            const price = row.querySelector("input[name$='-actual_unit_price']")?.value ||
+                          row.querySelector("input[name$='-agreed_unit_price']")?.value || "0";
+            const variant = row.querySelector("select[name$='-variant']")?.value || "";
+
+            formData.append(`items[${index}][quantity]`, qty);
+            formData.append(`items[${index}][unit_price]`, price);
+            formData.append(`items[${index}][variant]`, variant);
+            index += 1;
+        });
+
+        const supplier = document.querySelector("[name='supplier']")?.value || "";
+        const tdsRate = document.querySelector("[name='tds_rate']")?.value || "0";
+        formData.append("supplier", supplier);
+        formData.append("tds_rate", tdsRate);
+
+        fetch(calcApiUrl, {
+            method: "POST",
+            headers: { 
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                setStatus("error", data.error);
+                return;
+            }
+            applyTotals(data);
+            setStatus("", "");
+        })
+        .catch(err => {
+            console.error("AJAX Calculation Error:", err);
+            setStatus("error", "Could not calculate totals.");
+        });
+    }
+
+    function applyTotals(data) {
+        updateField("subtotal", data.subtotal);
+        updateField("vat_amount", data.vat_amount);
+        updateField("total_amount", data.total_amount);
+        updateField("tds_amount", data.tds_amount);
+        updateField("net_payable_amount", data.net_payable_amount);
+
+        itemRows.querySelectorAll(".item-row").forEach(function (row) {
+            const qtyInput = row.querySelector("input[name$='-received_quantity']") ||
+                              row.querySelector("input[name$='-ordered_quantity']");
+            const priceInput = row.querySelector("input[name$='-actual_unit_price']") ||
+                                row.querySelector("input[name$='-agreed_unit_price']");
+            const subtotalInput = row.querySelector("input[name$='-subtotal']");
+            
+            if (!qtyInput || !priceInput || !subtotalInput) return;
+
+            const qty = parseFloat(qtyInput.value || "0");
+            const price = parseFloat(priceInput.value || "0");
+            subtotalInput.value = (qty * price).toFixed(2);
+        });
+    }
+
+    function updateField(name, value) {
+        const input = document.querySelector(`[name='${name}']`);
+        if (input) input.value = value;
+    }
+
+    if (itemRows.querySelectorAll(".item-row").length > 0) {
+        scheduleCalculation();
+    }
+});
+</script>
+
+{% endblock %}

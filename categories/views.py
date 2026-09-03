@@ -114,7 +114,7 @@ class CategoryToggleStatusView(RBACPermissionMixin, View):
     module_name = 'categories'
     required_permission = 'edit'
 
-    def get(self, request, pk):
+    def post(self, request, pk):
         category = get_object_or_404(Category, pk=pk)
         category.is_active = not category.is_active
         category.save()

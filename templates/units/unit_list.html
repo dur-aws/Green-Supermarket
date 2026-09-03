@@ -1,106 +1,94 @@
 {% extends "base.html" %}
-{% load static  %}
+{% load static %}
 <title>{{ title }}</title>
 {% block content %}
-
-
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{% static 'css/products.css' %}" />
-    
-   
-    <div class="container">
-        <!-- Filter Bar -->
+<div class="container">
+    <!-- Filter Bar -->
     <div class="filter-bar">
         <div class="search-box">
             <span class="search-icon">&#128269;</span>
-            <input
-                type="text"
-                id="unit-search"
-                placeholder="Search by name or code..."
-                value="{{ query }}"
-                class="search-input"
-                autocomplete="off"
-            />
+            <input type="text" id="unit-search"
+                    placeholder="Search by name or code..."
+                    value="{{ query|default:'' }}"
+                    class="search-input"
+                    autocomplete="off">
         </div>
-         <div class="filter-right">
+        <div class="filter-right">
             <a href="{% url 'uom_add' %}" class="btn btn-primary btn-add">+ Add Unit</a>
             <a href="#" class="btn btn-export">&#8595; Export</a>
         </div>
     </div>
-     <!-- Summary Stat Strip -->
+    <!-- Summary Stat Strip -->
     <div class="stat-strip">
         <div class="stat-item">
             <span class="stat-label">Total Units
-            <strong id="showing-count">{{ uoms|length}}</strong>
+                <strong id="showing-count">{{ uoms|length}}</strong>
         </div>
     </div>
 
     <div class="table-card">
         <div class="table-responsive">
-                 <table class="data-table styled-table">
-            <thead>
-                <tr>
-                    <th>id</th>
-                    <th>name</th>
-                    <th>notaion</th>
-                    <th>Weight-Based</th>
-                    <th>is-active</th>
-                    <th>actions</th>
-                </tr>
-            </thead>
-            <tbody id="uom-table-body">
-                {% include 'units/unit_rows.html' %}
-            </tbody>
-        </table>
+            <table class="data-table styled-table">
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>name</th>
+                        <th>notaion</th>
+                        <th>Weight-Based</th>
+                        <th>is-active</th>
+                        <th>actions</th>
+                    </tr>
+                </thead>
+                <tbody id="uom-table-body">
+                    {% include 'units/unit_rows.html' %}
+                </tbody>
+            </table>
         </div>
-       
     </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const searchInput = document.getElementById("unit-search");
-    const showingCountEl = document.getElementById("showing-count");
-    const tableBody = document.getElementById("uom-table-body");
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("unit-search");
+        const showingCountEl = document.getElementById("showing-count");
+        const tableBody = document.getElementById("uom-table-body");
 
-    let debounceTimer = null;
-    const searchApiUrl = "{% url 'uom_search' %}";
+        let debounceTimer = null;
+        const searchApiUrl = "{% url 'uom_search' %}";
 
-    function runSearch() {
-        const params = new URLSearchParams();
-        if (searchInput.value.trim()) {
-            params.set('q', searchInput.value.trim());
+        function runSearch() {
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) {
+                params.set('q', searchInput.value.trim());
+            }
+
+            // Send request with JSON format flag
+            fetch(searchApiUrl + '?' + params.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (res) {
+                    return res.json();
+                })
+                .then(function (data) {
+                    tableBody.innerHTML = data.rows_html;
+                    showingCountEl.textContent = data.showing_count;
+                })
+                .catch(function (error) {
+                    console.error("AJAX Search Error:", error);
+                });
         }
 
-        // Send request with JSON format flag
-        fetch(searchApiUrl + '?' + params.toString(), {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(function (res) { 
-            return res.json(); 
-        })
-        .then(function (data) {
-            tableBody.innerHTML = data.rows_html;
-            showingCountEl.textContent = data.showing_count;
-        })
-        .catch(function (error) {
-            console.error("AJAX Search Error:", error);
+        // Debounced keystroke input listener
+        searchInput.addEventListener("input", function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, 250);
         });
-    }
-
-    // Debounced keystroke input listener
-    searchInput.addEventListener("input", function () {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(runSearch, 250);
     });
-});
 </script>
 
 
 
 
 {% endblock %}
-
-

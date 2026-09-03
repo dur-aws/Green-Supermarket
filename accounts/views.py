@@ -6,13 +6,14 @@ from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404, render
 from django.urls import reverse_lazy
 from django.views.generic import ListView, View, DetailView, CreateView, UpdateView, DeleteView, FormView
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.template.loader import render_to_string
+from django.core.exceptions import PermissionDenied
+from django.contrib.auth.decorators import login_required
 from .forms import CustomLoginForm, AdminUserCreationForm, AdminUserUpdateForm, AdminResetPasswordForm
 from .mixins import RBACPermissionMixin
 from django.contrib.auth import update_session_auth_hash
-from django.contrib.admin.views.decorators import staff_member_required
 from .models import Role, ModulePermission
 
 User = get_user_model()
@@ -24,6 +25,7 @@ class UserLoginView(LoginView):
     authentication_form = CustomLoginForm
     redirect_authenticated_user = True
 
+
     def form_valid(self, form):
         user = form.get_user()
         if user.status != 1 or not user.is_active:
@@ -31,6 +33,8 @@ class UserLoginView(LoginView):
             return self.form_invalid(form)
         login(self.request, user)
         messages.success(self.request, f"Welcome back, {user.first_name or user.username}!")
+        if not user.is_staff and hasattr(user, 'supplier_profile'):
+            return redirect('supplier_po_list')
         return redirect(self.get_success_url())
 
 
@@ -40,10 +44,6 @@ class UserLogoutView(LogoutView):
     def dispatch(self, request, *args, **kwargs):
         messages.info(request, "You have been successfully logged out.")
         return super().dispatch(request, *args, **kwargs)
-
-    # Allow GET requests to trigger logout
-    def get(self, request, *args, **kwargs):
-        return self.post(request, *args, **kwargs)
 
 class UserProfileView(LoginRequiredMixin, DetailView):
     model = User
@@ -85,6 +85,25 @@ class AdminUserListView(RBACPermissionMixin, ListView):
 
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['roles'] = Role.objects.order_by('role_name')
+        context['query'] = self.request.GET.get('q', '').strip()
+        context['selected_role'] = self.request.GET.get('role', '').strip()
+        return context
+
+
+class RoleListView(RBACPermissionMixin, ListView):
+    model = Role
+    template_name = 'accounts/admin/role_list.html'
+    context_object_name = 'roles'
+
+    module_name = 'accounts'
+    required_permission = 'view'
+
+    def get_queryset(self):
+        return Role.objects.annotate(user_count=Count('customuser')).order_by('role_name')
+
 
 class AdminUserDetailView(RBACPermissionMixin, DetailView):
     model = User
@@ -98,24 +117,32 @@ class AdminUserDetailView(RBACPermissionMixin, DetailView):
 
 class AdminUserSearchView(RBACPermissionMixin, ListView):
     model = User
-    template_name = 'users/user_list.html'
+    template_name = 'accounts/admin/user_list.html'
     context_object_name = 'users'
     paginate_by = 10
 
     # RBAC Mixin Settings
-    module_name = 'users'
+    module_name = 'accounts'
     required_permission = 'view'
 
     def get_queryset(self):
-        queryset = User.objects.all()
+        queryset = User.objects.select_related('role').all()
         query = self.request.GET.get('q', '').strip()
 
         if query:
             queryset = queryset.filter(
-                Q(user_name__icontains=query) | Q(email__icontains=query)
+                Q(username__icontains=query) |
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(email__icontains=query) |
+                Q(phone__icontains=query)
             )
 
-        return queryset.order_by('user_name')
+        role_filter = self.request.GET.get('role', '').strip()
+        if role_filter:
+            queryset = queryset.filter(role__role_name=role_filter)
+
+        return queryset.order_by('-date_joined')
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest' or self.request.GET.get('format') == 'json':
@@ -160,8 +187,6 @@ class AdminUserUpdateView(RBACPermissionMixin, UpdateView):
     required_permission = 'edit'
 
     def form_valid(self, form):
-        user = form.save(commit=False)
-        user.is_active = True
         messages.success(self.request, f"User '{self.object.username}' updated successfully!")
         return super().form_valid(form)
 
@@ -196,7 +221,7 @@ class AdminUserPasswordResetView(RBACPermissionMixin, FormView):
 
     # RBAC permission
     module_name = 'accounts'
-    required_permission = 'view'
+    required_permission = 'edit'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -207,15 +232,30 @@ class AdminUserPasswordResetView(RBACPermissionMixin, FormView):
         target_user = get_object_or_404(User, pk=self.kwargs['user_id'])
         new_pass = form.cleaned_data['new_password']
         target_user.set_password(new_pass)
-        target_user.is_active = True   
         target_user.save()
-        update_session_auth_hash(self.request, target_user)
+        update_session_auth_hash(self.request, self.request.user)
         messages.success(self.request, f"Password for user '{target_user.username}' reset successfully.")
         return super().form_valid(form)
 
 
-@staff_member_required
+@login_required
 def manage_role_permissions(request, role_id):
+    if not request.user.is_superuser:
+        user_role = getattr(request.user, 'role', None)
+        if not user_role:
+            raise PermissionDenied("You do not have permission to manage roles.")
+        try:
+            account_permission = ModulePermission.objects.get(
+                role=user_role,
+                module_name='accounts',
+            )
+        except ModulePermission.DoesNotExist:
+            raise PermissionDenied("You do not have permission to manage roles.")
+
+        required_permission = 'can_edit' if request.method == 'POST' else 'can_view'
+        if not getattr(account_permission, required_permission):
+            raise PermissionDenied("You do not have permission to manage roles.")
+
     role = get_object_or_404(Role, pk=role_id)
     modules = [m[0] for m in ModulePermission.MODULE_CHOICES]
 
