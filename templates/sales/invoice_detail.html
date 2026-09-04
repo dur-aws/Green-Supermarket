@@ -1,98 +1,57 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<style>
-    @media print {
-        body * { visibility: hidden; }
-        #printable-invoice, #printable-invoice * { visibility: visible; }
-        #printable-invoice { position: absolute; left: 0; top: 0; width: 100%; }
-        .no-print { display: none !important; }
-    }
-</style>
-
-<div class="container my-4">
-    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-        <a href="{% url 'sales_invoice' %}" class="btn btn-outline-secondary">&larr; New Sale</a>
-        <button onclick="window.print()" class="btn btn-primary"><i class="bi bi-printer"></i> Print Invoice</button>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Invoice #{{ sale.fiscal_year }}-{{ sale.invoice_no }}</h2>
+        <div>
+            <button onclick="window.print()" class="btn btn-secondary">🖨 Print</button>
+            <a href="{% url 'sales_list' %}" class="btn btn-outline-dark">Back to List</a>
+        </div>
     </div>
 
-    <!-- Invoice Card / Receipt -->
-    <div class="card border-0 shadow-sm p-4 mx-auto" id="printable-invoice" style="max-width: 800px;">
-        <div class="row mb-4">
-            <div class="col-6">
-                <h3 class="fw-bold text-primary">GSMS GROCERY</h3>
-                <small class="text-muted">Main Street, City Center<br>VAT No: 987654321</small>
-            </div>
-            <div class="col-6 text-end">
-                <h4 class="fw-bold mb-0">INVOICE</h4>
-                <div class="text-muted">#{{ invoice.invoice_number }}</div>
-                <small class="text-muted">Date: {{ invoice.created_at|date:"Y-m-d H:i" }}</small>
-            </div>
-        </div>
-
-        <hr>
-
+    <div class="card p-4">
         <div class="row mb-3">
-            <div class="col-6">
-                <strong class="d-block text-muted">Billed To:</strong>
-                <div>{{ invoice.customer_name }}</div>
-                <small class="text-muted">{{ invoice.customer_phone|default:"" }}</small>
+            <div class="col-md-6">
+                <p><strong>Customer:</strong> {{ sale.buyer_name }}</p>
+                <p><strong>Date:</strong> {{ sale.sale_date|date:"d M Y" }}</p>
             </div>
-            <div class="col-6 text-end">
-                <strong class="d-block text-muted">Payment Info:</strong>
-                <div>Method: {{ invoice.get_payment_method_display }}</div>
-                <span class="badge bg-success">{{ invoice.get_payment_status_display }}</span>
+            <div class="col-md-6 text-end">
+                <p><strong>Status:</strong> <span class="badge bg-success">{{ sale.payment_status }}</span></p>
+                <p><strong>Cashier:</strong> {{ sale.user.username }}</p>
             </div>
         </div>
 
-        <!-- Table of Items -->
-        <table class="table table-striped my-3">
-            <thead class="table-dark">
+        <table class="table table-bordered">
+            <thead>
                 <tr>
                     <th>Item</th>
-                    <th class="text-end">Price</th>
-                    <th class="text-center">Qty</th>
-                    <th class="text-end">Subtotal</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-end">Discount</th>
+                    <th class="text-end">Total</th>
                 </tr>
             </thead>
             <tbody>
-                {% for item in invoice.items.all %}
+                {% for item in sale.sale_item_set.all %}
                 <tr>
                     <td>{{ item.variant.variant_name }}</td>
-                    <td class="text-end">${{ item.unit_price }}</td>
-                    <td class="text-center">{{ item.quantity }}</td>
-                    <td class="text-end">${{ item.subtotal }}</td>
+                    <td class="text-end">{{ item.quantity }}</td>
+                    <td class="text-end">Rs. {{ item.unit_price }}</td>
+                    <td class="text-end">Rs. {{ item.discount_amount }}</td>
+                    <td class="text-end">Rs. {{ item.line_total }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <!-- Totals Summary -->
-        <div class="row justify-content-end">
-            <div class="col-md-5">
-                <table class="table table-sm table-borderless">
-                    <tr>
-                        <td>Subtotal:</td>
-                        <td class="text-end">${{ invoice.subtotal }}</td>
-                    </tr>
-                    <tr>
-                        <td>Discount:</td>
-                        <td class="text-end">-${{ invoice.discount_amount }}</td>
-                    </tr>
-                    <tr>
-                        <td>VAT (13%):</td>
-                        <td class="text-end">${{ invoice.tax_amount }}</td>
-                    </tr>
-                    <tr class="fw-bold border-top fs-5">
-                        <td>Grand Total:</td>
-                        <td class="text-end text-success">${{ invoice.grand_total }}</td>
-                    </tr>
-                </table>
+        <div class="row justify-content-end mt-3">
+            <div class="col-md-4 text-end">
+                <p><strong>Subtotal:</strong> Rs. {{ sale.subtotal }}</p>
+                <p><strong>Total Discount:</strong> Rs. {{ sale.discount_total }}</p>
+                <p><strong>Tax (VAT):</strong> Rs. {{ sale.vat_total }}</p>
+                <h4><strong>Grand Total:</strong> Rs. {{ sale.grand_total }}</h4>
             </div>
-        </div>
-
-        <div class="text-center text-muted mt-4 pt-3 border-top">
-            <small>Thank you for shopping with us!</small>
         </div>
     </div>
 </div>

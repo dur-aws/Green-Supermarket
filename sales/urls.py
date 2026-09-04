@@ -2,21 +2,25 @@ from django.urls import path
 from .views import (
     SalesInvoiceView,
     SalesInvoiceDetailView,
-    generate_fonepay_qr,
+   
     get_next_invoice_no,
     product_search_api,
     checkout_api,
-    SalesHistoryView
+    SalesHistoryView,
+    print_invoice,
+    
 )
 
 urlpatterns = [
     path('invoice/', SalesInvoiceView.as_view(), name='sales_invoice'),
-    path('invoice/<int:sales_id>/', SalesInvoiceDetailView.as_view(), name='sale_detail'),
-    path('report/',SalesHistoryView.as_view(), name='sales_list'),
     
+    path('report/',SalesHistoryView.as_view(), name='sales_list'),
+    path('invoice/view/<int:pk>/', SalesInvoiceDetailView.as_view(), name='sale_detail_view'),
     # Internal JSON APIs consumed by saleinterface JavaScript
     path('api/next-invoice-no/', get_next_invoice_no, name='sales_next_invoice_no'),
     path('api/product-search/', product_search_api, name='sales_product_search'),
-    path('api/generate-fonepay-qr/', generate_fonepay_qr, name='fonepay_qr'),
+    # path('api/generate-fonepay-qr/', generate_fonepay_qr, name='fonepay_qr'),
     path('api/checkout/', checkout_api, name='sales_checkout'),
+
+    path('invoice/<int:sales_id>/print/', print_invoice, name='sales_invoice_print'),
 ]

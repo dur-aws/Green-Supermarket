@@ -6,13 +6,13 @@
     <td>{{ variant.product.category.category_name }}</td>
     <td>{{ variant.product.brand|default:"—" }}</td>
     <td>{{ variant.primary_uom.notation }}</td>
-    <td>{{ variant.total_active_stock}}</td>
-    <td>{{ variant.reorder_level}}</td>
-    <td>{{ variant.cost_price }}</td>
-    <td>{{ variant.selling_price }}</td>
-    <td>{{ variant.vat_status }}</td>
-    <td>{{ variant.abc_class }}</td>
-    <td>
+    <td class="text-end">{{ variant.total_active_stock}}</td>
+    <td class="text-end">{{ variant.reorder_level}}</td>
+    <td class="text-end">{{ variant.cost_price }}</td>
+    <td class="text-end">{{ variant.selling_price }}</td>
+    <td class="text-center">{{ variant.vat_status }}</td>
+    <td class="text-center">{{ variant.abc_class }}</td>
+    <td class="text-center">
         {% with status=variant.stock_status %}
             {% if status == 'active' %}
                 <span class="badge bg-success">Active</span>
@@ -25,7 +25,7 @@
             {% endif %}
         {% endwith %}
     </td>
-    <td>
+    <td class="text-center">
         <a href="{% url 'product_edit' variant.product.pk %}" class="icon-btn icon-edit"><i class="fa-solid fa-pen"></i></a>
         <form method="post" action="{% url 'product_toggle_status' variant.pk %}" style="display:inline;">
             {% csrf_token %}
@@ -37,6 +37,6 @@
 </tr>
 {% empty %}
 <tr>
-    <td colspan="10" class="text-center">No products found.</td>
+    <td colspan="10" class="text-center py-4 text-muted">No products found.</td>
 </tr>
 {% endfor %}

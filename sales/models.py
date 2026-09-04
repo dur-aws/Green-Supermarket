@@ -49,7 +49,7 @@ class Sale(models.Model):
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 
     # Payment & Idempotency
-    tender_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    tender_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), null=True, blank=True)
     received_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     change_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     sales_ac = models.CharField(max_length=50, default="SALES A/C")

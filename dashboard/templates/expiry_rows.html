@@ -1,0 +1,51 @@
+{% comment %} Rendered rows for Expiry Alerts Widget in Dashboard {% endcomment %}
+{% for batch in batches %}
+<tr>
+    <td>
+        <strong>{{ batch.variant.product.product_name }}</strong>
+        <br>
+        <small class="text-muted">{{ batch.variant.variant_name }}</small>
+    </td>
+    <td>
+        <span class="badge badge-secondary">{{ batch.batch_number }}</span>
+    </td>
+    <td>
+        <strong>{{ batch.current_quantity }}</strong> 
+        <small>{{ batch.variant.primary_uom.notation|default:"Pcs" }}</small>
+    </td>
+    <td>
+        <span>{{ batch.expiry_date|date:"Y-m-d" }}</span>
+        <br>
+        {% if batch.days_left < 0 %}
+            <span class="badge badge-danger" style="background-color: #ef4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">
+                Expired ({{ batch.days_left|add:"0" }}d)
+            </span>
+        {% elif batch.days_left <= 15 %}
+            <span class="badge badge-danger" style="background-color: #f87171; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">
+                Expiring ({{ batch.days_left }}d left)
+            </span>
+        {% else %}
+            <span class="badge badge-warning" style="background-color: #f59e0b; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">
+                Near Expiry ({{ batch.days_left }}d left)
+            </span>
+        {% endif %}
+    </td>
+    <td class="text-right">
+        {% if batch.days_left < 0 or batch.days_left <= 15 %}
+            <a href="#" class="btn btn-sm btn-danger" style="font-size: 0.75rem; padding: 2px 8px;">
+                Deduct
+            </a>
+        {% else %}
+            <a href="{% url 'expiry_report' %}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem; padding: 2px 8px;">
+                View
+            </a>
+        {% endif %}
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="5" class="dash-table-empty" style="text-align: center; padding: 15px; color: #10b981;">
+        ✅ All inventory batches are fresh and well within validity!
+    </td>
+</tr>
+{% endfor %}

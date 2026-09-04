@@ -16,1419 +16,377 @@
   --sidebar-collapsed-width: 60px;
   --header-height: 56px;
 }
-.container {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    color: #333333;
+
+/* Fixed Page Container with Flex Hierarchy */
+.master-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px);
+  overflow: hidden;
+  padding: 1rem 1.5rem;
+  box-sizing: border-box;
+}
+
+/* Fixed Header Controls Bar */
+.sticky-header-panel {
+  flex-shrink: 0;
+  background-color: #ffffff;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0.75rem;
 }
 
 /* Filter Bar */
 .filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 8px;
-    gap: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    
-    
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .search-box {
-    position: relative;
-    flex: 1 1 200px;
-    margin-left: 10px;
-    min-width: 100px;
-    max-width: 250px;
+  position: relative;
+  flex: 1 1 200px;
+
+  min-width: 100px;
+  max-width: 250px;
 }
 
 .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #888888;
-    font-size: 0.9rem;
-    pointer-events: none;
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888888;
+  font-size: 0.9rem;
+  pointer-events: none;
 }
 
 .search-input {
-    width: 100%;
-    padding: 0.5rem 0.75rem 0.5rem 2.2rem;
-    font-size: 0.9rem;
-    border: 1px solid #dcdcdc;
-    border-radius: 3px;
-    outline: none;
-    transition: border-color 0.2s ease;
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.2rem;
+  font-size: 0.9rem;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s ease;
 }
 
 .search-input:hover {
-    border-color: #2e7d32;
+  border-color: #2e7d32;
 }
 .search-input:focus {
-    border-color: #2e7d32;
-    box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15);
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15);
 }
 
-.filter-select-group {
-    display: flex;
-    gap: 0.75rem;
+/* Popup Filter Card Styling */
+.filter-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1050;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  width: 320px;
+  padding: 1.25rem;
+  display: none;
+}
+.date-input-field {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+.date-input {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  background-color: #fff;
 }
 
 .filter-select {
-    padding: 0.5rem 0.8rem;
-    font-size: 0.9rem;
-    border: 1px solid #dcdcdc;
-    border-radius: 3px;
-    background-color: #ffffff;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.9rem;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  background-color: #ffffff;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
 }
 
 .filter-select:hover {
-    border-color: #15803d;
+  border-color: #15803d;
 }
 .filter-select:focus {
-    border-color: #2e7d32;
-    box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15);
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15);
 }
 
 .filter-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
 }
 
 .showing-text {
-    font-size: 0.85rem;
-    color: #666666;
+  font-size: 0.85rem;
+  color: #666666;
 }
 
 /* Action Buttons */
 .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: 6px;
-    text-decoration: none;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
-}
-
-
-.btn-primary.btn-add {
-    background-color: #2e7d32;
-    color: #fefefe;
-    border: 1px solid #7a9e7e;
-    transition: all 0.2s;
-}
-
-.btn-primary.btn-add:hover {
-    background:#fefefe;
-    color:  #2e7d32;
-}
-
-.btn-export {
-    background-color: #fefefe;
-    color: #111111;
-    border-color: #dcdcdc;
-}
-
-.btn-export:hover {
-    background-color: #ffcdd2;
-    color: #111111;
-}
-
-/* Stat Strip */
-.stat-strip {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 0.75rem 1.25rem;
-    font-size: 0.9rem;
-}
-
-.stat-item {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-.stat-label {
-    color: #666666;
-}
-
-.stat-divider {
-    height: 16px;
-    width: 1px;
-    background-color: #e0e0e0;
-}
-
-.stat-green {
-    color: #2e7d32;
-}
-
-.stat-orange {
-    color: #ed6c02;
-}
-
-.stat-red {
-    color: #d32f2f;
-}
-
-/* Styled Table Card */
-.table-card {
-    background-color: #f4fff9;
-    overflow: hidden;
-}
-
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: auto;
-}
-
-.styled-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    text-align: left;
-    font-size: 0.875rem;
-}
-
-.styled-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background-color: #2e7d32; /* must repeat the bg, sticky elements are transparent otherwise */
-    color: #ffffff;
-}
-.styled-table thead tr {
-    background-color: #2e7d32;
-    color: #ffffff;
-    font-weight: 600;
-}
-
-
-.styled-table th,
-.styled-table td {
-    padding: 0.75rem 0.75rem;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-
-.styled-table tbody tr:hover {
-    background-color: #ecfaec;
-}
-
-.styled-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Status Badges */
-.badge {
-    display: inline-block;
-    padding: 0.25rem 0.55rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: 12px;
-    text-transform: capitalize;
-}
-
-.bg-success {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-}
-
-.bg-warning {
-    background-color: #fff8e1;
-    color: #b78103;
-}
-
-.bg-danger {
-    background-color: #ffebee;
-    color: #c62828;
-}
-
-/* Action Buttons */
-.icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    border-radius: 4px;
-    padding: 0.3rem 0.6rem;
-    transition: background 0.2s ease;
-}
-
-/* Edit button */
-.icon-edit {
-    color: #1976d2;
-    background: #e3f2fd;
-}
-.icon-edit:hover {
-    background: #bbdefb;
-}
-
-/* Deactivate / Activate link */
-.action-link.deactivate {
-    color: #d32f2f;
-    background: #ffebee;
-    padding: 0.3rem 0.6rem;
-    border-radius: 4px;
-    text-decoration: none;
-}
-.action-link.deactivate:hover {
-    background: #ffcdd2;
-}
-
-/* Optional: Active state styling */
-.action-link.active {
-    color: #2e7d32;
-    background: #e8f5e9;
-}
-.action-link.active:hover {
-    background: #c8e6c9;
-}
-
-/* Alerts */
-.messages-wrapper {
-    margin-bottom: 1rem;
-}
-
-/* ==========================================================================
-   GSMS COMMON FORM & MODAL OVERLAY STYLES
-   ========================================================================== */
-
-:root {
-  --primary-color: #2e7d32;
-  --primary-hover: #256528;
-  --primary-light: #e8f5e9;
-  --dark-overlay: rgba(15, 23, 42, 0.65);
-  --modal-bg: #ffffff;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --border-color: #cbd5e1;
-  --danger-color: #dc2626;
-  --danger-light: #fef2f2;
-  --radius-lg: 12px;
-  --radius-md: 6px;
-  --shadow-overlay: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
-}
-
-/* --- 1. Centered Modal Backdrop & Page Layout --- */
-.page-wrap,
-.modal-overlay-wrapper {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: var(--dark-overlay);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 1.5rem;
-  box-sizing: border-box;
-  overflow-y: auto;
-}
-
-/* Modal Content Card Container */
-.form-card, 
-.container .card,
-.role-page .form-card {
-  background: var(--modal-bg);
-  width: 100%;
-  max-width: 850px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-overlay);
-  padding: 2rem;
-  margin: auto;
-  position: relative;
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
-  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes modalSlideUp {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* Header Sections inside Popup */
-.page-header, .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 1rem;
-  margin-bottom: 1.5rem;
-  background: transparent !important;
-}
-
-.page-header h1, .section-title, .card-header h4, .card-header h5 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin: 0;
-}
-
-.page-sub {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
-}
-
-/* --- 2. Grid & Inputs --- */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  position: relative;
-}
-
-.form-group-wide {
-  grid-column: 1 / -1;
-}
-
-.form-group label, .form-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-/* Common Text Inputs, Textareas & Selects */
-input[type="text"],
-input[type="number"],
-input[type="email"],
-input[type="password"],
-input[type="date"],
-input[type="datetime-local"],
-select,
-textarea,
-.form-control {
-  width: 100%;
-  padding: 0.6rem 0.85rem;
-  font-size: 0.9rem;
-  color: var(--text-main);
-  background-color: #f8fafc;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  outline: none;
-  box-sizing: border-box;
-  transition: all 0.2s ease-in-out;
-}
-
-input:focus, select:focus, textarea:focus, .form-control:focus {
-  background-color: #ffffff;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
-}
-
-/* Dropdown styling */
-select {
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1rem;
-  padding-right: 2.5rem;
-  cursor: pointer;
-}
-
-/* --- 3. Toggle Switch Control (Checkbox Replacement) --- */
-.form-check-group, .form-check {
-  display: flex;
-  align-items: center;
-  padding-top: 0.5rem;
-}
-
-.form-check-group label, .form-check-label {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
-  user-select: none;
+  justify-content: center;
+  padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-}
-
-/* Hide raw checkbox input */
-.form-check-group input[type="checkbox"],
-.form-check input[type="checkbox"] {
-  appearance: none;
-  width: 2.6rem;
-  height: 1.4rem;
-  background-color: #cbd5e1;
-  border-radius: 1rem;
-  position: relative;
-  cursor: pointer;
-  outline: none;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-}
-
-.form-check-group input[type="checkbox"]::before,
-.form-check input[type="checkbox"]::before {
-  content: "";
-  position: absolute;
-  top: 0.15rem;
-  left: 0.15rem;
-  width: 1.1rem;
-  height: 1.1rem;
-  background-color: #ffffff;
-  border-radius: 50%;
-  transition: transform 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.form-check-group input[type="checkbox"]:checked,
-.form-check input[type="checkbox"]:checked {
-  background-color: var(--primary-color);
-}
-
-.form-check-group input[type="checkbox"]:checked::before,
-.form-check input[type="checkbox"]:checked::before {
-  transform: translateX(1.2rem);
-}
-
-/* --- 4. Tabs & Segmented Navigation --- */
-.form-tabs {
-  display: flex;
-  gap: 0.5rem;
-  border-bottom: 2px solid var(--border-color);
-  margin-bottom: 1.5rem;
-}
-
-.tab-btn {
-  padding: 0.6rem 1.2rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tab-btn:hover {
-  color: var(--primary-color);
-}
-
-.tab-btn.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
-}
-
-/* --- 5. Buttons & Action Bars --- */
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.6rem 1.2rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   text-decoration: none;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s ease;
 }
 
-.btn-primary, .btn-success {
-  background-color: var(--primary-color);
-  color: #ffffff;
+.btn-primary.btn-add {
+  background-color: #2e7d32;
+  color: #fefefe;
+  border: 1px solid #7a9e7e;
+  transition: all 0.2s;
 }
 
-.btn-primary:hover, .btn-success:hover {
-  background-color: var(--primary-hover);
+.btn-primary.btn-add:hover {
+  background: #fefefe;
+  color: #2e7d32;
 }
 
-/* Clear / Cancel Button */
-.btn-clear, .btn-secondary, .btn-outline-secondary {
-  background-color: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border-color);
+.btn-export {
+  background-color: #fefefe;
+  color: #111111;
+  border-color: #dcdcdc;
 }
 
-.btn-clear:hover, .btn-secondary:hover, .btn-outline-secondary:hover {
-  background-color: #f1f5f9;
-  color: var(--text-main);
+.btn-export:hover {
+  background-color: #ffcdd2;
+  color: #111111;
 }
 
-.btn-sm {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.775rem;
+/* Stat Strip */
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.25rem;
 }
 
-/* --- 6. Formsets, Inline Cards & Tables --- */
-.variant-row, .item-row {
-  background: #f8fafc;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 1rem;
-  margin-bottom: 1rem;
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stat-label {
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-divider {
+  height: 16px;
+  width: 1px;
+  background-color: #e0e0e0;
+}
+
+.stat-green {
+  color: #5aa05d;
+}
+
+.stat-orange {
+  color: #bc753c;
+}
+
+.stat-red {
+  color: #ad5151;
+}
+
+/* Scrollable Table Area */
+.scrollable-table-card {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 1px;
+  background: #f6f4f4;
   position: relative;
 }
 
-.section-title-row {
+.styled-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+/* Fixed Sticky Table Header */
+.styled-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #57ba52;
+  color: #1b0202;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.styled-table tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #bde7d9;
+  color: #210606;
+  white-space: nowrap;
+}
+
+.styled-table tbody tr:hover {
+  background-color: #fdfdfd;
+}
+
+/* Helper Utilities */
+.invoice-link {
+  color: #16a34a;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.invoice-link:hover {
+  text-decoration: underline;
+}
+
+.text-center {
+  text-align: center !important;
+}
+.text-end {
+  text-align: right !important;
+}
+
+/* Fixed Bottom Pagination Bar */
+.pagination-footer {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-}
-
-/* --- 7. Validation Messages --- */
-.field-error {
-  font-size: 0.75rem;
-  color: var(--danger-color);
-  margin-top: 0.25rem;
-  font-weight: 500;
-}
-
-.alert-danger, .alert-item.alert-danger {
-  background-color: var(--danger-light);
-  color: var(--danger-color);
-  border: 1px solid #fecaca;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
   font-size: 0.85rem;
+  color: #6b7280;
+  background: #ffffff;
+}
+
+.pagination {
+  display: flex;
+  list-style: none;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+}
+
+.pagination li a,
+.pagination li span {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  color: #374151;
+  text-decoration: none;
+}
+
+.pagination li.active span {
+  background-color: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+/* Status Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.bg-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.bg-warning {
+  background-color: #fff8e1;
+  color: #b78103;
+}
+
+.bg-danger {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+/* Action Buttons */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  transition: background 0.2s ease;
+}
+
+/* Edit button */
+.icon-edit {
+  color: #1976d2;
+  background: #e3f2fd;
+}
+.icon-edit:hover {
+  background: #bbdefb;
+}
+
+/* Deactivate / Activate link */
+.action-link.deactivate {
+  color: #d32f2f;
+  background: #ffebee;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  text-decoration: none;
+}
+.action-link.deactivate:hover {
+  background: #ffcdd2;
+}
+
+/* Optional: Active state styling */
+.action-link.active {
+  color: #2e7d32;
+  background: #e8f5e9;
+}
+.action-link.active:hover {
+  background: #c8e6c9;
+}
+
+/* Alerts */
+.messages-wrapper {
   margin-bottom: 1rem;
-}
-/* =========================================================
-   GSMS COMMON FORM STYLES
-   Use these classes for ALL GSMS forms:
-   Product, Customer, Supplier, Category, Unit, Purchase,
-   Sales, User, Expense, Cost, etc.
-   ========================================================= */
-
-
-/* =========================================================
-   DESIGN VARIABLES
-   Match these with the existing GSMS dashboard theme if
-   your master.css already defines equivalent variables.
-   ========================================================= */
-
-:root {
-    --form-primary: #0b6f8f;
-    --form-primary-dark: #075a73;
-    --form-success: #159447;
-
-    --form-text: #17212b;
-    --form-muted: #6f7c87;
-
-    --form-border: #dfe5e9;
-    --form-input-bg: #f4f6f7;
-
-    --form-white: #ffffff;
-
-    --form-danger: #c83b3b;
-
-    --form-radius: 16px;
-
-    --form-shadow:
-        0 24px 70px rgba(20, 35, 45, 0.20);
-}
-
-
-/* =========================================================
-   PAGE
-   ========================================================= */
-
-.form-page {
-    min-height: 100%;
-}
-
-
-/* =========================================================
-   MODAL OVERLAY
-   ========================================================= */
-
-.form-overlay {
-    position: fixed;
-    inset: 0;
-
-    z-index: 1000;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 24px;
-
-    background: rgba(20, 27, 32, 0.56);
-
-    overflow-y: auto;
-}
-
-
-/* =========================================================
-   MODAL
-   ========================================================= */
-
-.form-modal {
-    width: min(100%, 980px);
-
-    max-height: calc(100vh - 48px);
-
-    overflow-y: auto;
-
-    background: var(--form-white);
-
-    border: 1px solid rgba(255, 255, 255, 0.8);
-
-    border-radius: 20px;
-
-    box-shadow: var(--form-shadow);
-}
-
-
-/* =========================================================
-   MODAL HEADER
-   ========================================================= */
-
-.form-modal-header {
-    position: sticky;
-
-    top: 0;
-
-    z-index: 10;
-
-    display: flex;
-
-    align-items: flex-start;
-
-    justify-content: space-between;
-
-    gap: 20px;
-
-    padding: 26px 30px 18px;
-
-    background: var(--form-white);
-
-    border-bottom: 1px solid #edf0f2;
-}
-
-
-.form-modal-header h1 {
-    margin: 0;
-
-    color: var(--form-text);
-
-    font-size: 25px;
-
-    font-weight: 700;
-
-    line-height: 1.2;
-}
-
-
-.form-page-sub {
-    margin: 7px 0 0;
-
-    color: var(--form-muted);
-
-    font-size: 14px;
-}
-
-
-/* =========================================================
-   CLOSE BUTTON
-   ========================================================= */
-
-.form-modal-close {
-    width: 38px;
-    height: 38px;
-
-    flex: 0 0 38px;
-
-    display: inline-flex;
-
-    align-items: center;
-    justify-content: center;
-
-    border: 0;
-
-    border-radius: 50%;
-
-    background: transparent;
-
-    color: #50606b;
-
-    font-size: 27px;
-
-    line-height: 1;
-
-    text-decoration: none;
-
-    cursor: pointer;
-
-    transition:
-        background 0.2s ease,
-        color 0.2s ease;
-}
-
-
-.form-modal-close:hover {
-    background: #eef3f5;
-
-    color: var(--form-text);
-}
-
-
-/* =========================================================
-   MAIN FORM
-   ========================================================= */
-
-.form {
-    padding: 26px 30px 30px;
-}
-
-
-/* =========================================================
-   FORM SECTION / CARD
-   ========================================================= */
-
-.form-section {
-    margin-bottom: 22px;
-
-    padding: 22px;
-
-    border: 1px solid var(--form-border);
-
-    border-radius: var(--form-radius);
-
-    background: var(--form-white);
-}
-
-
-.form-section-title {
-    margin: 0 0 18px;
-
-    color: var(--form-text);
-
-    font-size: 17px;
-
-    font-weight: 700;
-}
-
-
-.form-section-header {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 15px;
-
-    margin-bottom: 18px;
-}
-
-
-.form-section-header
-.form-section-title {
-    margin-bottom: 0;
-}
-
-
-/* =========================================================
-   GRID
-   ========================================================= */
-
-.form-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-
-    gap: 18px 20px;
-}
-
-
-.form-grid-variant {
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-}
-
-
-.form-field {
-    min-width: 0;
-}
-
-
-.form-field-wide {
-    grid-column: 1 / -1;
-}
-
-
-/* =========================================================
-   LABEL
-   ========================================================= */
-
-.form-field > label {
-    display: block;
-
-    margin: 0 0 7px;
-
-    color: var(--form-text);
-
-    font-size: 14px;
-
-    font-weight: 600;
-
-    line-height: 1.4;
-}
-
-
-/* =========================================================
-   INPUT / SELECT / TEXTAREA
-   Works with normal Django form widgets.
-   ========================================================= */
-
-.form-field input:not([type="checkbox"]):not([type="radio"]),
-.form-field select,
-.form-field textarea {
-
-    width: 100%;
-
-    min-height: 44px;
-
-    box-sizing: border-box;
-
-    padding: 10px 13px;
-
-    border: 1px solid transparent;
-
-    border-radius: 9px;
-
-    outline: none;
-
-    background: var(--form-input-bg);
-
-    color: var(--form-text);
-
-    font: inherit;
-
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        background 0.2s ease;
-}
-
-
-.form-field textarea {
-    min-height: 100px;
-
-    resize: vertical;
-}
-
-
-.form-field
-input:not([type="checkbox"]):not([type="radio"]):focus,
-.form-field select:focus,
-.form-field textarea:focus {
-
-    border-color: var(--form-primary);
-
-    background: #ffffff;
-
-    box-shadow:
-        0 0 0 3px rgba(11, 111, 143, 0.10);
-}
-
-
-.form-field input::placeholder,
-.form-field textarea::placeholder {
-    color: #9aa6ae;
-}
-
-
-/* =========================================================
-   SELECT / DROPDOWN
-   ========================================================= */
-
-.form-field select {
-    cursor: pointer;
-}
-
-
-/* =========================================================
-   CHECKBOX → ON/OFF SWITCH
-   ========================================================= */
-
-.form-switch-field {
-    display: flex;
-
-    align-items: center;
-
-    min-height: 44px;
-}
-
-
-.form-switch-field > label {
-    display: inline-flex;
-
-    align-items: center;
-
-    gap: 10px;
-
-    margin: 0;
-
-    cursor: pointer;
-
-    font-weight: 600;
-}
-
-
-.form-switch-field
-input[type="checkbox"] {
-
-    appearance: none;
-    -webkit-appearance: none;
-
-    width: 42px;
-    height: 23px;
-
-    margin: 0;
-
-    flex: 0 0 42px;
-
-    border: 0;
-
-    border-radius: 999px;
-
-    background: #cbd3d8;
-
-    position: relative;
-
-    cursor: pointer;
-
-    transition: background 0.2s ease;
-}
-
-
-.form-switch-field
-input[type="checkbox"]::after {
-
-    content: "";
-
-    position: absolute;
-
-    top: 3px;
-    left: 3px;
-
-    width: 17px;
-    height: 17px;
-
-    border-radius: 50%;
-
-    background: #ffffff;
-
-    box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.22);
-
-    transition:
-        transform 0.2s ease;
-}
-
-
-.form-switch-field
-input[type="checkbox"]:checked {
-
-    background:
-        var(--form-success);
-}
-
-
-.form-switch-field
-input[type="checkbox"]:checked::after {
-
-    transform:
-        translateX(19px);
-}
-
-
-/* =========================================================
-   TABS
-   Reusable for Goods / Services / Expenses, etc.
-   ========================================================= */
-
-.form-tabs {
-    display: flex;
-
-    gap: 10px;
-
-    margin-bottom: 25px;
-}
-
-
-.form-tab {
-    flex: 1;
-
-    min-height: 58px;
-
-    padding: 10px 18px;
-
-    border: 1px solid transparent;
-
-    border-radius: 14px;
-
-    background: #f1f2f3;
-
-    color: var(--form-text);
-
-    font: inherit;
-
-    font-size: 15px;
-
-    font-weight: 600;
-
-    cursor: pointer;
-
-    transition:
-        border-color 0.2s ease,
-        background 0.2s ease;
-}
-
-
-.form-tab:hover {
-    border-color: var(--form-primary);
-}
-
-
-.form-tab.active {
-    background: #ffffff;
-
-    border-color:
-        var(--form-primary);
-}
-
-
-/* =========================================================
-   REPEATING FORM ROW
-   Used for Product Variants, Sale Items, Purchase Items, etc.
-   ========================================================= */
-
-.form-repeater-row {
-
-    position: relative;
-
-    margin-bottom: 16px;
-
-    padding: 18px;
-
-    border: 1px solid var(--form-border);
-
-    border-radius: 13px;
-
-    background: #fbfcfc;
-}
-
-
-.form-repeater-row-error {
-    border-color: #e8a0a0;
-}
-
-
-/* =========================================================
-   DELETE / REMOVE FIELD
-   ========================================================= */
-
-.form-delete-field {
-    margin-top: 12px;
-}
-
-
-/* =========================================================
-   ALERTS
-   ========================================================= */
-
-.form-alert {
-
-    margin-bottom: 16px;
-
-    padding: 11px 13px;
-
-    border-radius: 9px;
-}
-
-
-.form-alert-danger {
-
-    background: #fff0f0;
-
-    color: var(--form-danger);
-}
-
-
-/* =========================================================
-   FIELD ERRORS
-   ========================================================= */
-
-.form-field-error {
-
-    display: block;
-
-    margin-top: 5px;
-
-    color: var(--form-danger);
-
-    font-size: 12px;
-
-    line-height: 1.4;
-}
-
-
-.form-error-banner {
-
-    margin-bottom: 12px;
-
-    padding: 9px 11px;
-
-    border-radius: 8px;
-
-    background: #fff0f0;
-
-    color: var(--form-danger);
-}
-
-
-/* =========================================================
-   BUTTONS
-   ========================================================= */
-
-.form-btn {
-
-    min-height: 42px;
-
-    display: inline-flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    gap: 7px;
-
-    padding: 9px 17px;
-
-    border: 1px solid transparent;
-
-    border-radius: 9px;
-
-    font: inherit;
-
-    font-size: 14px;
-
-    font-weight: 600;
-
-    text-decoration: none;
-
-    cursor: pointer;
-
-    transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
-}
-
-
-.form-btn-sm {
-
-    min-height: 36px;
-
-    padding: 7px 12px;
-
-    font-size: 13px;
-}
-
-
-.form-btn-primary {
-
-    color: #ffffff;
-
-    background:
-        var(--form-primary);
-}
-
-
-.form-btn-primary:hover {
-
-    background:
-        var(--form-primary-dark);
-
-    transform:
-        translateY(-1px);
-}
-
-
-.form-btn-secondary {
-
-    color: #45535d;
-
-    background: #ffffff;
-
-    border-color:
-        var(--form-border);
-}
-
-
-.form-btn-secondary:hover {
-
-    background: #f4f7f8;
-
-    border-color: #cbd5da;
-}
-
-
-/* =========================================================
-   FORM ACTIONS
-   ========================================================= */
-
-.form-actions {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: flex-end;
-
-    gap: 10px;
-
-    padding-top: 4px;
-}
-
-
-/* =========================================================
-   SCROLLBAR
-   ========================================================= */
-
-.form-modal::-webkit-scrollbar {
-    width: 8px;
-}
-
-
-.form-modal::-webkit-scrollbar-thumb {
-
-    background: #cbd3d8;
-
-    border-radius: 999px;
-}
-
-
-.form-modal::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 760px) {
-
-    .form-overlay {
-
-        padding: 10px;
-
-        align-items: flex-start;
-    }
-
-
-    .form-modal {
-
-        max-height:
-            calc(100vh - 20px);
-
-        border-radius: 14px;
-    }
-
-
-    .form-modal-header,
-    .form {
-
-        padding-left: 18px;
-
-        padding-right: 18px;
-    }
-
-
-    .form-grid,
-    .form-grid-variant {
-
-        grid-template-columns: 1fr;
-    }
-
-
-    .form-field-wide {
-
-        grid-column: auto;
-    }
-
-
-    .form-section {
-
-        padding: 16px;
-    }
-
-
-    .form-section-header {
-
-        align-items: flex-start;
-
-        flex-direction: column;
-    }
-
-
-    .form-tabs {
-
-        flex-direction: column;
-    }
-
-
-    .form-actions {
-
-        flex-direction: column-reverse;
-
-        align-items: stretch;
-    }
-
-
-    .form-actions
-    .form-btn {
-
-        width: 100%;
-    }
-
 }

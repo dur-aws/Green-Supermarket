@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Product and Stocks{% endblock %}
+{% block content %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/master.css' %}" />
 {% endblock %}
 
-{% block content %}
-<div class="container">
-
+<div class="master-container">
+    <!-- fixed -->
+    <div class="sticky-header-container">
     <!-- Filter Bar -->
     <div class="filter-bar">
         <div class="search-box">
@@ -24,7 +24,7 @@
             />
         </div>
 
-        <div class="filter-select-group">
+       <div>
             <select id="category-filter" class="filter-select">
                 <option value="">All Categories</option>
                 {% for cat in categories %}
@@ -33,23 +33,21 @@
                     </option>
                 {% endfor %}
             </select>
-
+        </div>
+        <div>
             <select id="stock-filter" name="stock_status" class="filter-select" onchange="this.form.submit()">
-                <option value="">All Stock Status</option>
+                <option value="">All Stock </option>
                 <option value="active" {% if selected_stock_status == "active" %}selected{% endif %}>Active</option>
                 <option value="low-stock" {% if selected_stock_status == "low-stock" %}selected{% endif %}>Low Stock</option>
                 <option value="out-of-stock" {% if selected_stock_status == "out-of-stock" %}selected{% endif %}>Out of Stock</option>
-                <option value="disable" {% if selected_stock_status == "disable" %}selected{% endif %}>Disabled</option>
+
             </select>
         </div>
 
-        <div class="filter-right">
-            <span class="showing-text">
-                Showing <strong id="showing-count">{{ products|length }}</strong>
-                of <strong id="total-count">{{ total_filtered|default:products|length }}</strong> products
-            </span>
+        <div>
             <a href="{% url 'product_add' %}" class="btn btn-primary btn-add">+ Add Product</a>
             <a href="#" class="btn btn-export">&#8595; Export</a>
+             <button type="button" onclick="window.print()" class="btn btn-export">Print</button>
         </div>
     </div>
 
@@ -59,50 +57,75 @@
             <span class="stat-label">Total Products:</span>
             <strong id="stat-total">{{ stats.total|default:0 }}</strong>
         </div>
-        <div class="stat-divider"></div>
+        
         <div class="stat-item">
             <span class="stat-label">Active:</span>
             <strong class="stat-green" id="stat-active">{{ stats.active|default:0 }}</strong>
         </div>
-        <div class="stat-divider"></div>
+        
         <div class="stat-item">
             <span class="stat-label">Low Stock:</span>
             <strong class="stat-orange" id="stat-low">{{ stats.low_stock|default:0 }}</strong>
         </div>
-        <div class="stat-divider"></div>
+        
         <div class="stat-item">
             <span class="stat-label">Out of Stock:</span>
             <strong class="stat-red" id="stat-out">{{ stats.out_of_stock|default:0 }}</strong>
         </div>
     </div>
+    </div>
 
     <!-- Data Table Card -->
-    <div class="table-card">
-        <div class="table-responsive">
-            <table class="data-table styled-table">
+    <div class="scrollable-table-card">
+        
+            <table class="styled-table">
                 <thead>
                     <tr>
                         <th>Code</th>
                         <th>Name</th>
                         <th>SKU</th>
-                        <th>Category</th>
-                        <th>Brand</th>
-                        <th>UOM</th>
-                        <th>Stock</th>
-                        <th>Reorder</th>
-                        <th>Cost NPR</th>
-                        <th>Sale NPR</th>
-                        <th>VAT %</th>
+                        <th class="text-center">Category</th>
+                        <th class="text-center">Brand</th>
+                        <th class="text-center">UOM</th>
+                        <th class="text-end">Stock</th>
+                        <th class="text-end">Reorder</th>
+                        <th class="text-end">Cost NPR</th>
+                        <th class="text-end">Sale NPR</th>
+                        <th class="text-end">VAT %</th>
                         <th>ABC</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="product-table-body">
                     {% include 'products/product_rows.html' %}
                 </tbody>
             </table>
-        </div>
+    </div>
+        <!-- FIXED BOTTOM PAGINATION -->
+    <div class="pagination-footer">
+        <div>total {{ products|length }} records</div>
+        {% if is_paginated %}
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+                <li><a href="?page={{ page_obj.previous_page_number }}">&lt;</a></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="active"><span>{{ num }}</span></li>
+                {% else %}
+                    <li><a href="?page={{ num }}">{{ num }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li><a href="?page={{ page_obj.next_page_number }}">&gt;</a></li>
+            {% endif %}
+        </ul>
+        {% endif %}
+    </div>
+      
     </div>
 
 </div>

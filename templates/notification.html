@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="history-container">
+    <div class="history-header">
+        <h2 class="history-title">Notification History</h2>
+        <span class="text-muted">Total: {{ notifications|length }}</span>
+    </div>
+
+    <div class="notif-history-list">
+        {% for alert in notifications %}
+        <div class="notif-item {% if not alert.is_read %}unread{% endif %}">
+            <div class="notif-icon {{ alert.type|default:'info' }}">
+                <i class="fa-solid {% if alert.type == 'danger' %}fa-triangle-exclamation{% elif alert.type == 'warning' %}fa-circle-exclamation{% else %}fa-bell{% endif %}"></i>
+            </div>
+            <div class="notif-content">
+                <div class="notif-title">{{ alert.title }}</div>
+                <div class="notif-desc">{{ alert.message }}</div>
+                <div class="notif-time">
+                    <i class="fa-regular fa-clock"></i> {{ alert.created_at|date:"Y-m-d H:i:s" }}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="notif-empty">
+            No notification history recorded yet.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

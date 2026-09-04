@@ -23,6 +23,7 @@ from django.views import View
 
 # from .models import Sales, Category, Product, SalesDetail, Inventory, Expense
 from customers.models import Customer
+from inventory.models import InventoryBatch
 from purchases.models import PurchaseOrder
 from accounts.mixins import RBACPermissionMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -268,9 +269,9 @@ def get_monthly_sales():
 #     return _html_response(html)
 
 
-# # -------------------------------------------------------------
-# # 6) LOW STOCK ROWS (HTML partial)  ->  GET /dashboard/api/low-stock/
-# # -------------------------------------------------------------
+# -------------------------------------------------------------
+# 6) LOW STOCK ROWS (HTML partial)  ->  GET /dashboard/api/low-stock/
+# -------------------------------------------------------------
 
 
 class LowStockView(RBACPermissionMixin, LoginRequiredMixin, View):
@@ -339,3 +340,110 @@ class LowStockView(RBACPermissionMixin, LoginRequiredMixin, View):
 # def _html_response(html):
 #     from django.http import HttpResponse
 #     return HttpResponse(html, content_type="text/html")
+
+#########################
+ # Epiry Alerts
+#########################
+
+@login_required
+def dashboard_expiry_alerts_api(request):
+    """
+    Dashboard API returning active counts of expired and near-expiry batches.
+    """
+    today = timezone.now().date()
+    
+    # Stock > 0 and Expiry < Today
+    expired_count = InventoryBatch.objects.filter(
+        expiry_date__lt=today, 
+        current_quantity__gt=Decimal('0.000')
+    ).count()
+    
+    # Stock > 0 and Expiry within 60 days
+    critical_count = InventoryBatch.objects.filter(
+        expiry_date__gte=today,
+        expiry_date__lte=today + timedelta(days=60),
+        current_quantity__gt=Decimal('0.000')
+    ).count()
+
+    return JsonResponse({
+        'expired_count': expired_count,
+        'critical_count': critical_count,
+        'status': 'success'
+    })
+
+
+@login_required
+def dashboard_expiry_rows(request):
+    """
+    Returns HTML rows (expiry_rows.html) for batches that are expired or expiring soon (within 60 days).
+    """
+    today = timezone.now().date()
+    
+    batches = InventoryBatch.objects.select_related(
+        'variant', 'variant__product', 'variant__primary_uom'
+    ).filter(
+        current_quantity__gt=Decimal('0.000'),
+        expiry_date__lte=today + timedelta(days=60)
+    ).order_by('expiry_date')[:8]
+
+    # Calculate days_left dynamically for template badges
+    for batch in batches:
+        batch.days_left = (batch.expiry_date - today).days
+
+    html = render_to_string('expiry_rows.html', {'batches': batches}, request=request)
+    return HttpResponse(html, content_type="text/html")
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from .models import Notification
+
+@login_required
+def recent_notifications_api(request):
+    """
+    Returns the recent 5 notifications for the user along with unread counts.
+    """
+    notifications_qs = Notification.objects.filter(
+        Q(user=request.user) | Q(user__isnull=True)
+    )[:5]
+
+    unread_count = Notification.objects.filter(
+        Q(user=request.user) | Q(user__isnull=True),
+        is_read=False
+    ).count()
+
+    data = []
+    for item in notifications_qs:
+        data.append({
+            'id': item.id,
+            'title': item.title,
+            'message': item.message,
+            'type': item.type,
+            'link': item.link or '#',
+            'is_read': item.is_read,
+            'time_ago': item.time_ago(),
+        })
+
+    return JsonResponse({
+        'status': 'success',
+        'unread_count': unread_count,
+        'notifications': data,
+    })
+
+
+@login_required
+def notification_history(request):
+    """
+    Renders the notification.html template showing all historical notifications.
+    """
+    notifications = Notification.objects.filter(
+        Q(user=request.user) | Q(user__isnull=True)
+    )
+
+    # Optional: Mark all as read when visiting history page
+    notifications.filter(is_read=False).update(is_read=True)
+
+    return render(request, 'notification.html', {
+        'notifications': notifications
+    })

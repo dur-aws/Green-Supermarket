@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice #{{ sale.invoice_no }}</title>
+    <style>
+        body { font-family: monospace; width: 80mm; margin: 0 auto; padding: 10px; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .line { border-bottom: 1px dashed #000; margin: 5px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        
+        .no-print-actions {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .btn-back {
+            background-color: #475569;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .item-text {
+            display: inline-block;
+            max-width: 90px;         /* Match column width */
+            white-space: nowrap;      /* Prevent wrapping to 2nd line */
+            overflow: hidden;         /* Hide overflowing text */
+            text-overflow: ellipsis;  /* Show "..." for extra text */
+            vertical-align: middle;
+        }
+        /* Hide buttons during printer output */
+        @media print {
+            .no-print-actions { display: none !important; }
+            @page { margin: 0; }
+            body { margin: 0.2cm; }
+        }
+    </style>
+</head>
+<body onload="window.print();">
+
+    <div class="no-print-actions">
+        <a href="{% url 'sales_invoice' %}" class="btn-back">← Back to New Sale</a>
+    </div>
+
+    <div class="text-center">
+        <h2>GREEN SUPERMARKET PVT LTD</h2>
+        <P>vat: 0000000</P>
+    </div>
+    <p>Invoice: {{ sale.invoice_no }}<br>Date: {{ sale.bs_date }} ({{ sale.sale_date|date:"Y-m-d" }})</p>
+    <div class="line"></div>
+    <table>
+        <thead>
+            <tr>
+                <th style="text-align: left; width:90px;">Item</th>
+                <th>Qty</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in sale.saleitem_set.all|default:sale.items.all %}
+            <tr>
+                <td style="width: 90px;">
+                <!-- 👈 Wrap text here -->
+                <span class="item-text">
+                    {{item.variant.product.product_name}} {{ item.variant.variant_name }}
+                </span>
+            </td>
+                
+                <td class="text-center">{{ item.quantity }}</td>
+                <td class="text-right">{{ item.line_total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="line"></div>
+    <table>
+        <tr><td>Subtotal:</td><td class="text-right">{{ sale.subtotal }}</td></tr>
+        <tr><td>Discount:</td><td class="text-right">{{ sale.discount_total }}</td></tr>
+        <tr><td>VAT:</td><td class="text-right">{{ sale.vat_total }}</td></tr>
+        <tr><th>Grand Total:</th><th class="text-right">{{ sale.grand_total }}</th></tr>
+        <tr><td>Tender:</td><td class="text-right">{{ sale.tender_amount }}</td></tr>
+        <tr><td>Change:</td><td class="text-right">{{ sale.change_amount }}</td></tr>
+    </table>
+    <div class="line"></div>
+    <p class="text-center">Thank you for visiting!</p>
+</body>
+</html>

@@ -4,7 +4,7 @@ from django.forms import inlineformset_factory
 from products.models import ProductVariant
 from .models import PurchaseOrder, PurchaseDetail, Supplier
 
-
+from django.core.exceptions import ValidationError
 
 class PurchaseOrderForm(forms.ModelForm):
     """Master form for Purchase Order header metadata and Tax/TDS calculations."""
@@ -69,6 +69,14 @@ class PurchaseOrderForm(forms.ModelForm):
         # Filter active suppliers only
         self.fields['supplier'].queryset = Supplier.objects.filter(is_active=1)
 
+    def clean(self):
+            cleaned_data = super().clean()
+            order_date = cleaned_data.get('order_date')
+            received_date = cleaned_data.get('received_date')
+
+            if received_date and order_date and received_date < order_date:
+                        self.add_error('received_date', "Received date cannot be earlier than Order date.")
+            return cleaned_data
 class VariantChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f"{obj.product.product_name} - {obj.variant_name}"
@@ -115,6 +123,21 @@ class PurchaseDetailForm(forms.ModelForm):
             }),
         }
 
+
+
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        manufacture_date = cleaned_data.get('manufacture_date')
+        expiry_date = cleaned_data.get('expiry_date')
+        harvest_date = cleaned_data.get('harvest_date')
+
+        
+        if expiry_date and manufacture_date and harvest_date and (expiry_date <= manufacture_date or expiry_date <= harvest_date):
+            self.add_error('expiry_date', "Expiry date must be greater than Manufacturing/Harvest date.")
+
+        return cleaned_data
 
 # ==========================================
 # MASTER-DETAIL INLINE FORMSET

@@ -19,7 +19,7 @@
             <span class="refresh-icon" aria-hidden="true">&#8635;</span> Refresh
         </button>
     </div>
-
+    
     <!-- ============ KPI STRIP ============ -->
     <div class="stat-strip" id="kpiStrip">
 
@@ -111,7 +111,31 @@
         </div>
 
     </div>
+    
 
+<!-- Insert this Expiry Table Card alongside Low Stock / Recent Sales -->
+<div class="form-card">
+    <div class="card-head">
+        <h2 class="card-title">⌛ Expiry Alerts & Batches</h2>
+        <!--<a href="#" class="card-link">Full Report &rarr;</a> -->
+    </div>
+    <div class="table-wrap">
+        <table class="dash-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Batch</th>
+                    <th>Stock</th>
+                    <th>Expiry Date</th>
+                    <th class="text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody id="expiryRows">
+                <tr><td colspan="5" class="dash-table-empty">Loading expiry alerts…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
     <!-- ============ RECENT SALES / LOW STOCK ============ -->
     <div class="dashboard-grid two-col">
 

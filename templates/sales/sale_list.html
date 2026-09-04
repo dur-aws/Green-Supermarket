@@ -1,285 +1,144 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% block title %}Sales Report{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/master.css' %}">
-<link rel="stylesheet" href="{% static 'css/accounts.css' %}">
 
-<style>
-    /* Sales History Dashboard Custom Styles */
-    .sales-nav-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 2px solid #e0e0e0;
-        padding-bottom: 0.5rem;
-        margin-bottom: 1rem;
-    }
-    .sales-nav-links {
-        display: flex;
-        gap: 1.5rem;
-    }
-    .sales-nav-links a {
-        text-decoration: none;
-        color: #555;
-        font-weight: 600;
-        font-size: 0.95rem;
-        padding-bottom: 0.5rem;
-    }
-    .sales-nav-links a.active {
-        color: #2e7d32;
-        border-bottom: 3px solid #2e7d32;
-    }
-    .system-meta {
-        font-size: 0.85rem;
-        color: #777;
-        display: flex;
-        gap: 1rem;
-    }
-    
-    /* Summary Metric Strip */
-    .summary-metrics {
-        display: flex;
-        gap: 2.5rem;
-        margin: 1.25rem 0;
-        padding: 0.5rem 0;
-    }
-    .metric-box {
-        display: flex;
-        flex-direction: column;
-    }
-    .metric-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    .metric-value {
-        font-size: 1.35rem;
-        font-weight: 800;
-    }
-    .metric-value.total { color: #111827; }
-    .metric-value.collected { color: #2e7d32; }
-    .metric-value.pending { color: #dc2626; }
-    .metric-value.invoices { color: #2e7d32; }
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}"/>
+{% endblock %}
 
-    /* Action Filter Bar Adjustments */
-    .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-    }
-    .filter-group {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.85rem;
-        color: #555;
-    }
-    .date-input {
-        padding: 0.45rem 0.6rem;
-        border: 1px solid #dcdcdc;
-        border-radius: 4px;
-        font-size: 0.85rem;
-    }
-    
-    /* Table Enhancements */
-    .invoice-link {
-        color: #2e7d32;
-        font-weight: 700;
-        text-decoration: none;
-    }
-    .invoice-link:hover {
-        text-decoration: underline;
-    }
-    .amount-received {
-        font-weight: 600;
-    }
-    .amount-received.paid { color: #2e7d32; }
-    .amount-received.zero { color: #dc2626; }
-    
-    .action-btn-group {
-        display: flex;
-        gap: 0.25rem;
-    }
-    .btn-icon-action {
-        background-color: #3b82f6;
-        color: white;
-        border: none;
-        padding: 0.3rem 0.5rem;
-        border-radius: 4px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-    }
-    .btn-icon-action.secondary {
-        background-color: #9ca3af;
-    }
-    
-    .pagination-wrapper {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 1rem;
-        font-size: 0.85rem;
-        color: #666;
-    }
-    .pagination {
-        display: flex;
-        list-style: none;
-        gap: 0.25rem;
-        margin: 0;
-        padding: 0;
-    }
-    .pagination li a, .pagination li span {
-        padding: 0.35rem 0.75rem;
-        border: 1px solid #dcdcdc;
-        border-radius: 4px;
-        color: #333;
-        text-decoration: none;
-    }
-    .pagination li.active span {
-        background-color: #2e7d32;
-        color: white;
-        border-color: #2e7d32;
-    }
-</style>
 
-<div class="container-fluid py-2 px-4">
-    
-    <!-- Filters and Top Actions -->
-    <form method="get" id="sales-filter-form">
-        <div class="filter-row">
-            <div class="search-box" style="flex: 0 1 240px;">
-                <span class="search-icon">🔍</span>
-                <input type="text" name="q" value="{{ request.GET.q }}" class="search-input" placeholder="Search invoice or party...">
+
+<div class="master-container">
+
+    <!-- FIXED TOP SECTION -->
+    <div class="sticky-header-panel">
+        
+        <!-- Combined Filter Row Form -->
+       
+            <div class="filter-bar" >
+                
+                <!-- Search Box -->
+                <div class="search-box">
+                    <span class="search-icon">&#128269;</span>
+                    <input
+                        type="text"
+                        name="q"
+                        id="sales-search"
+                        placeholder="Search invoice or party..."
+                        value="{{ request.GET.q|default:'' }}"
+                        class="search-input"
+                        autocomplete="off"
+                    />
+                </div>
+                
+                
+
+                <!-- Payment Status Filter -->
+                <div>
+                    <select name="status" class="filter-select" onchange="this.form.submit()">
+                        <option value="">All Payment</option>
+                        <option value="PAID" {% if request.GET.status == 'PAID' %}selected{% endif %}>Paid</option>
+                        <option value="PARTIAL" {% if request.GET.status == 'PARTIAL' %}selected{% endif %}>Pending / Partial</option>
+                        <option value="UNPAID" {% if request.GET.status == 'UNPAID' %}selected{% endif %}>Unpaid</option>
+                    </select>
+                </div>
+                
+                <!-- Actions -->
+                <div>
+                    <a href="{% url 'sales_invoice' %}" class="btn btn-primary btn-add">+ New Invoice</a>
+                    <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}export=excel" class="btn btn-export">&#8595; Export</a>
+                    <button type="button" onclick="window.print()" class="btn btn-export"><i class="fa-solid fa-print"></i></button>
+                </div>
             </div>
-
-            <div class="filter-group">
-                <label>From:</label>
-                <input type="date" name="from_date" value="{{ request.GET.from_date }}" class="date-input">
+       
+            
+        <!-- Stats Strip -->
+        <div class="stat-strip">
+            <div class="stat-item">
+                <span class="stat-label">Total Sales:</span>
+                <strong class="stat-total">Rs. {{ totals.grand_total|default:"0.00" }}</strong>
             </div>
-
-            <div class="filter-group">
-                <label>To:</label>
-                <input type="date" name="to_date" value="{{ request.GET.to_date }}" class="date-input">
+            <div class="stat-item">
+                <span class="stat-label">Collected:</span>
+                <strong class="stat-green">Rs. {{ totals.tender_amount|default:"0.00" }}</strong>
             </div>
-
-            <select name="status" class="filter-select">
-                <option value="">All</option>
-                <option value="PAID" {% if request.GET.status == 'PAID' %}selected{% endif %}>Paid</option>
-                <option value="PARTIAL" {% if request.GET.status == 'PARTIAL' %}selected{% endif %}>Pending / Partial</option>
-                <option value="UNPAID" {% if request.GET.status == 'UNPAID' %}selected{% endif %}>Unpaid</option>
-            </select>
-
-            <button type="submit" class="btn btn-primary btn-add" style="padding: 0.45rem 1rem;">Apply Filter</button>
-
-            <div style="margin-left: auto; display: flex; gap: 0.5rem;">
-                <a href="?export=excel" class="btn btn-export">⬇ Export</a>
-                <button type="button" onclick="window.print()" class="btn btn-export">🖨 Print Report</button>
+            <div class="stat-item">
+                <span class="stat-label">Pending / Dues:</span>
+                <strong class="stat-red">Rs. {{ totals.pending_amount|default:"0.00" }}</strong>
             </div>
-        </div>
-    </form>
-
-    <div>
-        <a href="{% url 'sales_invoice' %}" class="btn btn-primary btn-add" style="font-weight: 600; padding: 0.5rem 1.2rem;">+ New Invoice</a>
-    </div>
-
-    <!-- Metrics Strip -->
-    <div class="summary-metrics">
-        <div class="metric-box">
-            <span class="metric-label">Total Sales</span>
-            <span class="metric-value total">Rs. {{ totals.grand_total|default:"0.00" }}</span>
-        </div>
-        <div class="metric-box">
-            <span class="metric-label">Amount Collected</span>
-            <span class="metric-value collected">Rs. {{ totals.tender_amount|default:"0.00" }}</span>
-        </div>
-        <div class="metric-box">
-            <span class="metric-label">Pending / Dues</span>
-            <span class="metric-value pending">Rs. {{ totals.pending_amount|default:"0.00" }}</span>
-        </div>
-        <div class="metric-box">
-            <span class="metric-label">Invoices</span>
-            <span class="metric-value invoices">{{ page_obj.paginator.count|default:sales.count }}</span>
+            <div class="stat-item">
+                <span class="stat-label">Invoices:</span>
+                <strong class="stat-total">{{ page_obj.paginator.count|default:sales.count }}</strong>
+            </div>
         </div>
     </div>
 
-    <!-- Data Table -->
-    <div class="table-card">
-        <div class="table-responsive">
-            <table class="styled-table">
-                <thead>
-                    <tr>
-                        <th style="width: 30px;"><input type="checkbox" id="select-all"></th>
-                        <th>Invoice No.</th>
-                        <th>Date</th>
-                        <th>Party Name</th>
-                        <th class="text-center">Items</th>
-                        <th class="text-end">Sub Total</th>
-                        <th class="text-end">Tax</th>
-                        <th class="text-end">Grand Total</th>
-                        <th class="text-end">Received</th>
-                        <th class="text-center">Status</th>
-                        <th>User</th>
-                        <th class="text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sale in sales %}
-                    <tr>
-                        <td><input type="checkbox" name="sale_ids" value="{{ sale.sales_id }}"></td>
-                        <td>
-                            <a href="{% url 'sales_invoice'%}" class="invoice-link">
-                                {{ sale.fiscal_year }}-{{ sale.invoice_no }}
-                            </a>
-                        </td>
-                        <td>{{ sale.sale_date|date:"d M Y" }}</td>
-                        <td>{{ sale.buyer_name }}</td>
-                        <td class="text-center">{{ sale.items.count }}</td>
-                        <td class="text-end">{{ sale.subtotal }}</td>
-                        <td class="text-end">{{ sale.vat_total }}</td>
-                        <td class="text-end"><strong>{{ sale.grand_total }}</strong></td>
-                        <td class="text-end amount-received {% if sale.grand_total > 0 %}paid{% else %}zero{% endif %}">
-                            {{ sale.grand_total }}
-                        </td>
-                        <td class="text-center">
-                            {% if sale.payment_status == 'PAID' %}
-                                <span class="badge bg-success">Paid</span>
-                            {% elif sale.payment_status == 'PARTIAL' %}
-                                <span class="badge bg-warning">Pending</span>
-                            {% else %}
-                                <span class="badge bg-danger">Unpaid</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ sale.user.username }}</td>
-                        <td class="text-center">
-                            <div class="action-btn-group">
-                                {% comment %} <a href="{% url 'sales_detail' sale.sales_id %}" class="btn-icon-action" title="View / Edit">✏️</a> {% endcomment %}
-                                {% comment %} <a href="{% url 'sales_print' sale.sales_id %}" target="_blank" class="btn-icon-action secondary" title="Print Invoice">🖨</a> {% endcomment %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="12" class="text-center py-4 text-muted">No sales records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <!-- SCROLLABLE TABLE AREA -->
+    <div class="scrollable-table-card">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th style="width: 30px;"><input type="checkbox" id="select-all"></th>
+                    <th>Invoice No.</th>
+                    <th>Date</th>
+                    <th>Party Name</th>
+                    <th class="text-center">Items</th>
+                    <th class="text-end">Sub Total</th>
+                    <th class="text-end">Tax</th>
+                    <th class="text-end">Grand Total</th>
+                    <th class="text-end">Received</th>
+                    <th class="text-center">Status</th>
+                    <th>User</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in sales %}
+                <tr>
+                    <td><input type="checkbox" name="sales_id" value="{{ sale.sales_id }}"></td>
+                    <td>
+                        <a href="{% url 'sales_invoice_print' sale.sales_id %}" class="invoice-link">
+                            INV-{{ sale.invoice_no }}
+                        </a>
+                    </td>
+                    <td>{{ sale.sale_date|date:"d M Y" }}</td>
+                    <td>{{ sale.buyer_name|default:"Walk-in Customer" }}</td>
+                    <td class="text-center">{{ sale.saleitem_set.count|default:sale.items.count }}</td>
+                    <td class="text-end">{{ sale.subtotal }}</td>
+                    <td class="text-end">{{ sale.vat_total }}</td>
+                    <td class="text-end"><strong>{{ sale.grand_total }}</strong></td>
+                    <td class="text-end amount-received {% if sale.grand_total > 0 %}paid{% else %}zero{% endif %}">
+                        {{ sale.tender_amount|default:sale.grand_total }}
+                    </td>
+                    <td class="text-center">
+                        {% if sale.payment_status == 'PAID' %}
+                            <span class="badge bg-success">Paid</span>
+                        {% elif sale.payment_status == 'PARTIAL' %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% else %}
+                            <span class="badge bg-danger">Unpaid</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ sale.user.username }}</td>
+                    <td class="text-center">
+                        <div class="action-btn-group">
+                            <a href="{% url 'sales_invoice_print' sale.sales_id %}" target="_blank" class="btn-icon-action secondary" title="Print Invoice"><i class="fa-solid fa-print"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="12" class="text-center py-4 text-muted">No sales records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
-    <!-- Pagination Footer -->
-    <div class="pagination-wrapper">
-        <div>
-            Showing {{ sales|length }} records
-        </div>
+    <!-- FIXED BOTTOM PAGINATION -->
+    <div class="pagination-footer">
+        <div>Total {{ page_obj.paginator.count|default:sales|length }} records</div>
         {% if is_paginated %}
         <ul class="pagination">
             {% if page_obj.has_previous %}
@@ -303,10 +162,14 @@
 
 </div>
 
+<!-- Scripts -->
 <script>
     document.getElementById('select-all')?.addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('input[name="sale_ids"]');
+        const checkboxes = document.querySelectorAll('input[name="sales_id"]');
         checkboxes.forEach(cb => cb.checked = this.checked);
     });
+    
+    
+
 </script>
 {% endblock %}

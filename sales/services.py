@@ -29,7 +29,21 @@ class SaleService:
 
     @staticmethod
     @transaction.atomic
-    def create_sale(customer_id, items_data, payments_data, cashier, idempotency_key, narration='', tender_amount='', received_amount='', change_amount='' , bs_date='', fiscal_year=''):
+    def create_sale(
+        customer_id, 
+        items_data, 
+        payments_data, 
+        cashier, 
+        idempotency_key, 
+        narration='', 
+        tender_amount='', 
+        received_amount='', 
+        change_amount='', 
+        bs_date='', 
+        fiscal_year='',
+        overall_discount_amount=Decimal('0.00'),  # 👈 Accept bill-level flat discount
+        overall_discount_percent=Decimal('0.00') # 👈 Accept bill-level percentage discount
+    ):
         if idempotency_key:
             existing = Sale.objects.filter(idempotency_key=idempotency_key).first()
             if existing:
@@ -42,7 +56,7 @@ class SaleService:
         today_ad = timezone.now().date()
 
         subtotal = Decimal('0.00')
-        discount_total = Decimal('0.00')
+        item_discount_total = Decimal('0.00')  # 👈 Clear variable naming
         taxable_amount = Decimal('0.00')
         non_taxable_amount = Decimal('0.00')
         vat_total = Decimal('0.00')
@@ -50,7 +64,7 @@ class SaleService:
 
         for item in items_data:
             quantity = Decimal(str(item['quantity']))
-            discount = Decimal(str(item.get('discount', '0')))
+            discount = Decimal(str(item.get('discount', '0.00')))
             
             if quantity <= Decimal('0.000'):
                 raise InvalidQuantityError("Quantity must be greater than zero")
@@ -86,8 +100,7 @@ class SaleService:
 
             line_after_discount = line_gross - discount
             
-            # --- Dynamic Item-Level VAT Logic ---
-            # Retrieve VAT flag from payload or product variant model
+            # Dynamic Item-Level VAT Logic
             is_vatable = item.get('is_vatable', getattr(variant, 'is_vatable', getattr(variant.product, 'is_vatable', True)))
             
             if is_vatable:
@@ -106,7 +119,7 @@ class SaleService:
 
             line_total = line_after_discount + line_vat
             subtotal += line_gross
-            discount_total += discount
+            item_discount_total += discount  # 👈 Accumulate line-item discounts
 
             validated_items.append({
                 'variant': variant,
@@ -120,7 +133,18 @@ class SaleService:
                 'line_total': line_total,
             })
 
-        raw_grand_total = taxable_amount + non_taxable_amount + vat_total
+        # --- CALCULATE OVERALL BILL DISCOUNT ---
+        overall_disc = Decimal(str(overall_discount_amount or '0.00'))
+        overall_pct = Decimal(str(overall_discount_percent or '0.00'))
+        
+        if overall_pct > Decimal('0.00'):
+            net_before_bill_discount = taxable_amount + non_taxable_amount
+            overall_disc = (net_before_bill_discount * overall_pct / Decimal('100.00')).quantize(Decimal('0.01'))
+
+        # Combine line discounts + overall bill discount
+        total_final_discount = (item_discount_total + overall_disc).quantize(Decimal('0.01'))
+
+        raw_grand_total = (taxable_amount + non_taxable_amount - overall_disc) + vat_total
         grand_total = raw_grand_total.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
         round_off = (grand_total - raw_grand_total).quantize(Decimal('0.01'))
 
@@ -129,38 +153,36 @@ class SaleService:
 
         invoice_no = InvoiceNumberService.generate_next_number()
 
-        # Calculate change dynamically on the backend
         tender_val = Decimal(str(tender_amount or '0.00'))
         received_val = Decimal(str(received_amount or '0.00'))
-        
-        # Received amount defaults to tender_amount if left blank
         if received_val == Decimal('0.00') and tender_val > Decimal('0.00'):
             received_val = tender_val
 
         change_val = max(Decimal('0.00'), (received_val - grand_total).quantize(Decimal('0.01')))
 
+        # Create Sale with accurate total discount
         sale = Sale.objects.create(
-        invoice_no=invoice_no,
-        fiscal_year=fiscal_year,
-        customer=customer,
-        customer_pan=getattr(customer, 'pan_number', None),
-        buyer_name=getattr(customer, 'name', 'Walk-in Customer'),
-        user=cashier,
-        bs_date=bs_date,
-        taxable_amount=taxable_amount,
-        non_taxable_amount=non_taxable_amount,
-        subtotal=subtotal,
-        discount_total=discount_total,
-        vat_total=vat_total,
-        round_off=round_off,
-        grand_total=grand_total,
-        tender_amount=tender_amount,
-        received_amount=received_amount,
-        change_amount=change_amount,
-        sale_status='COMPLETED',
-        narration=narration,
-        idempotency_key=idempotency_key,
-    )
+            invoice_no=invoice_no,
+            fiscal_year=fiscal_year,
+            customer=customer,
+            customer_pan=getattr(customer, 'pan_number', None),
+            buyer_name=getattr(customer, 'name', 'Walk-in Customer'),
+            user=cashier,
+            bs_date=bs_date,
+            taxable_amount=taxable_amount,
+            non_taxable_amount=non_taxable_amount,
+            subtotal=subtotal,
+            discount_total=total_final_discount,  # 👈 Accurately calculated total discount
+            vat_total=vat_total,
+            round_off=round_off,
+            grand_total=grand_total,
+            tender_amount=tender_val,
+            received_amount=received_val,
+            change_amount=change_val,
+            sale_status='COMPLETED',
+            narration=narration,
+            idempotency_key=idempotency_key,
+        )
 
         for vi in validated_items:
             qty_needed = vi['quantity']
@@ -191,6 +213,8 @@ class SaleService:
                 line_total=vi['line_total'],
             )
 
+        return sale, True
+        
         
 
             # StockHistory.objects.create(
@@ -230,12 +254,12 @@ class SaleCancelService:
 
     @staticmethod
     @transaction.atomic
-    def cancel_sale(sale_id, cancelled_by):
+    def cancel_sale(sales_id, cancelled_by):
         """
         Reverses stock deduction on original inventory batches and records CANCELLED status.
         Never deletes rows to maintain full audit trails.
         """
-        sale = Sale.objects.select_for_update().get(pk=sale_id)
+        sale = Sale.objects.select_for_update().get(pk=sales_id)
 
         if sale.status != 'COMPLETED':
             raise SaleError(f"Cannot cancel a sale with status {sale.status}")

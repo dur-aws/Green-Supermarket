@@ -56,8 +56,9 @@
           <button title="Grid View" class="icon-btn">
             <i class="fa-solid fa-border-all"></i>
           </button>
-          <button title="Notifications" class="icon-btn">
+          <button title="Notifications" class="icon-btn" id="notification-bell-btn">
             <i class="fa-regular fa-bell"></i>
+            <span class="notification-badge" id="notifBadge" style="display: none;">0</span>
           </button>
           <button title="Calculator" class="icon-btn">
             <i class="fa-solid fa-calculator"></i>
@@ -94,6 +95,21 @@
         </div>
       </div>
     </header>
+    <!-- Notification Popup Overlay -->
+    <div class="notif-modal-overlay" id="notifModalOverlay">
+      <div class="notif-card">
+        <div class="notif-header">
+          <h3>Notifications</h3>
+          <button class="notif-close-btn" id="notifCloseBtn">&times;</button>
+        </div>
+        <ul class="notif-list" id="notifListContainer">
+          <li class="notif-empty">Loading notifications...</li>
+        </ul>
+        <div class="notif-footer">
+          <a href="{% url 'notification_history' %}" class="notif-history-link">History</a>
+        </div>
+      </div>
+    </div>
 
     <div class="app-container">
       <!-- ================= SIDEBAR ================= -->
@@ -368,6 +384,88 @@
         });
       }
       });
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const notifBtn = document.getElementById("notification-bell-btn");
+      const modalOverlay = document.getElementById("notifModalOverlay");
+      const closeBtn = document.getElementById("notifCloseBtn");
+      const notifList = document.getElementById("notifListContainer");
+      const badge = document.getElementById("notifBadge");
+
+      // Toggle Popup
+      if (notifBtn) {
+        notifBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          modalOverlay.classList.add("active");
+          fetchRecentNotifications();
+        });
+      }
+
+      if (closeBtn) {
+        closeBtn.addEventListener("click", function () {
+          modalOverlay.classList.remove("active");
+        });
+      }
+
+      // Close when clicking outside the modal content
+      if (modalOverlay) {
+        modalOverlay.addEventListener("click", function (e) {
+          if (e.target === modalOverlay) {
+            modalOverlay.classList.remove("active");
+          }
+        });
+      }
+
+      async function fetchRecentNotifications() {
+        try {
+          const response = await fetch("notifications/api/recent/", {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+          });
+          if (!response.ok) throw new Error("Failed to load notifications");
+          
+          const data = await response.json();
+          renderNotifications(data.notifications);
+          
+          if (badge) {
+            badge.textContent = data.unread_count || 0;
+            badge.style.display = data.unread_count > 0 ? "inline-block" : "none";
+          }
+        } catch (err) {
+          console.error("Notification load error:", err);
+          if (notifList) {
+            notifList.innerHTML = `<li class="notif-empty">Unable to fetch notifications.</li>`;
+          }
+        }
+      }
+
+      function renderNotifications(items) {
+        if (!notifList) return;
+        if (!items || items.length === 0) {
+          notifList.innerHTML = `<li class="notif-empty">No new notifications.</li>`;
+          return;
+        }
+
+        let html = "";
+        items.slice(0, 5).forEach(item => {
+          const iconClass = item.type === "danger" ? "fa-triangle-exclamation" :
+                            item.type === "warning" ? "fa-circle-exclamation" : "fa-bell";
+          
+          html += `
+            <a href="${item.link || '#'}" class="notif-item ${item.is_read ? '' : 'unread'}">
+              <div class="notif-icon ${item.type || 'info'}">
+                <i class="fa-solid ${iconClass}"></i>
+              </div>
+              <div class="notif-content">
+                <div class="notif-title">${item.title}</div>
+                <div class="notif-desc">${item.message}</div>
+                <div class="notif-time">${item.time_ago}</div>
+              </div>
+            </a>
+          `;
+        });
+        notifList.innerHTML = html;
+      }
+    });
     </script>
     {% block extra_js %}
     <script src="{% static 'js/dashboard.js' %}"></script>

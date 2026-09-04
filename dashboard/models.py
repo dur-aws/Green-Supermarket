@@ -1,67 +1,43 @@
-# from django.db import models
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
 
-# # Create your models here.
-# # dashboard/models.py
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('danger', 'Danger / Critical'),
+        ('warning', 'Warning'),
+        ('info', 'Information'),
+        ('success', 'Success'),
+    )
+    user = models.ForeignKey(
+            settings.AUTH_USER_MODEL, 
+            on_delete=models.SET_NULL, 
+            null=True, 
+            blank=True,
+            related_name='notifications'
+        )
+    title = models.CharField(max_length=150)
+    message = models.TextField()
+    type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='info')
+    link = models.CharField(max_length=255, blank=True, null=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created_at']
 
-# class Sales(models.Model):
-#     sales_id = models.AutoField(primary_key=True)
-#     sale_date = models.DateField()
-#     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    def __str__(self):
+        return f"{self.title} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 
-#     class Meta:
-#         managed = False
-#         db_table = 'sales'
+    def time_ago(self):
+        now = timezone.now()
+        diff = now - self.created_at
         
-# class Category(models.Model):
-#     category_id = models.AutoField(primary_key=True)
-#     category_name = models.CharField(max_length=100)
-
-#     class Meta:
-#         managed = False
-#         db_table = 'category'
-
-
-# class Product(models.Model):
-#     product_id = models.AutoField(primary_key=True)
-#     category = models.ForeignKey(Category, on_delete=models.DO_NOTHING, db_column='category_id')
-#     product_name = models.CharField(max_length=150)
-#     status = models.IntegerField()
-
-#     class Meta:
-#         managed = False
-#         db_table = 'product'
-
-
-
-# class SalesDetail(models.Model):
-#     sales_detail_id = models.AutoField(primary_key=True)
-#     sales = models.ForeignKey(Sales, on_delete=models.DO_NOTHING, db_column='sales_id')
-#     product = models.ForeignKey(Product, on_delete=models.DO_NOTHING, db_column='product_id')
-#     quantity = models.IntegerField()
-#     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
-
-#     class Meta:
-#         managed = False
-#         db_table = 'sales_detail'
-
-
-# class Inventory(models.Model):
-#     inventory_batch_id = models.AutoField(primary_key=True)
-#     product = models.ForeignKey(Product, on_delete=models.DO_NOTHING, db_column='product_id')
-#     quantity = models.IntegerField()
-#     reorder_level = models.IntegerField()
-
-#     class Meta:
-#         managed = False
-#         db_table = 'inventory_batch'
-
-
-# class Expense(models.Model):
-#     expense_id = models.AutoField(primary_key=True)
-#     amount = models.DecimalField(max_digits=10, decimal_places=2)
-#     expense_date = models.DateField()
-
-#     class Meta:
-#         managed = False
-#         db_table = 'expense'
+        if diff.days > 0:
+            return f"{diff.days}d ago"
+        seconds = diff.seconds
+        if seconds < 60:
+            return "Just now"
+        if seconds < 3600:
+            return f"{seconds // 60}m ago"
+        return f"{seconds // 3600}h ago"

@@ -6,14 +6,19 @@
 <link rel="stylesheet" href="{% static 'css/master.css' %}">
 {% endblock %}
 
-<div class="container">
-    <!-- Filter Bar -->
+<div class="master-container">
+    <div class="sticky-header-panel">
     <div class="filter-bar">
         <div class="search-box">
             <span class="search-icon">&#128269;</span>
-            <input type="text" id="user-search" placeholder="Search by name or email..." value="{{ query|default:'' }}"
-                class="search-input" autocomplete="off">
+            <input type="text" 
+                id="user-search" 
+                placeholder="Search by name or email..." 
+                value="{{ query|default:'' }}"
+                class="search-input" 
+                autocomplete="off">
         </div>
+        <div>
         <select id="role-filter" class="filter-select">
             <option value="">All Roles</option>
             {% for role in roles %}
@@ -22,14 +27,11 @@
             </option>
             {% endfor %}
         </select>
-
-
-
-        <div class="filter-right">
-            <span class="showing-text">Showing <strong>{{ users|length }}</strong> accounts</span>
+        </div>
+        <div>
             <a href="{% url 'user_create' %}" class="btn btn-primary btn-add">+ Add User</a>
         </div>
-</div>
+    </div>
         <!-- Stat Strip -->
         <div class="stat-strip">
             <div class="stat-item">
@@ -37,11 +39,13 @@
                 <span class="stat-green">{{ users.paginator.count|default:users|length }}</span>
             </div>
         </div>
+   </div>
+
 
     <!-- Styled Table Card -->
-    <div class="table-card">
-        <div class="table-responsive">
-            <table class=" data-table styled-table">
+    <div class="scrollable-table-card">
+        
+            <table class="styled-table">
                 <thead>
                     <tr>
                         <th>Username</th>
@@ -57,8 +61,32 @@
                     {% include 'accounts/admin/user_rows.html' %}
                 </tbody>
             </table>
-        </div>
+       
     </div>
+    <!-- FIXED BOTTOM PAGINATION -->
+    <div class="pagination-footer">
+        <div>Showing {{ users|length }} records</div>
+        {% if is_paginated %}
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+                <li><a href="?page={{ page_obj.previous_page_number }}">&lt;</a></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="active"><span>{{ num }}</span></li>
+                {% else %}
+                    <li><a href="?page={{ num }}">{{ num }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li><a href="?page={{ page_obj.next_page_number }}">&gt;</a></li>
+            {% endif %}
+        </ul>
+        {% endif %}
+    </div>
+
 
 </div>
 

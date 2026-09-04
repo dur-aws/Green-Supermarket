@@ -9,7 +9,8 @@
 # =============================================================
 
 from django.urls import path
-from .views import dashboard_view, LowStockView, sales_trend_api
+from .views import (dashboard_view, LowStockView, sales_trend_api, dashboard_expiry_alerts_api, dashboard_expiry_rows,
+                    recent_notifications_api, notification_history)
 
 urlpatterns = [
     path("", dashboard_view, name="dashboard"),
@@ -26,9 +27,15 @@ urlpatterns = [
     path("api/sales-trend/", sales_trend_api, name="dashboard_sales_trend"),
 #     path("api/top-categories/", views.dashboard_top_categories, name="dashboard_top_categories"),
 #     path("api/top-products/", views.dashboard_top_products, name="dashboard_top_products"),
-#     path("api/recent-sales/", views.dashboard_recent_sales, name="dashboard_recent_sales"),
+    #  path("api/recent-sales/", dashboard_recent_sales, name="dashboard_recent_sales"),
+    path("api/expiry-alerts/", dashboard_expiry_alerts_api, name="dashboard-expiry-alerts"),
+    path("api/expiry-rows/", dashboard_expiry_rows, name="dashboard-expiry-alert"),
     path("api/low-stock/", LowStockView.as_view(), name="dashboard_low_stock"),
 #     path("api/pending-po/", views.dashboard_pending_po, name="dashboard_pending_po"),
+
+    
+    path('notifications/api/recent/', recent_notifications_api, name='recent_notifications_api'),
+    path('notifications/history/', notification_history, name='notification_history'),
 ]
 
 
