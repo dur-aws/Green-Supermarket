@@ -91,8 +91,6 @@
                 <table class="data-table styled-table" id="items-table">
                     <thead>
                         <tr>
-                            
-                            
                             <th>product *</th>
                             <th>Ordered Qty</th>
                             <th>Agreed Price</th>
@@ -144,25 +142,85 @@
             </div>
 
             <!-- Empty row template for JS cloning -->
+            <!-- ================= EMPTY ROW TEMPLATE ================= -->
+
             <template id="empty-item-template">
-            <tr class="item-row">
-                {% for hidden in formset.empty_form.hidden_fields %}
-                    {{ hidden }}
-                {% endfor %}
 
-                {% for field in formset.empty_form.visible_fields %}
+                <tr class="item-row">
+
+                    <!-- Hidden fields -->
+                    {% for hidden in formset.empty_form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+
+
+                    <!-- Product / Variant -->
                     <td>
-                        {{ field }}
-                        {% if field.errors %}
-                            <span class="field-error">{{ field.errors.0 }}</span>
-                        {% endif %}
+                        {{ formset.empty_form.variant }}
                     </td>
-                {% endfor %}
 
-                <td class="text-center">
-                    <button type="button" class="btn btn-clear btn-sm remove-item-btn">✕</button>
-                </td>
-            </tr>
+
+                    <!-- Ordered Quantity -->
+                    <td>
+                        {{ formset.empty_form.ordered_quantity }}
+                    </td>
+
+
+                    <!-- Agreed Price -->
+                    <td>
+                        {{ formset.empty_form.agreed_unit_price }}
+                    </td>
+
+
+                    <!-- Received Quantity -->
+                    <td>
+                        {{ formset.empty_form.received_quantity }}
+                    </td>
+
+
+                    <!-- Actual Price -->
+                    <td>
+                        {{ formset.empty_form.actual_unit_price }}
+                    </td>
+
+
+                    <!-- Subtotal -->
+                    <td>
+                        {{ formset.empty_form.subtotal }}
+                    </td>
+
+
+                    <!-- Manufacture Date -->
+                    <td>
+                        {{ formset.empty_form.manufacture_date }}
+                    </td>
+
+
+                    <!-- Harvest Date -->
+                    <td>
+                        {{ formset.empty_form.harvest_date }}
+                    </td>
+
+
+                    <!-- Expiry Date -->
+                    <td>
+                        {{ formset.empty_form.expiry_date }}
+                    </td>
+
+
+                    <!-- Remove -->
+                    <td class="text-center">
+
+                        <button
+                            type="button"
+                            class="btn btn-clear btn-sm remove-item-btn">
+                            ✕
+                        </button>
+
+                    </td>
+
+                </tr>
+
             </template>
         </div>
 
@@ -239,17 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Call inside your row removal handler:
-    itemRows.addEventListener("click", function (e) {
-        const btn = e.target.closest(".remove-item-btn");
-        if (!btn) return;
-        const row = btn.closest(".item-row");
-        if (row) {
-            row.remove();
-            reindexFormset(); // Fixes missing indices
-            scheduleCalculation();
-        }
-    });
+  
 
     // Add Row
     addBtn.addEventListener("click", function () {

@@ -72,6 +72,14 @@
           <button title="Help" class="icon-btn">
             <i class="fa-solid fa-circle-question"></i>
           </button>
+          {% if request.user.is_authenticated %}
+          <form method="post" action="{% url 'logout' %}" onsubmit="return confirm('Are you sure you want to log out?');">
+            {% csrf_token %}
+            <button type="submit" class="icon-btn" title="Log out" aria-label="Log out">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </form>
+          {% endif %}
         </div>
 
         <div class="user-profile">
@@ -84,15 +92,38 @@
               {% if request.user.is_authenticated and request.user.role.role_name %} {% endif %}
             </span>
           </div>
-          {% if request.user.is_authenticated %}
-          <form method="post" action="{% url 'logout' %}" onsubmit="return confirm('Are you sure you want to log out?');">
-            {% csrf_token %}
-            <button type="submit" class="icon-btn" title="Log out" aria-label="Log out">
-              <i class="fa-solid fa-right-from-bracket"></i>
-            </button>
-          </form>
-          {% endif %}
         </div>
+        <div class="alert-messages">
+                {% if messages %} {% for message in messages %} {% if message.tags == 'error' or message.tags == 'danger' %}
+                <div class="alert-item alert-danger">
+                  <span class="alert-icon">⛔</span>
+                  <span class="alert-text"
+                    ><strong>Error:</strong> {{ message }}</span
+                  >
+                  <button class="alert-close" aria-label="Dismiss">✕</button>
+                </div>
+                {% elif message.tags == 'warning' %}
+                <div class="alert-item alert-warning">
+                  <span class="alert-icon">⚠️</span>
+                  <span class="alert-text"
+                    ><strong>Warning:</strong> {{ message }}</span
+                  >
+                  <button class="alert-close" aria-label="Dismiss">✕</button>
+                </div>
+                {% elif message.tags == 'success' %}
+                <div class="alert-item alert-success">
+                  <span class="alert-icon">✅</span>
+                  <span class="alert-text">{{ message }}</span>
+                  <button class="alert-close" aria-label="Dismiss">✕</button>
+                </div>
+                {% else %}
+                <div class="alert-item alert-info">
+                  <span class="alert-icon">ℹ️</span>
+                  <span class="alert-text">{{ message }}</span>
+                  <button class="alert-close" aria-label="Dismiss">✕</button>
+                </div>
+                {% endif %} {% endfor %} {% endif %}
+          </div>
       </div>
     </header>
     <!-- Notification Popup Overlay -->
@@ -254,6 +285,7 @@
             </a>
             <div class="submenu" id="submenu-accounting">
               <a href="#" data-module="chart-accounts">Chart of Accounts</a>
+              <a href="{% url 'fiscal_year_list' %}" data-module="fiscal-year">Fiscal Year</a>
             </div>
           </div>
 
@@ -293,47 +325,17 @@
 
       <!-- ================= MAIN CONTENT AREA ================= -->
       <div class="main">
-        <div class="top-nav-tabs">
-          <a href="#" class="tab-item">
-            <i class="fa-regular fa-file-lines"></i> Sales Invoice
-          </a>
-          <a href="{% url 'dashboard' %}" class="tab-item">Dashboard</a>
-      
-          <div class="alert-messages">
-            {% if messages %} {% for message in messages %} {% if message.tags == 'error' or message.tags == 'danger' %}
-            <div class="alert-item alert-danger">
-              <span class="alert-icon">⛔</span>
-              <span class="alert-text"
-                ><strong>Error:</strong> {{ message }}</span
-              >
-              <button class="alert-close" aria-label="Dismiss">✕</button>
-            </div>
-            {% elif message.tags == 'warning' %}
-            <div class="alert-item alert-warning">
-              <span class="alert-icon">⚠️</span>
-              <span class="alert-text"
-                ><strong>Warning:</strong> {{ message }}</span
-              >
-              <button class="alert-close" aria-label="Dismiss">✕</button>
-            </div>
-            {% elif message.tags == 'success' %}
-            <div class="alert-item alert-success">
-              <span class="alert-icon">✅</span>
-              <span class="alert-text">{{ message }}</span>
-              <button class="alert-close" aria-label="Dismiss">✕</button>
-            </div>
-            {% else %}
-            <div class="alert-item alert-info">
-              <span class="alert-icon">ℹ️</span>
-              <span class="alert-text">{{ message }}</span>
-              <button class="alert-close" aria-label="Dismiss">✕</button>
-            </div>
-            {% endif %} {% endfor %} {% endif %}
-          </div>
-        </div>
-        <main class="content-body">{% block content %} {% endblock %}</main>
+      <div class="top-nav-tabs">
+        <a href="{% url 'sales_invoice' %}" class="tab-item">
+          <i class="fa-regular fa-file-lines"></i> Sales Invoice
+        </a>
+        <a href="{% url 'dashboard' %}" class="tab-item">Dashboard</a>
+        
+        
       </div>
+      <main class="content-body">{% block content %} {% endblock %}</main>
     </div>
+  </div>
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {

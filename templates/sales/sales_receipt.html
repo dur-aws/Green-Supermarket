@@ -1,92 +1,218 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Invoice #{{ sale.invoice_no }}</title>
+    <meta charset="UTF-8">
+    <title>TAX INVOICE - {{ sale.invoice_no }}</title>
     <style>
-        body { font-family: monospace; width: 80mm; margin: 0 auto; padding: 10px; }
+        body {
+            font-family: 'Courier New', Courier, monospace, 'Arial', sans-serif;
+            font-size: 12px;
+            color: #000;
+            margin: 0;
+            padding: 10px;
+            background: #fff;
+        }
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            border: 1px solid #000;
+            padding: 15px;
+        }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .line { border-bottom: 1px dashed #000; margin: 5px 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .text-left { text-align: left; }
+        .bold { font-weight: bold; }
         
-        .no-print-actions {
-            margin-bottom: 15px;
-            text-align: center;
+        .header-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
         }
-        .btn-back {
-            background-color: #475569;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            text-decoration: none;
-            display: inline-block;
+        
+        table.info-table, table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
         }
-        .item-text {
-            display: inline-block;
-            max-width: 90px;         /* Match column width */
-            white-space: nowrap;      /* Prevent wrapping to 2nd line */
-            overflow: hidden;         /* Hide overflowing text */
-            text-overflow: ellipsis;  /* Show "..." for extra text */
-            vertical-align: middle;
+        
+        table.data-table th, table.data-table td {
+            border: 1px solid #000;
+            padding: 5px;
         }
-        /* Hide buttons during printer output */
+        
+        table.data-table th {
+            background-color: #f2f2f2;
+        }
+
+        .no-border td {
+            border: none !important;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            font-size: 10px;
+            border-top: 1px dashed #000;
+            padding-top: 5px;
+        }
+
         @media print {
-            .no-print-actions { display: none !important; }
-            @page { margin: 0; }
-            body { margin: 0.2cm; }
+            .no-print { display: none; }
+            .invoice-box { border: none; padding: 0; }
         }
     </style>
 </head>
-<body onload="window.print();">
+<body>
 
-    <div class="no-print-actions">
-        <a href="{% url 'sales_invoice' %}" class="btn-back">← Back to New Sale</a>
+<div class="no-print" style="margin-bottom: 15px; text-align: center;">
+    <button onclick="window.print()" style="padding: 8px 16px; font-size: 14px; cursor: pointer;">Print Invoice</button>
+</div>
+
+<div class="invoice-box">
+    <!-- IRD Header Requirement -->
+    <div class="text-center header-title">
+        TAX INVOICE 
     </div>
 
+    <!-- Seller Information -->
     <div class="text-center">
-        <h2>GREEN SUPERMARKET PVT LTD</h2>
-        <P>vat: 0000000</P>
+        <span class="bold" style="font-size: 14px;">{{ company.name|default:"YOUR STORE / COMPANY NAME" }}</span><br>
+        {{ company.address|default:"Kathmandu, Nepal" }}<br>
+        <span class="bold">Seller PAN/VAT No: {{ company.pan_number|default:"123456789" }}</span><br>
+        Tel: {{ company.phone|default:"+977-1-0000000" }}
     </div>
-    <p>Invoice: {{ sale.invoice_no }}<br>Date: {{ sale.bs_date }} ({{ sale.sale_date|date:"Y-m-d" }})</p>
-    <div class="line"></div>
-    <table>
+
+    <hr style="border-top: 1px solid #000; margin: 10px 0;">
+
+    <!-- Invoice Reference & Buyer Info -->
+    <table class="info-table">
+        <tr>
+            <td width="55%">
+                <span class="bold">Buyer Details</span><br>
+                Name: {{ sale.customer.customer_name|default:sale.buyer_name }}<br>
+                Address: {{ sale.customer.address|default:"N/A" }}<br>
+                <span class="bold">Buyer PAN/VAT No: {{ sale.customer.pan_vat_number|default:sale.customer_pan|default:"N/A" }}</span>
+            </td>
+            <td width="45%" class="text-right">
+                <span class="bold">Invoice No: {{ sale.invoice_no }}</span><br>
+                Fiscal Year: {{ sale.fiscal_year.name }}<br>
+                Date (BS): {{ sale.bs_date }}<br>
+                Date (AD): {{ sale.sale_date|date:"Y-m-d H:i" }}<br>
+                Payment Mode: {{ sale.payment_mode }}
+            </td>
+        </tr>
+    </table>
+
+    <!-- Line Items Table -->
+    <table class="data-table">
         <thead>
             <tr>
-                <th style="text-align: left; width:90px;">Item</th>
-                <th>Qty</th>
-                <th class="text-right">Total</th>
+                <th width="5%">S.N.</th>
+                <th width="40%">Item Description</th>
+                <th width="10%">Qty</th>
+                <th width="15%">Rate (NPR)</th>
+                <th width="10%">Taxable</th>
+                <th width="20%">Amount (NPR)</th>
             </tr>
         </thead>
         <tbody>
-            {% for item in sale.saleitem_set.all|default:sale.items.all %}
+            {% for item in sale.items.all %}
             <tr>
-                <td style="width: 90px;">
-                <!-- 👈 Wrap text here -->
-                <span class="item-text">
-                    {{item.variant.product.product_name}} {{ item.variant.variant_name }}
-                </span>
-            </td>
-                
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>
+                    {{ item.variant.product.product_name }} - {{ item.variant.variant_name }}
+                </td>
                 <td class="text-center">{{ item.quantity }}</td>
-                <td class="text-right">{{ item.line_total }}</td>
+                <td class="text-right">{{ item.unit_price|floatformat:2 }}</td>
+                <td class="text-center">{% if item.variant.is_vatable %}Yes{% else %}No{% endif %}</td>
+                <td class="text-right">{{ item.subtotal|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">No line items recorded.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <div class="line"></div>
-    <table>
-        <tr><td>Subtotal:</td><td class="text-right">{{ sale.subtotal }}</td></tr>
-        <tr><td>Discount:</td><td class="text-right">{{ sale.discount_total }}</td></tr>
-        <tr><td>VAT:</td><td class="text-right">{{ sale.vat_total }}</td></tr>
-        <tr><th>Grand Total:</th><th class="text-right">{{ sale.grand_total }}</th></tr>
-        <tr><td>Tender:</td><td class="text-right">{{ sale.tender_amount }}</td></tr>
-        <tr><td>Change:</td><td class="text-right">{{ sale.change_amount }}</td></tr>
+
+    <!-- Tax Summary & Calculation Table -->
+    <table class="data-table no-border">
+        <tr>
+            <td width="50%">
+                <span class="bold">Amount in Words / अक्षराूपी:</span><br>
+                {{ sale.grand_total_in_words|default:"NPR Only" }}
+            </td>
+            <td width="50%">
+                <table style="width: 100%;">
+                    <tr>
+                        <td class="text-right bold">Subtotal:</td>
+                        <td class="text-right" width="40%">{{ sale.subtotal|floatformat:2 }}</td>
+                    </tr>
+                    {% if sale.discount_total > 0 %}
+                    <tr>
+                        <td class="text-right bold">Discount Allowed:</td>
+                        <td class="text-right">- {{ sale.discount_total|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-right bold">Taxable Amount:</td>
+                        <td class="text-right">{{ sale.taxable_amount|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-right bold">Non-Taxable Amount:</td>
+                        <td class="text-right">{{ sale.non_taxable_amount|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-right bold">VAT (13%):</td>
+                        <td class="text-right">{{ sale.vat_total|floatformat:2 }}</td>
+                    </tr>
+                    <tr style="font-size: 13px; border-top: 1px solid #000;">
+                        <td class="text-right bold">Grand Total (NPR):</td>
+                        <td class="text-right bold">{{ sale.grand_total|floatformat:2 }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
     </table>
-    <div class="line"></div>
-    <p class="text-center">Thank you for visiting!</p>
+
+    <!-- Split Payments Breakdown (If Applicable) -->
+    {% if sale.payment_mode == 'SPLIT' %}
+    <div style="margin-top: 5px;">
+        <span class="bold">Payment Settlement Breakdown:</span>
+        <ul>
+            {% for payment in sale.payments.all %}
+            <li>{{ payment.method }}: NPR {{ payment.amount|floatformat:2 }} (Ref: {{ payment.transaction_reference|default:"N/A" }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Signatures & Footer Compliance -->
+    <br><br>
+    <table style="width: 100%; text-align: center; margin-top: 20px;">
+        <tr>
+            <td width="33%">
+                ---------------------------<br>
+                Prepared By 
+            </td>
+            <td width="33%">
+                ---------------------------<br>
+                Received By
+            </td>
+            <td width="33%">
+                ---------------------------<br>
+                Authorized Signature
+            </td>
+        </tr>
+    </table>
+
+    <div class="text-center footer-note">
+        Thank you for your business!<br>
+        <i>Note: This is an IRD compliant Tax Invoice generated electronically. Records are maintained as per VAT Rules 2053.</i>
+    </div>
+</div>
+
 </body>
 </html>

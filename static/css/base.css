@@ -7,9 +7,9 @@
   --sidebar-hover: #1b4d3e;
   --sidebar-active: #15803d;
   --sidebar-text: #c2d1cc;
-  --sidebar-text-active: #ffffff;
-  --topbar-bg: #ffffff;
-  --body-bg: #f1fdf8;
+  --sidebar-text-active: #fcfcfc;
+  --topbar-bg: #fbfbfb;
+  --body-bg: #f7f9f8;
   --primary-green: #15803d;
   --primary-light: #e8f5e9;
   --text-main: #202936;
@@ -129,7 +129,7 @@ a {
   gap: 20px;
 }
 /* ==========================================================================
-   Header Mobile Action Drawer Fix
+   Header Mobile Action Drawer 
    ========================================================================== */
 
 .header-actions-toggle {
@@ -426,11 +426,12 @@ a {
 /* Floating Alerts Container (Positioned right under user-profile) */
 .alert-messages {
   position: absolute;
-  top: calc(var(--header-height) - 8px);
+  /* top: calc(var(--header-height) - 8px); */
   right: 12px;
   width: 260px; /* Reduced width */
   max-height: 250px; /* Capped height for ~5 items max */
   display: flex;
+  
   flex-direction: column;
   gap: 6px;
   z-index: 1050;
@@ -838,11 +839,17 @@ body.sidebar-collapsed .main {
 
 /* Top Navigation Tabs */
 .top-nav-tabs {
-  background-color: #ffffff;
+  background-color: var(--topbar-bg);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--border-color);
+  justify-content: flex-start;
+  padding: 0 16px;
+  position: fixed;
+  top: 1; 
   
+  z-index: 1000;
+
 }
 
 .tab-item {
@@ -860,16 +867,16 @@ body.sidebar-collapsed .main {
 .tab-item:hover {
   background-color: var(--primary-light);
   color: var(--primary-green);
-  font-weight: 600;
+  font-weight: 400;
   border-color: #c8e6c9;
-  border-bottom: 2px solid var(--primary-green);
+  border-bottom: 1px solid var(--primary-green);
 }
 .tab-item.active {
   background-color: var(--primary-light);
   color: var(--primary-green);
-  font-weight: 600;
+  font-weight: 400;
   border-color: #c8e6c9;
-  border-bottom: 2px solid var(--primary-green);
+  border-bottom: 1px solid var(--primary-green);
 }
 
 .tab-item i {
@@ -878,9 +885,9 @@ body.sidebar-collapsed .main {
 
 /* Main Content Body */
 .content-body {
-  padding-right: 16px;
+ 
   flex-grow: 1;
-  background-color: #ffffff ;
+  background-color:var(--body-bg) ;
 }
 
 /* ==========================================================================

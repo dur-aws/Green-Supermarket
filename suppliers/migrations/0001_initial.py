@@ -14,51 +14,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='PurchaseOrder',
-            fields=[
-                ('purchase_id', models.AutoField(primary_key=True, serialize=False)),
-                ('purchase_date', models.DateField()),
-                ('invoice_number', models.CharField(blank=True, max_length=50, null=True)),
-                ('subtotal', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('tax_amount', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('total_amount', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('payment_status', models.CharField(max_length=7)),
-            ],
-            options={
-                'db_table': 'purchase_order',
-                'managed': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='User',
-            fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('username', models.CharField(max_length=150, unique=True)),
-                ('password', models.CharField(max_length=128)),
-                ('first_name', models.CharField(max_length=150)),
-                ('last_name', models.CharField(max_length=150)),
-                ('email', models.CharField(max_length=254)),
-                ('phone', models.CharField(blank=True, max_length=20, null=True)),
-                ('status', models.SmallIntegerField()),
-                ('is_superuser', models.IntegerField()),
-                ('is_staff', models.IntegerField()),
-                ('is_active', models.IntegerField()),
-                ('last_login', models.DateTimeField(blank=True, null=True)),
-                ('date_joined', models.DateTimeField()),
-            ],
-            options={
-                'db_table': 'user',
-                'managed': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='Role',
-            fields=[
-                ('role_id', models.AutoField(primary_key=True, serialize=False)),
-                ('role_name', models.CharField(max_length=50, unique=True)),
-            ],
-        ),
+        
         migrations.CreateModel(
             name='Supplier',
             fields=[

@@ -4,8 +4,6 @@
 
 .invoice-container {
   background-color: #ffffff;
-  border-radius: 6px;
-  border: 1px solid var(--border-color, #e5e7eb);
   padding: 16px;
   display: flex;
   flex-direction: column;

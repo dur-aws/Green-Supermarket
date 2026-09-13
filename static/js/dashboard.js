@@ -252,7 +252,7 @@ document.addEventListener("DOMContentLoaded", function () {
     topProducts: "/dashboard/api/top-products/",
   };
 
-  const REFRESH_MS = 60000; // auto-refresh every 60s
+  const REFRESH_MS = 1000000; // auto-refresh every 60s
   let currentPeriod = "weekly";
 
   function fmtMoney(n) {
@@ -283,6 +283,8 @@ document.addEventListener("DOMContentLoaded", function () {
     return res.json();
   }
 
+  
+
   async function getHTML(url) {
     const res = await fetch(url, {
       headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -311,7 +313,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (expiredCount === 0 && criticalCount === 0) {
         container.innerHTML = `
           <div class="alert-banner alert-success" style="padding: 10px 14px; background: #ecfdf5; border: 1px solid #10b981; color: #065f46; border-radius: 6px; font-size: 0.875rem;">
-            <span>✅ All stock is fresh! No batch expirations pending.</span>
+            <span>All stock is fresh! No batch expirations pending.</span>
           </div>
         `;
         return;
@@ -321,7 +323,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (expiredCount > 0) {
         html += `
           <div class="alert-banner alert-danger" style="padding: 10px 14px; background: #fef2f2; border: 1px solid #f87171; color: #991b1b; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; margin-bottom: 8px;">
-            <div><strong>🚨 Action Required:</strong> <span>${expiredCount} batch(es) have passed expiry date!</span></div>
+            <div><strong>Action Required:</strong> <span>${expiredCount} batch(es) have passed expiry date!</span></div>
             <a href="/inventory/wastage/create/" class="btn btn-sm" style="background: #dc2626; color: #fff; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.75rem;">Record Wastage</a>
           </div>
         `;
@@ -329,7 +331,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (criticalCount > 0) {
         html += `
           <div class="alert-banner alert-warning" style="padding: 10px 14px; background: #fffbe2; border: 1px solid #facc15; color: #854d0e; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem;">
-            <div><strong>⚠️ Expiry Warning:</strong> <span>${criticalCount} batch(es) expiring soon.</span></div>
+            <div><strong>Expiry Warning:</strong> <span>${criticalCount} batch(es) expiring soon.</span></div>
             <a href="/inventory/expiry-report/?status=CRITICAL" class="btn btn-sm" style="background: #eab308; color: #fff; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.75rem;">View Report</a>
           </div>
         `;
@@ -495,10 +497,10 @@ async function loadSalesTrend(period) {
   function refreshAll() {
     loadExpiryAlerts();
     loadSalesTrend(currentPeriod);
-    loadPartial(ENDPOINTS.expiryRows, "expiryRows", 5); // 👈 Fetch Expiry Table Rows
-    loadPartial(ENDPOINTS.recentSales, "recentSalesRows", 4);
-    loadPartial(ENDPOINTS.lowStock, "lowStockRows", 4);
-    loadPartial(ENDPOINTS.pendingPO, "pendingPoRows", 4);
+    loadPartial(ENDPOINTS.expiryRows, "expiryRows", 5); 
+    loadPartial(ENDPOINTS.recentSales, "recentSalesRows", 6);
+    loadPartial(ENDPOINTS.lowStock, "lowStockRows", 6);
+    loadPartial(ENDPOINTS.pendingPO, "pendingPoRows", 6);
   }
 
   function initRefreshButton() {

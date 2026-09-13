@@ -2,6 +2,8 @@ from django.db import models
 from accounts.models import Role
 from suppliers.models import Supplier, User
 from products.models import ProductVariant
+from accounting.models import JournalEntry
+
 
 class PurchaseOrder(models.Model):
     ORDER_STATUS_CHOICES = [
@@ -50,6 +52,7 @@ class PurchaseOrder(models.Model):
     tds_amount = models.DecimalField(max_digits=12, decimal_places=2)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
     net_payable_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    journal_entry = models.ForeignKey(JournalEntry, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = True

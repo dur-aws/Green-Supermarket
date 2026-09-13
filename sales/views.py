@@ -20,6 +20,7 @@ from sales.exceptions import SaleError
 from sales.services import InvoiceNumberService, SaleCancelService, SaleService
 from sales.models import Sale, SaleItem
 from accounts.mixins import RBACPermissionMixin
+from accounting.models import FiscalYear
 
 
 class SalesInvoiceView(RBACPermissionMixin, LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
@@ -30,13 +31,22 @@ class SalesInvoiceView(RBACPermissionMixin, LoginRequiredMixin, PermissionRequir
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['today_date'] = timezone.now().strftime('%Y-%m-%d')
+        context['fiscal_years'] = FiscalYear.objects.all().order_by('-is_active', '-name')
+        context['active_fiscal_year'] = FiscalYear.objects.filter(is_active=True).first()
         return context
 
 
 @login_required
 @permission_required('sales.add_sale', raise_exception=True)
 def get_next_invoice_no(request):
-    next_no = InvoiceNumberService.generate_next_number()
+    fy_id = request.GET.get('fiscal_year')
+    active_fy = None
+    if fy_id and str(fy_id).isdigit():
+        active_fy = FiscalYear.objects.filter(pk=int(fy_id)).first()
+    if not active_fy:
+        active_fy = FiscalYear.objects.filter(is_active=True).first()
+
+    next_no = InvoiceNumberService.generate_next_number(fiscal_year=active_fy)
     now = timezone.now()
     return JsonResponse({
         'invoice_no': next_no,
@@ -44,7 +54,6 @@ def get_next_invoice_no(request):
         'bs_date': str(nepali_datetime.date.today()),
         'time': now.strftime('%H:%M:%S')
     })
-
 
 @login_required
 @permission_required('sales.view_sale', raise_exception=True)
@@ -77,11 +86,11 @@ def product_search_api(request):
         days_left = (b.expiry_date - today).days
         
         # Determine Urgency Level based on ABC Criteria
-        urgency_tag = 'CRITICAL' if days_left <= 15 else ('WARNING' if days_left <= 60 else 'OK')
+        urgency_tag = 'CRITICAL' if days_left <= 15 else ('WARNING' if days_left <= 30 else 'OK')
 
         results.append({
             'batch_id': b.batch_id,
-            'batch_number': b.batch_number,
+            'batch_number': b.batch_number[6:],
             'id': v.product.product_id,
             'variant_id': v.variant_id,
             'name': v.product.product_name,
@@ -89,16 +98,54 @@ def product_search_api(request):
             'barcode': v.barcode,
             'price': str(v.selling_price),
             'stock': str(b.current_quantity),
-            'unit': getattr(v.primary_uom, 'unit_name', 'Pcs') if hasattr(v, 'primary_uom') else 'Pcs',
+            'unit': getattr(v.primary_uom, 'notation'),
             'vat': v.vat_status,
-            'expiry_date': b.expiry_date.strftime('%Y-%m-%d'),
-            'exp_date': b.expiry_date.strftime('%Y-%m-%d'),
+            'expiry_date': b.expiry_date.strftime('%m-%d'),
+            
             'days_left': days_left,
             'urgency_tag': urgency_tag
         })
 
     return JsonResponse({'results': results})
 
+from django.views.decorators.http import require_POST
+from .models import Sale
+from payments.services import PaymentProcess
+from payments.services import FonepayService
+
+@require_POST
+def create_fonepay_payment(request):
+    try:
+        data = json.loads(request.body)
+        sale_id = data.get("sales_id")
+
+        if not sale_id:
+            return JsonResponse({"success": False, "message": "Sale ID is required."}, status=400)
+
+        sale = Sale.objects.get(sales_id=sale_id)
+
+        result = PaymentProcess.create_payment(
+            sale=sale,
+            payment_method="FONEPAY"
+        )
+
+        payment = sale.payment_transactions.get(transaction_id=result["payment_id"])
+        payment = FonepayService.generate_qr(payment)
+
+        return JsonResponse({
+            "success": True,
+            "payment_id": payment.transaction_id,
+            "invoice_no": sale.invoice_no,
+            "amount": str(payment.amount),
+            "reference": payment.internal_reference,
+            "qr_data": payment.qr_payload,
+            "status": payment.status,
+        })
+
+    except Sale.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Sale not found."}, status=404)
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=400)
 
 @login_required
 @permission_required('sales.add_sale', raise_exception=True)
@@ -106,7 +153,7 @@ def product_search_api(request):
 def checkout_api(request):
     try:
         data = json.loads(request.body)
-
+        print(data)
         idempotency_key = data.get('idempotency_key', '')
         fiscal_year = data.get('fiscal_year', '')
         customer_id = data.get('customer_id', 1)
@@ -116,6 +163,7 @@ def checkout_api(request):
         tender_amount = data.get('tender_amount', '0.00')
         received_amount = data.get('received_amount', '0.00')
         change_amount = data.get('change_amount', '0.00')
+        buyer_pan = data.get('buyer_pan', '')
         
         items_data = data.get('items', [])
         payments_data = data.get('payments', [])
@@ -134,6 +182,7 @@ def checkout_api(request):
             tender_amount=tender_amount,
             received_amount=received_amount,
             change_amount=change_amount,
+            buyer_pan=buyer_pan,
             bs_date=bs_date,
             fiscal_year=fiscal_year,
             overall_discount_amount=overall_discount_amount,  

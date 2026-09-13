@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fiscal Years</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Fiscal Years (B.S.)</h2>
+        <a href="{% url 'fiscal_year_create' %}" class="btn btn-primary">Add Fiscal Year</a>
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Name</th>
+                <th>Start Date (BS)</th>
+                <th>End Date (BS)</th>
+                <th>Status</th>
+                <th>Is Closed?</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fy in fiscal_years %}
+            <tr>
+                <td><strong>{{ fy.name }}</strong></td>
+                <td>{{ fy.start_date_bs }}</td>
+                <td>{{ fy.end_date_bs }}</td>
+                <td>
+                    {% if fy.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if fy.is_closed %}
+                        <span class="badge bg-danger">Closed</span>
+                    {% else %}
+                        <span class="badge bg-info text-dark">Open</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not fy.is_active %}
+                        <a href="{% url 'fiscal_year_activate' fy.id %}" class="btn btn-sm btn-outline-success">Set Active</a>
+                    {% endif %}
+                    <a href="{% url 'fiscal_year_toggle_close' fy.id %}" class="btn btn-sm btn-outline-warning">
+                        {% if fy.is_closed %} Re-open {% else %} Close Period {% endif %}
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">No fiscal years configured yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

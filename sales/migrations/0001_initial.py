@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('customer_pan', models.CharField(blank=True, max_length=20, null=True)),
                 ('buyer_name', models.CharField(default='Walk-in Customer', max_length=100)),
                 ('invoice_no', models.IntegerField(editable=False, unique=True)),
-                ('fiscal_year', models.CharField(default='2083/84', max_length=10)),
+             
                 ('bs_date', models.CharField(blank=True, max_length=15, null=True)),
                 ('sale_date', models.DateTimeField(auto_now_add=True)),
                 ('taxable_amount', models.DecimalField(decimal_places=2, default=Decimal('0.00'), max_digits=12)),
@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'sale',
                 'ordering': ['-sale_date'],
-                'managed': True,
+               
             },
         ),
         migrations.CreateModel(

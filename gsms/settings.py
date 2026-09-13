@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'setting_app',
     'expenses',
     'costs',
+    'accounting',
 ]
 
 MIDDLEWARE = [

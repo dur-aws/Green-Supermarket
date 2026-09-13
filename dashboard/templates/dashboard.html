@@ -116,7 +116,7 @@
 <!-- Insert this Expiry Table Card alongside Low Stock / Recent Sales -->
 <div class="form-card">
     <div class="card-head">
-        <h2 class="card-title">⌛ Expiry Alerts & Batches</h2>
+        <h2 class="card-title">Expiry Alerts & Batches</h2>
         <!--<a href="#" class="card-link">Full Report &rarr;</a> -->
     </div>
     <div class="table-wrap">
@@ -142,16 +142,18 @@
         <div class="form-card">
             <div class="card-head">
                 <h2 class="card-title">Recent Sales</h2>
-                <a href="{% url 'sales_list' %}" class="card-link">View all &rarr;</a>
+                <a href="{% url 'sales_list' %}" class="card-link">View &rarr;</a>
             </div>
             <div class="table-wrap">
                 <table class="dash-table">
                     <thead>
                         <tr>
-                            <th>Invoice #</th>
+                            <th>Invoice</th>
                             <th>Customer</th>
+                            {% comment %} <th>items</th> {% endcomment %}
                             <th>Amount</th>
-                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Date</th>
                         </tr>
                     </thead>
                     <tbody id="recentSalesRows">
@@ -174,9 +176,9 @@
                     <thead>
                         <tr>
                             <th>Product</th>
-                            <th>Current</th>
-                            <th>Reorder Level</th>
-                            <th></th>
+                            <th>Reorder</th>
+                            <th>stock Status</th>
+                            
                         </tr>
                     </thead>
                     <tbody id="lowStockRows">

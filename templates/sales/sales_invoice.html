@@ -32,11 +32,12 @@
         border: 1px solid #cbd5e1;
         border-radius: 4px;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        width: 275px;
         max-height: 220px;
         overflow-y: auto;
     }
     .search-dropdown-item {
-        padding: 8px 12px;
+        padding: 3px 7px;
         cursor: pointer;
         font-size: 13px;
         border-bottom: 1px solid #f1f5f9;
@@ -46,6 +47,166 @@
         background-color: #e2e8f0;
         color: #0f172a;
     }
+
+
+    /* ===============================
+       FONEPAY QR MODAL - ISOLATED STYLE
+       =============================== */
+    #qr_modal.modal-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 999999 !important;
+        display: none;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 20px;
+        box-sizing: border-box;
+        background: rgba(15, 23, 42, 0.38) !important;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    #qr_modal .modal-card {
+        position: relative;
+        width: min(440px, 92vw);
+        max-height: min(90vh, 760px);
+        overflow-y: auto;
+        box-sizing: border-box;
+        padding: 28px 28px 24px;
+        background: #ffffff;
+        border: 1px solid rgba(16, 42, 67, 0.10);
+        border-radius: 18px;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.30);
+        text-align: center;
+        animation: fonepayQrIn 0.22s ease-out;
+    }
+
+    #qr_modal .modal-card h3 {
+        margin: 0 0 10px;
+        font-size: 21px;
+        font-weight: 700;
+        color: #102a43;
+    }
+
+    #qr_modal .modal-card > p {
+        margin: 0 0 18px;
+        color: #52606d;
+        font-size: 15px;
+    }
+
+    #qr_modal #qr_modal_amount {
+        display: inline-block;
+        margin-left: 4px;
+        font-size: 24px;
+        font-weight: 800;
+        color: #16803c;
+    }
+
+    #qr_modal .qr-container {
+        width: 220px;
+        min-height: 220px;
+        margin: 0 auto 18px;
+        padding: 14px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    #qr_modal .qr-container canvas,
+    #qr_modal .qr-container img {
+        display: block;
+        width: 190px !important;
+        height: 190px !important;
+        max-width: 100%;
+    }
+
+    #qr_modal .payment-info {
+        margin: 0 auto 20px;
+        padding: 13px 16px;
+        width: 100%;
+        box-sizing: border-box;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        text-align: left;
+    }
+
+    #qr_modal .payment-info p {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+        margin: 7px 0;
+        font-size: 13px;
+        color: #52606d;
+    }
+
+    #qr_modal .payment-info span {
+        font-weight: 600;
+        color: #102a43;
+        text-align: right;
+        word-break: break-word;
+    }
+
+    #qr_modal #qr_modal_status {
+        color: #d97706;
+        text-align: right;
+    }
+
+    #qr_modal .modal-actions {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    #qr_modal .modal-actions .btn {
+        min-width: 125px;
+        min-height: 42px;
+        border-radius: 9px;
+    }
+
+    #qr_modal #btn_confirm_qr_payment:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    @keyframes fonepayQrIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.97);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @media (max-width: 520px) {
+        #qr_modal .modal-card {
+            width: 94vw;
+            padding: 22px 18px 20px;
+            border-radius: 14px;
+        }
+
+        #qr_modal .qr-container {
+            width: 205px;
+            min-height: 205px;
+        }
+
+        #qr_modal .qr-container canvas,
+        #qr_modal .qr-container img {
+            width: 175px !important;
+            height: 175px !important;
+        }
+    }
+
 </style>
 
 <div class="invoice-container">
@@ -54,17 +215,18 @@
             <i class="fa-regular fa-file-lines invoice-icon"></i>
             <h2>Sales Invoice</h2>
         </div>
-
+           
         <div class="fiscal-year-selector">
             <label for="fiscal_year">For Year<span class="required">*</span></label>
             <select id="fiscal_year" name="fiscal_year">
                 {% if fiscal_years %}
                     {% for fy in fiscal_years %}
-                        <option value="{{ fy }}" {% if fy == active_fiscal_year %}selected{% endif %}>{{ fy }}</option>
+                        <option value="{{ fy.id }}" 
+                                {% if fy.id == active_fiscal_year.id or fy.is_active %}selected{% endif %}
+                                {% if fy.is_closed %}disabled{% endif %}>
+                            {{ fy.name }} {% if fy.is_closed %}(Closed){% endif %}
+                        </option>
                     {% endfor %}
-                {% else %}
-                    <option value="2082/83">2082/83</option>
-                    <option value="2083/84" selected>2083/84</option>
                 {% endif %}
             </select>
         </div>
@@ -99,14 +261,29 @@
                 <input type="text" id="invoice_date" name="invoice_date" value="" />
             </div>
         </div>
-
+            <!-- Render Multi-Tender Breakdown if SPLIT Payment -->
+            
         <div class="form-group">
-            <label for="payment_method">Payment Mode<span class="required">*</span></label>
+            <label for="payment_method">Payment Method<span class="required">*</span></label>
             <select id="payment_method" name="payment_method">
                 <option value="CASH" selected>CASH</option>
                 <option value="CARD">CARD / POS</option>
                 <option value="FONEPAY">FONEPAY (Dynamic QR)</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CREDIT">On Credit</option>
+                <option value="SPLIT">Split Payment</option>
             </select>
+            <div id="split_payment_details" class="split-payment-panel" style="display:none;">
+                <div class="split-payment-header"><div><strong>Split Payment</strong><small>Cash + Fonepay Dynamic QR</small></div><span id="split_payment_status" class="split-status">Enter amounts</span></div>
+                <div class="split-payment-fields">
+                    <div class="split-method-field"><label>Cash</label><div class="split-input-wrap"><span>NPR</span><input type="text" id="split_cash_amount" value="0.00" oninput="validateNumericInput(this)"></div></div>
+                    <div class="split-method-field"><label>Fonepay</label><div class="split-input-wrap split-fonepay-input"><span>NPR</span><input type="text" id="split_fonepay_amount" value="0.00" oninput="validateNumericInput(this)"><span class="fonepay-mini-badge">QR</span></div></div>
+                </div>
+                <div class="split-payment-summary"><div><span>Grand Total</span><strong id="split_grand_total">NPR 0.00</strong></div><div><span>Split Total</span><strong id="split_entered_total">NPR 0.00</strong></div><div><span>Remaining</span><strong id="split_remaining_total">NPR 0.00</strong></div></div>
+                <div id="split_fonepay_hint" class="split-fonepay-hint" style="display:none;"><i class="fa-solid fa-qrcode"></i> Fonepay amount will open in the centered QR popup.</div>
+            </div>
+            <small>IRD PAN/VAT for invoices above NPR 5,000</small>
+            <input type="text" id="buyer_pan" name="buyer_pan" maxlength="20" placeholder="Buyer PAN/VAT number">
         </div>
     </div>
 
@@ -202,12 +379,16 @@
                 <span>Change</span>
                 <span class="summary-val highlight-green" id="lbl_change">0.00</span>
             </div>
+            <div class="summary-row">
+                <span>Balance Due</span>
+                <span class="summary-val" id="lbl_balance_due">0.00</span>
+            </div>
         </div>
     </div>
 
     <div class="invoice-footer-actions">
         <div class="left-actions">
-            <button type="button" class="btn btn-outline" id="btn_show_qr"><i class="fa-solid fa-qrcode"></i> Dynamic QR</button>
+            <button type="button" class="btn btn-outline" id="btn_fonepay"><i class="fa-solid fa-qrcode"></i> Dynamic QR</button>
         </div>
 
         <div class="right-actions">
@@ -224,19 +405,73 @@
 
 <div id="qr_modal" class="modal-overlay" style="display: none;">
     <div class="modal-card">
+
         <h3>Fonepay Dynamic Payment</h3>
-        <p>Scan to pay NPR <strong id="qr_modal_amount">0.00</strong></p>
-        <div id="qr_code_container" class="qr-container"></div>
-        <p class="ref-text">Reference: <span id="qr_modal_ref">-</span></p>
-        <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" id="btn_close_qr">Cancel</button>
-            <button type="button" class="btn btn-primary" id="btn_confirm_qr_payment">Confirm Payment</button>
+
+        <p>
+            Scan to pay NPR
+            <strong id="qr_modal_amount">0.00</strong>
+        </p>
+
+        <!-- QR -->
+        <div id="qr_code_container" class="qr-container">
+            <!-- QR generated dynamically -->
         </div>
+        <div id="split_qr_container" class="qr-container" style="display: none;"></div>
+
+        <!-- Payment information -->
+        <div class="payment-info">
+
+            <p>
+                Invoice:
+                <span id="qr_modal_invoice">-</span>
+            </p>
+
+            <p>
+                Payment Reference:
+                <span id="qr_modal_ref">-</span>
+            </p>
+
+            <p>
+                Status:
+                <strong id="qr_modal_status">
+                    Waiting for payment
+                </strong>
+            </p>
+
+        </div>
+
+        <!-- Hidden payment ID -->
+        <input
+            type="hidden"
+            id="qr_modal_payment_id"
+            value=""
+        >
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                id="btn_close_qr"
+            >
+                Cancel
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                id="btn_confirm_qr_payment"
+                disabled
+            >
+                Confirm Payment
+            </button>
+
+        </div>
+
     </div>
 </div>
-
-
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     
     function validateNumericInput(input) {
@@ -252,9 +487,16 @@
         let overallDiscountAmount = 0.00;
         let activePaymentTransactionId = null;
         let currentBsDate = "";
+        let pollingInterval = null;
+        let fonepayPending = false;
+        let checkoutInProgress = false;
 
+        // 1. Updated fetch function to pass selected Fiscal Year
         function fetchNextInvoiceNumber() {
-            fetch('{% url "sales_next_invoice_no" %}')
+            const fySelect = document.getElementById('fiscal_year');
+            const fyId = fySelect ? fySelect.value : '';
+
+            fetch(`{% url "sales_next_invoice_no" %}?fiscal_year=${encodeURIComponent(fyId)}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.invoice_no) {
@@ -266,6 +508,13 @@
                 })
                 .catch(err => console.error("Fetch error:", err));
         }
+
+        // 2. Attach Event Listener to update sequence on Fiscal Year dropdown change
+        const fySelectEl = document.getElementById('fiscal_year');
+        if (fySelectEl) {
+            fySelectEl.addEventListener('change', fetchNextInvoiceNumber);
+        }
+
         fetchNextInvoiceNumber();
 
         function initRows() {
@@ -273,12 +522,22 @@
             overallDiscountPercent = 0.00;
             overallDiscountAmount = 0.00;
             activePaymentTransactionId = null;
+            fonepayPending = false;
+            checkoutInProgress = false;
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
 
             // Reset inputs after checkout
             document.getElementById('tender_input').value = "0.00";
             document.getElementById('lbl_received_amount').innerText = "0.00";
             document.getElementById('lbl_change').innerText = "0.00";
+            document.getElementById('lbl_balance_due').innerText = "0.00";
+            document.getElementById('buyer_pan').value = "";
             document.getElementById('narration').value = "";
+            if(document.getElementById('split_cash_amount')) document.getElementById('split_cash_amount').value='0.00';
+            if(document.getElementById('split_fonepay_amount')) document.getElementById('split_fonepay_amount').value='0.00';
 
             renderTable();
         }
@@ -353,7 +612,7 @@
                         </td>
                         <td class="text-center">0</td>
                         <td class="text-center">${item.is_vatable ? item.vat_percent + '%' : 'Exempt'}</td>
-                        <td class="text-right font-bold">${(lineAfterDiscount + lineVat).toFixed(2)}</td>
+                        <td class="text-right font-bold">${(lineAfterDiscount).toFixed(2)}</td>
                         <td class="text-center">
                             <button type="button" class="btn-action delete" data-index="${index}"><i class="fa-solid fa-trash"></i></button>
                         </td>
@@ -370,6 +629,8 @@
             }
 
             const totalNet = taxableSubtotal + nonTaxableSubtotal;
+            billDiscount = Math.min(Math.max(0, billDiscount), totalNet);
+
             let finalTaxable = taxableSubtotal;
             let finalNonTaxable = nonTaxableSubtotal;
 
@@ -470,20 +731,36 @@
         }
 
         
+        // Dynamic grid events are delegated to the table body.
+        // This is important because renderTable() recreates the rows after every edit.
         function attachGridEvents() {
-        document.querySelectorAll('.grid-search-input').forEach(input => {
-            input.addEventListener('input', function () {
-                const idx = this.dataset.index;
-                const query = this.value.trim();
+            const tbody = document.getElementById('cart_tbody');
+            if (!tbody || tbody.dataset.eventsAttached === '1') return;
+
+            tbody.dataset.eventsAttached = '1';
+
+            // Product search: works for every dynamically-created search box.
+            tbody.addEventListener('input', function (e) {
+                if (!e.target.classList.contains('grid-search-input')) return;
+
+                const input = e.target;
+                const idx = Number(input.dataset.index);
+                const query = input.value.trim();
                 const dropdown = document.getElementById(`dropdown-${idx}`);
+
+                if (!dropdown) return;
 
                 if (query.length < 1) {
                     dropdown.style.display = 'none';
+                    dropdown.innerHTML = '';
                     return;
                 }
 
                 fetch(`{% url 'sales_product_search' %}?q=${encodeURIComponent(query)}`)
-                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+                        return res.json();
+                    })
                     .then(data => {
                         dropdown.innerHTML = '';
                         const results = data.results || data.products || data;
@@ -494,30 +771,25 @@
                         }
 
                         results.forEach(product => {
-                            const pName = product.name || product.product_name;
+                            const pName = product.name || product.product_name || '';
                             const pVariant = product.variant || '';
-                            const pStock = product.stock || product.closing_stock || 0;
+                            const pStock = product.stock ?? product.closing_stock ?? 0;
                             const pUnit = product.unit || 'Pcs';
-                            const pPrice = product.price;
-
-                            // Expiry and Batch parameters from API
-                            const batchNo = product.batch_number || '';
-                            const expDate = product.expiry_date || product.exp_date || '';
+                            const pPrice = product.price ?? 0;
+                            const batchNo = product.batch_number || product.batch || '';
+                            const expDate = product.expiry_date || '';
                             const daysLeft = product.days_left;
                             const urgency = product.urgency_tag || 'OK';
 
-                            // Dynamic badge styles based on urgency
-                            let badgeStyle = 'background-color: #10b981; color: #fff;'; // Green (OK)
+                            let badgeStyle = 'background-color: #6bcb88; color: #fff;';
                             if (urgency === 'CRITICAL') {
-                                badgeStyle = 'background-color: #ef4444; color: #fff;'; // Red (<= 15 days)
+                                badgeStyle = 'background-color: #e78686; color: #fff;';
                             } else if (urgency === 'WARNING') {
-                                badgeStyle = 'background-color: #f59e0b; color: #fff;'; // Yellow (<= 60 days)
+                                badgeStyle = 'background-color: #f1c375ba; color: #fff;';
                             }
 
-                            const badgeHtml = expDate 
-                                ? `<span style="${badgeStyle} font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">
-                                    Exp: ${expDate} ${daysLeft !== undefined ? `(${daysLeft}d left)` : ''}
-                                </span>`
+                            const badgeHtml = expDate
+                                ? `<span style="${badgeStyle} font-size: 0.7rem; padding: 1px 3px; border-radius: 4px; margin-left: 2px;">${expDate} ${daysLeft !== undefined ? `(${daysLeft}d left)` : ''}</span>`
                                 : '';
 
                             const div = document.createElement('div');
@@ -527,104 +799,172 @@
                             div.style.borderBottom = '1px solid #f3f4f6';
 
                             div.innerHTML = `
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <strong>${pName} ${pVariant}</strong> 
-                                        ${batchNo ? `<small style="color: #6b7280;">(Batch: ${batchNo})</small>` : ''}
-                                        ${badgeHtml}
-                                    </div>
-                                    <div style="text-align: right;">
-                                        <strong>NPR ${pPrice}</strong><br>
-                                        <small style="color: #6b7280;">Stock: ${pStock} ${pUnit}</small>
-                                    </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                                    <strong>${pName} ${pVariant}</strong>
+                                    ${badgeHtml}
+                                    <span>NPR ${Number(pPrice).toFixed(2)}</span>
+                                    <small style="color:#6b7280;">${batchNo} ${pStock} ${pUnit}</small>
                                 </div>
                             `;
 
-                            div.addEventListener('click', function () {
+                            div.addEventListener('mousedown', function (event) {
+                                // mousedown prevents the input blur from hiding the dropdown before selection.
+                                event.preventDefault();
                                 selectProduct(idx, product);
                             });
 
                             dropdown.appendChild(div);
                         });
+
                         dropdown.style.display = 'block';
                     })
-                    .catch(err => console.error("Search fetch error:", err));
-                });
+                    .catch(err => console.error('Search fetch error:', err));
             });
-        }
 
-            document.querySelectorAll('.qty-input').forEach(input => {
-                input.addEventListener('change', function () {
-                    const idx = this.dataset.index;
-                    const val = parseFloat(this.value) || 1;
-                    items[idx].quantity = val > 0 ? val : 1;
+            // Quantity / price / item discount: delegated so new rows work automatically.
+            tbody.addEventListener('change', function (e) {
+                const target = e.target;
+                const idx = Number(target.dataset.index);
+
+                if (!Number.isInteger(idx) || !items[idx]) return;
+
+                if (target.classList.contains('qty-input')) {
+                    const value = parseFloat(target.value);
+                    items[idx].quantity = Number.isFinite(value) && value > 0 ? value : 1;
                     renderTable();
-                });
-            });
+                    return;
+                }
 
-            document.querySelectorAll('.price-input').forEach(input => {
-                input.addEventListener('change', function () {
-                    const idx = this.dataset.index;
-                    const val = parseFloat(this.value) || 0;
-                    items[idx].price = val >= 0 ? val : 0;
+                if (target.classList.contains('price-input')) {
+                    const value = parseFloat(target.value);
+                    items[idx].price = Number.isFinite(value) && value >= 0 ? value : 0;
                     renderTable();
-                });
-            });
+                    return;
+                }
 
-            document.querySelectorAll('.discount-input').forEach(input => {
-                input.addEventListener('change', function () {
-                    const idx = this.dataset.index;
-                    const val = parseFloat(this.value) || 0;
-                    items[idx].discount = val >= 0 ? val : 0;
+                if (target.classList.contains('discount-input')) {
+                    const value = parseFloat(target.value);
+                    const gross = (Number(items[idx].price) || 0) * (Number(items[idx].quantity) || 0);
+                    items[idx].discount = Math.min(
+                        Number.isFinite(value) && value >= 0 ? value : 0,
+                        gross
+                    );
                     renderTable();
-                });
-            });
+                    return;
+                }
 
-            const billAmtInput = document.getElementById('bill_discount_amt_input');
-            if (billAmtInput) {
-                billAmtInput.addEventListener('change', function () {
-                    overallDiscountAmount = parseFloat(this.value) || 0;
+                if (target.id === 'bill_discount_amt_input') {
+                    const value = parseFloat(target.value);
+                    overallDiscountAmount = Number.isFinite(value) && value >= 0 ? value : 0;
                     overallDiscountPercent = 0;
                     renderTable();
-                });
-            }
+                    return;
+                }
 
-            const billPctInput = document.getElementById('bill_discount_pct_input');
-            if (billPctInput) {
-                billPctInput.addEventListener('change', function () {
-                    overallDiscountPercent = parseFloat(this.value) || 0;
+                if (target.id === 'bill_discount_pct_input') {
+                    const value = parseFloat(target.value);
+                    overallDiscountPercent = Math.min(
+                        Number.isFinite(value) && value >= 0 ? value : 0,
+                        100
+                    );
                     overallDiscountAmount = 0;
                     renderTable();
-                });
-            }
-
-            document.querySelectorAll('.btn-action.delete').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const idx = this.dataset.index;
-                    items.splice(idx, 1);
-                    if (items.length === 0 || items[items.length - 1].product_id !== null) {
-                        items.push({ product_id: null });
-                    }
-                    renderTable();
-                });
+                }
             });
-        
 
-        function calculateChange() {
-            const grandTotal = parseFloat(document.getElementById('lbl_grand_total').innerText) || 0;
-            const tender = parseFloat(document.getElementById('tender_input').value) || 0;
-            let received = parseFloat(document.getElementById('lbl_received_amount').innerText) || 0;
-            
-            if (tender >= 0) {
-                received = tender;
-                document.getElementById('lbl_received_amount').innerText = tender.toFixed(2);
-            }
+            // Delete is also delegated because rows are recreated dynamically.
+            tbody.addEventListener('click', function (e) {
+                const btn = e.target.closest('.btn-action.delete');
+                if (!btn) return;
 
-            const change = Math.max(0, received - grandTotal);
-            document.getElementById('lbl_change').innerText = change.toFixed(2);
+                const idx = Number(btn.dataset.index);
+                if (!Number.isInteger(idx) || !items[idx]) return;
+
+                items.splice(idx, 1);
+                if (items.length === 0 || items[items.length - 1].product_id !== null) {
+                    items.push({ product_id: null });
+                }
+                renderTable();
+            });
         }
 
-        document.getElementById('tender_input').addEventListener('input', calculateChange);
+        function calculateChange() {
+            const grandTotal = parseFloat(document.getElementById('lbl_grand_total')?.innerText) || 0;
+            const method = document.getElementById('payment_method')?.value || 'CASH';
+            const tenderInput = document.getElementById('tender_input');
+            const receivedEl = document.getElementById('lbl_received_amount');
+            const changeEl = document.getElementById('lbl_change');
+            const balanceEl = document.getElementById('lbl_balance_due');
+
+            let tender = parseFloat(tenderInput?.value) || 0;
+            let received = 0;
+            let change = 0;
+            let balance = 0;
+
+            if (method === 'CASH') {
+                received = Math.max(0, tender);
+                change = Math.max(0, received - grandTotal);
+                balance = Math.max(0, grandTotal - received);
+            } else if (method === 'CREDIT') {
+                // Credit sale: nothing is received at checkout.
+                tender = 0;
+                received = 0;
+                change = 0;
+                balance = grandTotal;
+            } else if (method === 'SPLIT') {
+                const a = getSplitAmounts();
+                received = a.cash + a.fonepay;
+                change = Math.max(0, received - grandTotal);
+                balance = Math.max(0, grandTotal - received);
+            } else {
+                // Card/e-wallet/bank transfer are treated as exact payment.
+                received = grandTotal;
+                change = 0;
+                balance = 0;
+                if (tenderInput) tenderInput.value = grandTotal.toFixed(2);
+            }
+
+            if (receivedEl) receivedEl.innerText = received.toFixed(2);
+            if (changeEl) changeEl.innerText = change.toFixed(2);
+            if (balanceEl) balanceEl.innerText = balance.toFixed(2);
+        }
+
+        const tenderInputEl = document.getElementById('tender_input');
+        if (tenderInputEl) {
+            tenderInputEl.addEventListener('input', calculateChange);
+            tenderInputEl.addEventListener('change', calculateChange);
+        }
+
+        const paymentMethodEl = document.getElementById('payment_method');
+        if (paymentMethodEl) {
+            paymentMethodEl.addEventListener('change', function () {
+                const method = this.value;
+                const splitBox = document.getElementById('split_payment_details');
+                const fonepayBtn = document.getElementById('btn_fonepay');
+
+                if (splitBox) {
+                    splitBox.style.display = method === 'SPLIT' ? 'block' : 'none';
+                }
+
+                if (fonepayBtn) {
+                    fonepayBtn.style.display = (method === 'FONEPAY' || method === 'SPLIT') ? '' : 'none';
+                }
+
+                calculateChange();
+                if(method === 'SPLIT') updateSplitPaymentUI();
+            });
+        }
+
+        ['split_cash_amount','split_fonepay_amount'].forEach(id => { const el=document.getElementById(id); if(el){ el.addEventListener('input',updateSplitPaymentUI); el.addEventListener('change',updateSplitPaymentUI); } });
+
+        function getSplitAmounts(){ return { cash: parseFloat(document.getElementById('split_cash_amount')?.value)||0, fonepay: parseFloat(document.getElementById('split_fonepay_amount')?.value)||0 }; }
+        function updateSplitPaymentUI(){
+            const total=parseFloat(document.getElementById('lbl_grand_total')?.innerText)||0, a=getSplitAmounts(), paid=a.cash+a.fonepay, rem=total-paid;
+            document.getElementById('split_grand_total').innerText=`NPR ${total.toFixed(2)}`; document.getElementById('split_entered_total').innerText=`NPR ${paid.toFixed(2)}`; document.getElementById('split_remaining_total').innerText=`NPR ${Math.abs(rem)<.005?'0.00':rem.toFixed(2)}`;
+            const st=document.getElementById('split_payment_status'); if(Math.abs(rem)<=.01&&paid>0){st.textContent='Ready';st.style.background='#e7f6ed';st.style.color='#138a4b';}else if(rem>0){st.textContent=`NPR ${rem.toFixed(2)} left`;st.style.background='#fff7e6';st.style.color='#b45309';}else{st.textContent='Over by NPR '+Math.abs(rem).toFixed(2);st.style.background='#feecec';st.style.color='#dc2626';}
+            document.getElementById('split_remaining_total').style.color=rem>.01?'#b45309':(rem<-.01?'#dc2626':'#138a4b'); document.getElementById('split_fonepay_hint').style.display=a.fonepay>0?'block':'none'; calculateChange();
+        }
+        function getPaymentEntries(grandTotal){ const method=document.getElementById('payment_method')?.value||'CASH'; if(method!=='SPLIT')return [{method,amount:grandTotal}]; const a=getSplitAmounts(); return [{method:'CASH',amount:a.cash},{method:'FONEPAY',amount:a.fonepay}].filter(p=>p.amount>0); }
 
         function calculateBottomTotals(subtotal, discount, taxable, nonTaxable, vat, roundOff, grandTotal) {
             document.getElementById('lbl_subtotal').innerText = subtotal.toFixed(2);
@@ -638,30 +978,230 @@
             calculateChange();
         }
 
-        // Save & Checkout Event
-        // Reusable Checkout Function
-        function processCheckout(shouldPrint = false) {
-            const validItems = items.filter(i => i.product_id !== null);
-            if (validItems.length === 0) {
-                alert('Please select at least one product!');
+        
+
+        function renderQr(container, value) {
+            container.innerHTML = '';
+            if (window.QRCode) {
+                new QRCode(container, {
+                    text: value,
+                    width: 190,
+                    height: 190,
+                    colorDark: '#102a43',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                return;
+            }
+            const image = document.createElement('img');
+            image.alt = 'Demo payment QR code';
+            image.width = 190;
+            image.height = 190;
+            image.src = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(value)}`;
+            container.appendChild(image);
+        }
+
+        function showDemoQr(amount, method, reference) {
+            const modal = document.getElementById('qr_modal');
+            const container = document.getElementById('qr_code_container');
+            document.getElementById('split_qr_container').style.display = 'none';
+            container.style.display = 'block';
+            document.getElementById('qr_modal_amount').textContent = Number(amount).toFixed(2);
+            document.getElementById('qr_modal_invoice').textContent = document.getElementById('invoice_no').value || 'Demo Invoice';
+            document.getElementById('qr_modal_ref').textContent = reference;
+            document.getElementById('qr_modal_status').textContent = 'Demo QR ready';
+            document.getElementById('qr_modal_status').style.color = '#102a43';
+            renderQr(container, `GSMS-DEMO|${method}|NPR ${Number(amount).toFixed(2)}|${reference}`);
+            document.getElementById('btn_confirm_qr_payment').disabled = false;
+            modal.style.display = 'flex';
+        }
+
+        function showSplitDemoQrs(entries) {
+            const modal = document.getElementById('qr_modal');
+            const container = document.getElementById('split_qr_container');
+            document.getElementById('qr_code_container').style.display = 'none';
+            container.style.display = 'grid';
+            container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))';
+            container.style.gap = '16px';
+            container.innerHTML = '';
+            entries.forEach((entry, index) => {
+                const card = document.createElement('div');
+                card.style.textAlign = 'center';
+                const title = document.createElement('strong');
+                title.textContent = `${entry.method} - NPR ${Number(entry.amount).toFixed(2)}`;
+                const qr = document.createElement('div');
+                qr.style.margin = '8px auto';
+                card.append(title, qr);
+                container.appendChild(card);
+                renderQr(qr, `GSMS-DEMO|SPLIT-${index + 1}|${entry.method}|NPR ${Number(entry.amount).toFixed(2)}`);
+            });
+            document.getElementById('qr_modal_amount').textContent = entries.reduce((sum, entry) => sum + Number(entry.amount), 0).toFixed(2);
+            document.getElementById('qr_modal_invoice').textContent = document.getElementById('invoice_no').value || 'Demo Invoice';
+            document.getElementById('qr_modal_ref').textContent = 'DEMO-SPLIT-' + Date.now();
+            document.getElementById('qr_modal_status').textContent = 'Demo split QR ready';
+            document.getElementById('qr_modal_status').style.color = '#102a43';
+            document.getElementById('btn_confirm_qr_payment').disabled = false;
+            modal.style.display = 'flex';
+        }
+
+        function showFonepayQR(data) {
+            const modal = document.getElementById('qr_modal');
+            const container = document.getElementById('qr_code_container');
+            const splitContainer = document.getElementById('split_qr_container');
+
+            splitContainer.style.display = 'none';
+            container.style.display = 'block';
+            container.innerHTML = '';
+
+            const qrValue = data.qr_payload || data.qr_data || data.qr_url || data.qr || data.payment_url;
+            if (qrValue) {
+                renderQr(container, qrValue);
+            } else {
+                // Keep the existing demo fallback when the payment service only returns a reference.
+                renderQr(container, `GSMS-DEMO|FONEPAY|NPR ${Number(data.amount || 0).toFixed(2)}|${data.reference || 'FONEPAY-DEMO'}`);
+            }
+
+            document.getElementById('qr_modal_amount').textContent = Number(data.amount || 0).toFixed(2);
+            document.getElementById('qr_modal_invoice').textContent = document.getElementById('invoice_no').value || 'Demo Invoice';
+            document.getElementById('qr_modal_ref').textContent = data.reference || data.payment_id || 'FONEPAY-DEMO';
+            document.getElementById('qr_modal_status').textContent = 'Waiting for payment';
+            document.getElementById('qr_modal_status').style.color = '';
+            document.getElementById('btn_confirm_qr_payment').disabled = false;
+            document.getElementById('qr_modal_payment_id').value = data.payment_id || '';
+            modal.style.display = 'flex';
+        }
+// Polling Helper Function
+        function startPaymentPolling(paymentId) {
+            if (!paymentId) return;
+
+            if (pollingInterval) clearInterval(pollingInterval);
+
+            const statusEl = document.getElementById('qr_modal_status');
+            const confirmBtn = document.getElementById('btn_confirm_qr_payment');
+            fonepayPending = true;
+
+            const checkPayment = async () => {
+                try {
+                    const res = await fetch(`/payments/${paymentId}/status/`, {
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!res.ok) throw new Error(`Payment status HTTP ${res.status}`);
+
+                    const data = await res.json();
+                    const status = String(data.status || '').toUpperCase();
+
+                    if (status === 'PAID' || status === 'SUCCESS' || status === 'COMPLETED' || data.paid === true) {
+                        if (pollingInterval) {
+                            clearInterval(pollingInterval);
+                            pollingInterval = null;
+                        }
+
+                        activePaymentTransactionId = data.transaction_id || data.payment_transaction_id || paymentId;
+                        fonepayPending = false;
+
+                        if (statusEl) {
+                            statusEl.textContent = 'Payment Successful!';
+                            statusEl.style.color = '#16a34a';
+                        }
+                        if (confirmBtn) confirmBtn.disabled = false;
+
+                        // The original flow creates the sale before creating the QR.
+                        // Therefore DO NOT call sales_checkout() again here; that would create
+                        // a duplicate invoice. The verified payment endpoint is responsible for
+                        // completing the pending sale.
+                        setTimeout(() => {
+                            const modal = document.getElementById('qr_modal');
+                            if (modal) modal.style.display = 'none';
+                            if (confirmBtn) confirmBtn.disabled = true;
+                            const qrPaymentId = document.getElementById('qr_modal_payment_id');
+                            if (qrPaymentId) qrPaymentId.value = '';
+                        }, 800);
+
+                        return;
+                    }
+
+                    if (status === 'FAILED' || status === 'CANCELLED' || status === 'EXPIRED') {
+                        if (pollingInterval) {
+                            clearInterval(pollingInterval);
+                            pollingInterval = null;
+                        }
+
+                        fonepayPending = false;
+                        if (statusEl) {
+                            statusEl.textContent = `Payment ${status.charAt(0) + status.slice(1).toLowerCase()}!`;
+                            statusEl.style.color = '#dc2626';
+                        }
+                        if (confirmBtn) confirmBtn.disabled = true;
+                    }
+                } catch (err) {
+                    console.error('Polling error:', err);
+                }
+            };
+
+            // Check immediately, then every 6 seconds.
+            checkPayment();
+            pollingInterval = setInterval(checkPayment, 6000);
+        }
+
+        // Modal Close & Reset Polling
+        document.getElementById('btn_close_qr').addEventListener('click', function() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            fonepayPending = false;
+            document.getElementById('qr_modal').style.display = 'none';
+            document.getElementById('btn_confirm_qr_payment').disabled = true;
+        });
+
+        // Dynamic QR Button Listener
+        document.getElementById("btn_fonepay").addEventListener("click", async function () {
+            if (fonepayPending) {
+                alert('A Fonepay payment is already pending. Please complete or cancel it first.');
                 return;
             }
 
-            const tenderVal = parseFloat(document.getElementById('tender_input').value) || 0;
-            const receivedVal = parseFloat(document.getElementById('lbl_received_amount').innerText) || 0;
-            const changeVal = parseFloat(document.getElementById('lbl_change').innerText) || 0;
+            if (!['FONEPAY','SPLIT'].includes(document.getElementById('payment_method').value)) {
+                alert('Please select FONEPAY (Dynamic QR) as the payment method first.');
+                return;
+            }
 
+            const validItems = items.filter(i => i.product_id !== null);
+            if (validItems.length === 0) {
+                alert('Please select at least one product before initiating dynamic payment!');
+                return;
+            }
+
+            // 1. Create Sale Entry with PENDING status
+            const grandTotal = parseFloat(document.getElementById('lbl_grand_total').innerText) || 0;
+            const selectedMethod = document.getElementById('payment_method').value;
+            let splitAmounts = null;
+            let paymentEntries;
+            if (selectedMethod === 'SPLIT') {
+                splitAmounts = getSplitAmounts();
+                const splitTotal = splitAmounts.cash + splitAmounts.fonepay;
+                if (splitAmounts.cash <= 0 || splitAmounts.fonepay <= 0 || Math.abs(splitTotal - grandTotal) > 0.01) {
+                    alert('Split payment requires Cash + Fonepay amounts that exactly match the grand total.');
+                    return;
+                }
+                paymentEntries = getPaymentEntries(grandTotal);
+            } else {
+                paymentEntries = [{ method: 'FONEPAY', amount: grandTotal }];
+            }
+            const fonepayAmount = paymentEntries.find(p => p.method === 'FONEPAY')?.amount || grandTotal;
             const payload = {
-                idempotency_key: 'IDEM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                idempotency_key: 'IDEM-QR-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
                 fiscal_year: document.getElementById('fiscal_year').value,
                 customer_id: document.getElementById('party_ac').value,
                 narration: document.getElementById('narration').value,
                 bs_date: currentBsDate,
-                tender_amount: tenderVal,
-                received_amount: receivedVal,
-                change_amount: changeVal,
-                discount_amount: overallDiscountAmount,
-                discount_percent: overallDiscountPercent,
+                tender_amount: selectedMethod === 'SPLIT' ? splitAmounts.cash : grandTotal,
+                received_amount: selectedMethod === 'SPLIT' ? splitAmounts.cash : 0,
+                change_amount: 0,
+                buyer_pan: document.getElementById('buyer_pan').value,
+                overall_discount_amount: overallDiscountAmount,
+                overall_discount_percent: overallDiscountPercent,
                 items: validItems.map(i => ({
                     product_id: i.product_id,
                     quantity: i.quantity,
@@ -670,54 +1210,165 @@
                     is_vatable: i.is_vatable,
                     vat_percent: i.vat_percent
                 })),
-                payment_transaction_ids: activePaymentTransactionId ? [activePaymentTransactionId] : [],
-                payments: [{
-                    method: document.getElementById('payment_method').value,
-                    amount: receivedVal
-                }]
+                payments: paymentEntries
             };
 
-            fetch('{% url "sales_checkout" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json().then(data => ({ status: res.status, body: data })))
-            .then(res => {
-                if (res.status === 200 || res.status === 201) {
-                    const invoiceNo = res.body.invoice_no;
-                    const salesId = res.body.sales_id;
-                    
+            try {
+                const checkoutRes = await fetch('{% url "sales_checkout" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-                    if (shouldPrint) {
-                        // Open print layout in a new window/tab to trigger print preview
-                        const printUrl = `/sales/invoice/${salesId}/print/`; // Adjust to your print URL pattern
-                        const printWindow = window.open(printUrl, '_blank');
-                        
-                        if (printWindow) {
-                            printWindow.focus();
-                        } else {
-                            // Fallback to current browser window print if popup blocker intercepts
-                            window.location.href = `/sales/invoice/${salesId}/print/`;
-                        }
-                    } else {
-                        alert(`Sale Saved Successfully! Invoice: ${invoiceNo}`);
-                    }
-
-                    // Reset invoice fields and fetch next sequential number
-                    initRows();
-                    fetchNextInvoiceNumber();
-                } else {
-                    alert(`Error: ${res.body.error}`);
+                const checkoutData = await checkoutRes.json();
+                if (!checkoutRes.ok) {
+                    alert("Error creating pending sale: " + (checkoutData.error || checkoutData.message));
+                    return;
                 }
-            })
-            .catch(err => {
-                console.error("Checkout error:", err);
-                alert("An error occurred while saving the sale.");
-            });
+
+                const saleId = checkoutData.sales_id;
+
+                // 2. Request Fonepay QR Payload
+                const response = await fetch("/payments/fonepay/create/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ sale_id: saleId, amount: fonepayAmount })
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    alert(data.message || data.error);
+                    return;
+                }
+
+                // 3. Render Modal & Start Polling
+                showFonepayQR(data);
+                startPaymentPolling(data.payment_id);
+
+            } catch (err) {
+                console.error("Fonepay Checkout Error:", err);
+                alert("An error occurred while initiating dynamic payment.");
+            }
+        });
+        // Save & Checkout Event
+        // Reusable Checkout Function
+        async function processCheckout(shouldPrint = false) {
+            if (checkoutInProgress) return;
+
+            if (fonepayPending) {
+                alert('Please complete the pending Fonepay payment first.');
+                return;
+            }
+
+            const validItems = items.filter(i => i.product_id !== null);
+            if (validItems.length === 0) {
+                alert('Please select at least one product!');
+                return;
+            }
+
+            const method = document.getElementById('payment_method').value;
+            const grandTotal = parseFloat(document.getElementById('lbl_grand_total').innerText) || 0;
+            const tenderVal = parseFloat(document.getElementById('tender_input').value) || 0;
+            const receivedVal = parseFloat(document.getElementById('lbl_received_amount').innerText) || 0;
+            const changeVal = parseFloat(document.getElementById('lbl_change').innerText) || 0;
+
+            if (grandTotal <= 0) {
+                alert('Grand total must be greater than zero.');
+                return;
+            }
+
+            if (method === 'CASH' && receivedVal + 0.01 < grandTotal) {
+                alert(`Insufficient cash received. Balance due: NPR ${(grandTotal - receivedVal).toFixed(2)}`);
+                document.getElementById('tender_input').focus();
+                return;
+            }
+
+            if (method === 'SPLIT') {
+                const splitEntries = getPaymentEntries(grandTotal);
+                const splitTotal = splitEntries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+                if (splitEntries.length < 1 || Math.abs(splitTotal - grandTotal) > 0.01) {
+                    alert('Split payment amounts must add up to the grand total.');
+                    return;
+                }
+            }
+
+            checkoutInProgress = true;
+            const saveBtn = document.getElementById('btn_save_only');
+            const printBtn = document.getElementById('btn_save_and_print');
+            if (saveBtn) saveBtn.disabled = true;
+            if (printBtn) printBtn.disabled = true;
+
+            const payload = {
+                idempotency_key: 'IDEM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                fiscal_year: document.getElementById('fiscal_year').value,
+                customer_id: document.getElementById('party_ac').value,
+                narration: document.getElementById('narration').value,
+                bs_date: currentBsDate,
+                tender_amount: method === 'CASH' ? tenderVal : grandTotal,
+                received_amount: receivedVal,
+                change_amount: changeVal,
+                overall_discount_amount: overallDiscountAmount,
+                overall_discount_percent: overallDiscountPercent,
+                buyer_pan: document.getElementById('buyer_pan').value,
+                items: validItems.map(i => ({
+                    product_id: i.product_id,
+                    quantity: Number(i.quantity) || 0,
+                    price: Number(i.price) || 0,
+                    discount: Number(i.discount) || 0,
+                    is_vatable: i.is_vatable,
+                    vat_percent: Number(i.vat_percent) || 0
+                })),
+                payment_transaction_ids: activePaymentTransactionId ? [activePaymentTransactionId] : [],
+                payments: getPaymentEntries(grandTotal)
+            };
+
+            try {
+                const res = await fetch('{% url "sales_checkout" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || data.message || 'Unable to save sale.');
+                }
+
+                const invoiceNo = data.invoice_no;
+                const salesId = data.sales_id;
+
+                if (shouldPrint && salesId) {
+                    const printUrl = `/sales/invoice/${salesId}/print/`;
+                    const printWindow = window.open(printUrl, '_blank');
+                    if (printWindow) {
+                        printWindow.focus();
+                    } else {
+                        window.location.href = printUrl;
+                    }
+                } else {
+                    alert(`Sale Saved Successfully! Invoice: ${invoiceNo}`);
+                }
+
+                initRows();
+                fetchNextInvoiceNumber();
+            } catch (err) {
+                console.error('Checkout error:', err);
+                alert(`Error: ${err.message}`);
+            } finally {
+                checkoutInProgress = false;
+                if (saveBtn) saveBtn.disabled = false;
+                if (printBtn) printBtn.disabled = false;
+            }
         }
 
         // Attach event listeners to both buttons
@@ -728,6 +1379,27 @@
         document.getElementById('btn_save_and_print').addEventListener('click', function () {
             processCheckout(true);
         });
+
+        document.querySelectorAll('#split_cash_amount, #split_card_amount').forEach(input => {
+            input.addEventListener('input', calculateChange);
+            input.addEventListener('change', calculateChange);
+        });
+
+        const resetBtn = document.getElementById('btn_reset');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () {
+                if (fonepayPending) {
+                    alert('Please cancel the pending Fonepay payment before resetting.');
+                    return;
+                }
+                initRows();
+            });
+        }
+
+        // Initial payment-method UI state.
+        if (paymentMethodEl) {
+            paymentMethodEl.dispatchEvent(new Event('change'));
+        }
 
         function getCookie(name) {
             let cookieValue = null;

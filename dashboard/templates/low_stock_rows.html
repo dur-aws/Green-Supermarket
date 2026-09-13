@@ -1,9 +1,9 @@
 {% for item in data %}
 <tr>
-    <td> <strong>{{ item.product }} {{item.variant}}</strong><br>
-       <small> Reorder qty: {{item.reorder_level}} {{item.unit}}</small>
+    <td> <strong>{{ item.product }} {{item.variant}}</strong>
     </td>
-    <td></td>
+    <td> {{item.reorder_level}} {{item.unit}}</td>
+    
     <td>
         {% if item.stock_status == "out-of-stock" %}
             <span class="badge badge-red">OUT OF STOCK</span>

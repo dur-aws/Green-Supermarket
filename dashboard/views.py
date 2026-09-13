@@ -258,18 +258,23 @@ def get_monthly_sales():
 #     ]
 #     return JsonResponse(data, safe=False)
 
-
-# # -------------------------------------------------------------
-# # 5) RECENT SALES (HTML partial)  ->  GET /dashboard/api/recent-sales/
-# # -------------------------------------------------------------
-# @login_required
-# def dashboard_recent_sales(request):
-#     sales = Sales.objects.select_related("customer").order_by("-sale_date")[:8]
-#     html = render_to_string("dashboard/_recent_sales_rows.html", {"sales": sales}, request=request)
-#     return _html_response(html)
-
-
 # -------------------------------------------------------------
+# 5) RECENT SALES (HTML partial)  ->  GET /dashboard/api/recent-sales/
+# -------------------------------------------------------------
+@login_required
+def recent_sales_api(request):
+    """
+    Partial view returning the 10 most recent sales transactions
+    as HTML <tr> rows for the dashboard table.
+    """
+    recent_sales = (
+        Sale.objects.select_related("customer")
+        .order_by("-sale_date")[:6]   # limit to 10
+    )
+    return render(request, "recent_sales_rows.html", {
+        "sales": recent_sales
+    })
+# -----------------------------------
 # 6) LOW STOCK ROWS (HTML partial)  ->  GET /dashboard/api/low-stock/
 # -------------------------------------------------------------
 
@@ -382,9 +387,9 @@ def dashboard_expiry_rows(request):
     batches = InventoryBatch.objects.select_related(
         'variant', 'variant__product', 'variant__primary_uom'
     ).filter(
-        current_quantity__gt=Decimal('0.000'),
+        
         expiry_date__lte=today + timedelta(days=60)
-    ).order_by('expiry_date')[:8]
+    ).order_by('expiry_date')[:6]
 
     # Calculate days_left dynamically for template badges
     for batch in batches:
@@ -393,9 +398,9 @@ def dashboard_expiry_rows(request):
     html = render_to_string('expiry_rows.html', {'batches': batches}, request=request)
     return HttpResponse(html, content_type="text/html")
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
+
+
+
 from django.db.models import Q
 from .models import Notification
 
