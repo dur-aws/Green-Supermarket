@@ -12,7 +12,7 @@ class SupplierAccessMixin(AccessMixin):
             return self.handle_no_permission()
         
         # Check if user is linked to a Supplier profile or is staff/admin
-        if not hasattr(request.user, 'supplier_profile') and not (self.allow_staff and request.user.is_staff):
+        if not getattr(request.user, 'is_supplier_role', False) and not (self.allow_staff and request.user.is_staff):
             raise PermissionDenied("You do not have access to the Supplier Portal.")
             
         return super().dispatch(request, *args, **kwargs)

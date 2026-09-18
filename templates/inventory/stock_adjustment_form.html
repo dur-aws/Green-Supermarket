@@ -2,27 +2,27 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/form.css' %}">
-<div class="page-wrap" style="max-width: 600px;">
+<div class="page-wrap" style="max-width: 500px;">
   
-        <div class="page-header bg-primary text-white">
-            <h5 class="mb-0">Adjust Batch Stock</h5>
+        <div class="page-header">
+            <h3 >Adjust Batch Stock</h3>
         </div>
         <div class="form-card">
-            <div class="alert alert-info py-2 small">
+            <div>
                 <strong>Batch:</strong> {{ batch.batch_number }} <br>
-                <strong>Variant:</strong> {{ batch.variant }} <br>
+                <strong>Variant:</strong> {{batch.variant.product.product_name}} {{ batch.variant }} <br>
                 <strong>Available Stock:</strong> {{ batch.current_quantity|floatformat:3 }}
             </div>
 
             <form method="post">
                 {% csrf_token %}
                 
-                <div class="mb-3">
+                <div class="form-field">
                     <label class="form-label fw-bold">Reason Code</label>
                     {{ form.reason_code }}
                 </div>
 
-                <div class="mb-3">
+                <div class="form-field">
                     <label class="form-label fw-bold">Quantity Change</label>
                     {{ form.quantity_change }}
                     <div class="form-text text-muted">
@@ -30,14 +30,14 @@
                     </div>
                 </div>
 
-                <div class="mb-3">
+                <div class="form-field">
                     <label class="form-label fw-bold">Notes / Audit Log</label>
                     {{ form.notes }}
                 </div>
 
-                <div class="d-flex justify-content-between pt-2">
-                    <a href="{% url 'stock_list' %}" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Save Adjustment</button>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                    <a href="{% url 'stock_list' %}" class="form-btn btn-add-variant">Cancel</a>
+                    <button type="submit" class="form-btn btn-delete-variant">Save Adjustment</button>
                 </div>
             </form>
         </div>

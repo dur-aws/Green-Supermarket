@@ -1,0 +1,28 @@
+{% extends 'base.html' %} {% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="page-wrap">
+  <div class="page-header">
+    <h2>Credit Memo {{ credit_memo.memo_number }}</h2>
+    <span>{{ credit_memo.get_status_display }}</span>
+  </div>
+  <div class="form-card" style=" display: flex; flex-direction: column;">
+    <p>Invoice: {{ credit_memo.sale.invoice_no }}</p>
+    <p>Amount: <strong>{{ credit_memo.amount|floatformat:2 }}</strong></p>
+    <p>Journal: {{ credit_memo.journal_entry_id|default:'Pending' }}</p>
+    <div style="display: flex; justify-content: center; gap: 0.75rem;">
+    {% if credit_memo.status == 'PENDING_REFUND' %}<a
+      class="form-btn btn-add-variant "
+      href="{% url 'refund_create' credit_memo.pk %}"
+      >Create Refund</a
+    >{% endif %}{% if credit_memo.payment_refund.status == 'PENDING' %}
+    <form method="post" action="{% url 'refund_confirm' credit_memo.pk %}">
+      {% csrf_token %}<button class="form-btn btn-add-variant " type="submit">
+        Confirm Physical Refund
+      </button>
+    </form>
+    {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

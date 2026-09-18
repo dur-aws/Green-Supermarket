@@ -1,0 +1,48 @@
+{% extends 'base.html' %} {% load static %} {% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}" />
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
+<div class="page-wrap">
+  <div class="page-header"><h2>Create Sales Return</h2></div>
+  <div class="form-card">
+    <form method="post">
+      {% csrf_token %}{{ form.non_field_errors }}
+      <label class="form-label">{{ form.invoice_no.label }}</label>
+      {{ form.invoice_no }}{{ form.invoice_no.errors }} {% if sale %}
+      <h3>Invoice {{ sale.invoice_no }}</h3>
+      
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Sold</th>
+            <th>Previously returned</th>
+            <th>Return quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in sale_items %}
+          <tr>
+            <td>{{ item.variant.produt.product_name}} {{ item.variant.variant_name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.remaining_returnable_quantity }}</td>
+            <td>
+              <input
+                type="number"
+                name="quantity_{{ item.pk }}"
+                min="0"
+                max="{{ item.remaining_returnable_quantity }}"
+                step="0.001"
+              />
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %} <label class="form-label">{{ form.reason.label }}</label>
+      {{form.reason }}
+      <button class="form-btn btn-add-variant" type="submit">Create RMA</button>
+    </form>
+  </div>
+</div>
+<script src="{% static 'js/sales_returns.js' %}"></script>
+{% endblock %}

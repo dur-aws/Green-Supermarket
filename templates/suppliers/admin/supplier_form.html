@@ -1,60 +1,61 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/master.css' %}">
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="page-wrap" style="max-width: 500px;">
+                <div class="page-header ">
                     <h4 class="mb-0">{% if object %}Edit Supplier: {{ object.supplier_name }}{% else %}Add New Supplier{% endif %}</h4>
                 </div>
-                <div class="card-body">
+                <div class="form-card">
                     <form method="post" novalidate>
                         {% csrf_token %}
                         
                         <h5>Basic Information</h5>
-                        <div class="mb-3">
+                        <div class="form-group">
                             <label class="form-label">Supplier Name *</label>
                             {{ form.supplier_name }}
                             {{ form.supplier_name.errors }}
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
+                        <div class="form-group">
+                            <div class="form-field">
                                 <label class="form-label">Contact Person</label>
                                 {{ form.contact_person }}
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Email Address *</label>
+                            <div class="form-field">
+                                <label class=>Email Address *</label>
                                 {{ form.email }}
                                 {{ form.email.errors }}
                             </div>
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Phone Number</label>
+                        <div class="form-group">
+                            <div class="from-field">
+                                <label >Phone Number</label>
                                 {{ form.phone }}
                             </div>
-                            <div class="col-md-6">
+                            <div class="from-field">
                                 <label class="form-label">PAN / VAT Number</label>
                                 {{ form.pan_vat_number }}
                             </div>
                         </div>
 
-                        <hr>
-                        <h5>Organic / Eco Certification</h5>
-                        <div class="form-check mb-2">
+                        
+                        <div class="form-group form-check-group">
+                           
+                            <label class="form-check-label" for="{{ form.is_organic_certified.id_for_label }}">
                             {{ form.is_organic_certified }}
-                            <label class="form-check-label" for="{{ form.is_organic_certified.id_for_label }}">Is Organic / Eco Certified Supplier?</label>
+                            Is Organic / Eco Certified Supplier?
+                            </label>
+                            
                         </div>
-                        <div class="mb-3">
+                        
+                        <div class="form-group">
                             <label class="form-label">Certification Details</label>
                             {{ form.certification_details }}
                         </div>
 
-                        <div class="mb-3">
+                        <div class="form-group">
                             <label class="form-label">Address</label>
                             {{ form.address }}
                         </div>
@@ -62,22 +63,22 @@
                         {% if not portal_account_exists %}
                         <hr>
                         <h5>Portal Access (Optional)</h5>
-                        <div class="form-check mb-3">
-                            {{ form.create_portal_account }}
-                            <label class="form-check-label" for="{{ form.create_portal_account.id_for_label }}">Generate User Account for Supplier Portal Access</label>
+
+                        <div class="form-check form-check-group">
+                            <label class="form-check-label" for="{{ form.create_portal_account.id_for_label }}">
+                                {{ form.create_portal_account }}
+                                Generate User Account for Supplier Portal Access
+                            </label>
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
+                        <div class="row form-group">
+                            <div class="from-field">
                                 <label class="form-label">Username</label>
                                 {{ form.username }}
                                 {{ form.username.errors }}
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Portal Role</label>
-                                <div class="form-control-plaintext"><strong>SUPPLIER</strong> <small>(fixed)</small></div>
-                            </div>
-                            <div class="col-md-6">
+                            
+                            <div class="from-field">
                                 <label class="form-label">Password</label>
                                 {{ form.password }}
                                 {{ form.password.errors }}
@@ -91,8 +92,8 @@
                         </div>
                     </form>
                 </div>
-            </div>
-        </div>
-    </div>
+          
+       
+    
 </div>
 {% endblock %}

@@ -14,6 +14,9 @@ class RBACPermissionMixin(LoginRequiredMixin, UserPassesTestMixin):
         if user.is_superuser:
             return True
 
+        if getattr(user, 'is_supplier_role', False) and self.module_name != 'suppliers':
+            return False
+
         if not hasattr(user, 'role') or not user.role:
             return False
 

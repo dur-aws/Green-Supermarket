@@ -324,7 +324,7 @@ document.addEventListener("DOMContentLoaded", function () {
         html += `
           <div class="alert-banner alert-danger" style="padding: 10px 14px; background: #fef2f2; border: 1px solid #f87171; color: #991b1b; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; margin-bottom: 8px;">
             <div><strong>Action Required:</strong> <span>${expiredCount} batch(es) have passed expiry date!</span></div>
-            <a href="/inventory/wastage/create/" class="btn btn-sm" style="background: #dc2626; color: #fff; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.75rem;">Record Wastage</a>
+            <a href="/sales/expiry-report/?status=EXPIRED" class="btn btn-sm" style="background: #dc2626; color: #fff; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.75rem;">Review Expired Stock</a>
           </div>
         `;
       }

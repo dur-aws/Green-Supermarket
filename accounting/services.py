@@ -78,8 +78,11 @@ class ChartOfAccountsService:
             ('1020', 'Bank Account / Card Clearing', 'ASSET', None),
             ('1030', 'Digital Wallet Clearing (Fonepay)', 'ASSET', None),
             ('1100', 'Accounts Receivable (Customers)', 'ASSET', None),
+            ('1110', 'Refund Clearing / Customer Credit', 'ASSET', None),
             ('1200', 'Inventory Asset Account', 'ASSET', None),
+            ('1210', 'GRN Clearing Account', 'LIABILITY', None),
             ('2010', 'Accounts Payable (Suppliers)', 'LIABILITY', None),
+            ('2040', 'TDS Payable', 'LIABILITY', None),
             ('2020', 'Output VAT Payable', 'LIABILITY', None),
             ('2030', 'Input VAT Credit', 'LIABILITY', None),
             ('3010', 'Sales Revenue', 'REVENUE', None),
@@ -157,6 +160,155 @@ class AccountingService:
                     credit=Decimal(str(item.get('credit', '0.00'))).quantize(Decimal('0.01'))
                 )
             return entry
+
+    @classmethod
+    def post_inventory_loss_journal_entry(
+        cls, *, entry_date, reference_id, amount, description, created_by=None
+    ):
+        """Post the standard debit-loss/credit-inventory entry for stock write-offs."""
+        amount = Decimal(str(amount)).quantize(Decimal('0.01'))
+        if amount <= Decimal('0.00'):
+            raise AccountingError("Inventory loss must be greater than zero.")
+
+        existing_entry = JournalEntry.objects.filter(
+            reference_type='ADJUST', reference_id=reference_id, description=description
+        ).first()
+        if existing_entry:
+            return existing_entry
+
+        fiscal_year = FiscalYear.objects.filter(is_active=True).first()
+        if fiscal_year is None:
+            fiscal_year = FiscalYearService.auto_create_current_fy()
+
+        return cls.create_journal_entry(
+            entry_date=entry_date,
+            bs_date='',
+            description=description,
+            reference_type='ADJUST',
+            reference_id=reference_id,
+            fiscal_year=fiscal_year,
+            items=[
+                {'account_code': '4020', 'debit': amount, 'credit': Decimal('0.00')},
+                {'account_code': '1200', 'debit': Decimal('0.00'), 'credit': amount},
+            ],
+            created_by=created_by,
+        )
+
+    @classmethod
+    def post_purchase_return_journal_entry(
+        cls, *, entry_date, reference_id, amount, description, created_by=None
+    ):
+        """Reduce supplier liability when inventory is returned to the supplier."""
+        amount = Decimal(str(amount)).quantize(Decimal('0.01'))
+        if amount <= Decimal('0.00'):
+            raise AccountingError("Purchase return value must be greater than zero.")
+
+        existing_entry = JournalEntry.objects.filter(
+            reference_type='ADJUST', reference_id=reference_id, description=description
+        ).first()
+        if existing_entry:
+            return existing_entry
+
+        fiscal_year = FiscalYear.objects.filter(is_active=True).first()
+        if fiscal_year is None:
+            fiscal_year = FiscalYearService.auto_create_current_fy()
+
+        return cls.create_journal_entry(
+            entry_date=entry_date,
+            bs_date='',
+            description=description,
+            reference_type='ADJUST',
+            reference_id=reference_id,
+            fiscal_year=fiscal_year,
+            items=[
+                {'account_code': '2010', 'debit': amount, 'credit': Decimal('0.00')},
+                {'account_code': '1200', 'debit': Decimal('0.00'), 'credit': amount},
+            ],
+            created_by=created_by,
+        )
+
+    @classmethod
+    @transaction.atomic
+    def post_purchase_receipt_journal_entry(cls, purchase, created_by=None):
+        """Post inventory, input VAT, supplier payable, and TDS for a received purchase."""
+        if purchase.journal_entry_id:
+            return purchase.journal_entry
+
+        fiscal_year = FiscalYear.objects.filter(is_active=True).first()
+        if fiscal_year is None:
+            fiscal_year = FiscalYearService.auto_create_current_fy()
+
+        subtotal = Decimal(str(purchase.subtotal or 0)).quantize(Decimal('0.01'))
+        freight = Decimal(str(purchase.freight_charge or 0)).quantize(Decimal('0.01'))
+        vat = Decimal(str(purchase.vat_amount or 0)).quantize(Decimal('0.01'))
+        tds = Decimal(str(purchase.tds_amount or 0)).quantize(Decimal('0.01'))
+        inventory_value = subtotal + freight
+        payable = Decimal(str(purchase.net_payable_amount or 0)).quantize(Decimal('0.01'))
+
+        grn_entry = cls.create_journal_entry(
+            entry_date=purchase.received_date or purchase.order_date or timezone.now().date(),
+            bs_date='',
+            description=f'GRN receipt for purchase #{purchase.purchase_id}',
+            reference_type='PURCHASE',
+            reference_id=purchase.purchase_id,
+            fiscal_year=fiscal_year,
+            items=[
+                {'account_code': '1200', 'debit': inventory_value, 'credit': 0},
+                {'account_code': '1210', 'debit': 0, 'credit': inventory_value},
+            ],
+            created_by=created_by or purchase.received_by_user,
+        )
+
+        items = [
+            {'account_code': '1210', 'debit': inventory_value, 'credit': 0},
+            {'account_code': '2010', 'debit': 0, 'credit': payable},
+        ]
+        if vat > 0:
+            items.append({'account_code': '2030', 'debit': vat, 'credit': 0})
+        if tds > 0:
+            items.append({'account_code': '2040', 'debit': 0, 'credit': tds})
+
+        entry = cls.create_journal_entry(
+            entry_date=purchase.received_date or purchase.order_date or timezone.now().date(),
+            bs_date='',
+            description=f'Purchase invoice #{purchase.purchase_id}',
+            reference_type='PURCHASE',
+            reference_id=purchase.purchase_id,
+            fiscal_year=fiscal_year,
+            items=items,
+            created_by=created_by or purchase.received_by_user,
+        )
+        purchase.journal_entry = entry
+        purchase.save(update_fields=['journal_entry'])
+        return entry
+
+    @classmethod
+    @transaction.atomic
+    def post_purchase_payment_journal_entry(cls, payment, created_by=None):
+        """Post a supplier settlement from cash/bank to accounts payable."""
+        existing_entry = JournalEntry.objects.filter(
+            reference_type='PAYMENT', reference_id=payment.pk
+        ).first()
+        if existing_entry:
+            return existing_entry
+
+        fiscal_year = FiscalYear.objects.filter(is_active=True).first()
+        if fiscal_year is None:
+            fiscal_year = FiscalYearService.auto_create_current_fy()
+        amount = Decimal(str(payment.amount)).quantize(Decimal('0.01'))
+        return cls.create_journal_entry(
+            entry_date=timezone.now().date(),
+            bs_date='',
+            description=f'Supplier payment for purchase #{payment.purchase_id}',
+            reference_type='PAYMENT',
+            reference_id=payment.pk,
+            fiscal_year=fiscal_year,
+            items=[
+                {'account_code': cls._resolve_payment_account(payment.payment_method), 'debit': amount, 'credit': 0},
+                {'account_code': '2010', 'debit': 0, 'credit': amount},
+            ],
+            created_by=created_by or payment.created_by,
+        )
 
     @classmethod
     @transaction.atomic

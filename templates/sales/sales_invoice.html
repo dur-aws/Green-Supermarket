@@ -18,37 +18,8 @@
         position: relative;
         overflow: visible !important;
     }
-    .search-container {
-        position: relative;
-        width: 100%;
-    }
-    .search-dropdown {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        z-index: 99999 !important;
-        background-color: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        width: 275px;
-        max-height: 220px;
-        overflow-y: auto;
-    }
-    .search-dropdown-item {
-        padding: 3px 7px;
-        cursor: pointer;
-        font-size: 13px;
-        border-bottom: 1px solid #f1f5f9;
-        text-align: left;
-    }
-    .search-dropdown-item:hover {
-        background-color: #e2e8f0;
-        color: #0f172a;
-    }
-
-
+   
+   
     /* ===============================
        FONEPAY QR MODAL - ISOLATED STYLE
        =============================== */
@@ -206,6 +177,66 @@
             height: 175px !important;
         }
     }
+    
+ .customer-result-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.customer-result-main strong {
+    color: #1f7a4d;
+}
+
+.customer-result-main span {
+    color: #333;
+}
+
+.search-dropdown-item small {
+    display: block;
+    margin-top: 4px;
+    color: #777;
+    font-size: 12px;
+}
+
+
+/* No customer */
+
+.search-dropdown-item.no-result {
+    cursor: default;
+    color: #777;
+}
+
+.search-dropdown-item.no-result:hover {
+    background: #fff;
+}
+
+
+.quick-register-form {
+    padding: 10px;
+    background: #f8fcf9;
+}
+
+.quick-register-form input {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 3px 0;
+    padding: 7px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+}
+
+.quick-register-form button {
+    width: 100%;
+    margin-top: 6px;
+}
+
+.quick-register-error {
+    display: block;
+    color: #b42318;
+    font-size: 12px;
+    margin-top: 5px;
+}
 
 </style>
 
@@ -249,10 +280,12 @@
         </div>
 
         <div class="form-group">
-            <label for="party_ac">Party A/C<span class="required">*</span></label>
-            <select id="party_ac" name="party_ac">
-                <option value="1" selected>CASH</option>
-            </select>
+            <label for="customer_search">Customer<span class="required">*</span></label>
+            <div class="search-container">
+                <input id="customer_search" type="search" autocomplete="off" placeholder="Code, name, phone or email" value="{% if default_customer %}{{ default_customer.customer_code }} - {{ default_customer.customer_name }}{% endif %}">
+                <input id="party_ac" type="hidden" value="{% if default_customer %}{{ default_customer.customer_id }}{% else %}1{% endif %}">
+                <div id="customer_results" class="search-dropdown" hidden></div>
+            </div>
         </div>
 
         <div class="form-group">
@@ -282,8 +315,7 @@
                 <div class="split-payment-summary"><div><span>Grand Total</span><strong id="split_grand_total">NPR 0.00</strong></div><div><span>Split Total</span><strong id="split_entered_total">NPR 0.00</strong></div><div><span>Remaining</span><strong id="split_remaining_total">NPR 0.00</strong></div></div>
                 <div id="split_fonepay_hint" class="split-fonepay-hint" style="display:none;"><i class="fa-solid fa-qrcode"></i> Fonepay amount will open in the centered QR popup.</div>
             </div>
-            <small>IRD PAN/VAT for invoices above NPR 5,000</small>
-            <input type="text" id="buyer_pan" name="buyer_pan" maxlength="20" placeholder="Buyer PAN/VAT number">
+            
         </div>
     </div>
 
@@ -491,6 +523,192 @@
         let fonepayPending = false;
         let checkoutInProgress = false;
 
+        const customerSearch = document.getElementById("customer_search");
+const customerResults = document.getElementById("customer_results");
+const customerId = document.getElementById("party_ac");
+
+
+// -------------------------------------
+// Initial state
+// -------------------------------------
+
+customerId.value = "{% if default_customer %}{{ default_customer.customer_id }}{% else %}1{% endif %}";
+customerSearch.value = "{% if default_customer %}{{ default_customer.customer_code }} - {{ default_customer.customer_name }}{% else %}Walk-in Customer{% endif %}";
+
+
+// -------------------------------------
+// Customer search
+// -------------------------------------
+
+customerSearch.addEventListener("input", async function () {
+
+    const query = this.value.trim();
+
+    // Customer search started again
+    customerId.value = "";
+
+    if (query.length < 1) {
+
+        customerResults.innerHTML = "";
+        customerResults.hidden = true;
+        customerResults.style.display = "none";
+
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `{% url 'customer_search_api' %}?q=${encodeURIComponent(query)}`
+        );
+
+        const data = await response.json();
+
+        const customers = data.results || [];
+
+        customerResults.innerHTML = "";
+
+        // -------------------------------------
+        // Existing customers found
+        // -------------------------------------
+
+        if (customers.length > 0) {
+
+            customers.forEach(customer => {
+
+                const item = document.createElement("div");
+
+                item.className = "search-dropdown-item";
+
+                item.innerHTML = `
+                    <div class="customer-result-main">
+                        <strong>${customer.code}</strong>
+                        <span>${customer.name}</span>
+                    </div>
+
+                    ${
+                        customer.phone
+                            ? `<small>${customer.phone}</small>`
+                            : ""
+                    }
+                `;
+
+                item.addEventListener("mousedown", function (e) {
+
+                    e.preventDefault();
+
+                    // Store selected customer ID
+                    customerId.value = customer.id;
+
+                    // Show selected customer
+                    customerSearch.value =
+                        `${customer.code} - ${customer.name}`;
+
+                    // Hide dropdown
+                    customerResults.innerHTML = "";
+                    customerResults.hidden = true;
+                    customerResults.style.display = "none";
+                });
+
+                customerResults.appendChild(item);
+
+            });
+
+        }
+
+        // -------------------------------------
+        // No customer found
+        // -------------------------------------
+
+        else {
+
+            const noResult = document.createElement("div");
+
+            noResult.className =
+                "search-dropdown-item no-result";
+
+            noResult.innerHTML = `
+                <div>
+                    <strong>No customer found</strong>
+                    <small>
+                        No existing customer matches "${query}"
+                    </small>
+                </div>
+            `;
+
+            customerResults.appendChild(noResult);
+
+
+            const quickRegister = document.createElement("form");
+            quickRegister.className = "quick-register-form";
+            quickRegister.innerHTML = `
+                <strong>Register new customer</strong>
+                <input name="customer_name" value="${query.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;')}" placeholder="Name" required>
+                <input name="phone" placeholder="Phone">
+                <input name="email" type="email" placeholder="Email">
+                <input name="pan_vat_number" placeholder="PAN / VAT number">
+                <button type="submit" class="btn btn-primary">Register customer</button>
+                <small class="quick-register-error" hidden></small>
+            `;
+
+            quickRegister.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                const submitButton = quickRegister.querySelector('button[type="submit"]');
+                const errorMessage = quickRegister.querySelector('.quick-register-error');
+                submitButton.disabled = true;
+                errorMessage.hidden = true;
+
+                try {
+                    const response = await fetch('{% url "customer_quick_add" %}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams(new FormData(quickRegister))
+                    });
+                    const customer = await response.json();
+                    if (!response.ok) {
+                        const errors = Object.values(customer.errors || {}).flat().join(' ');
+                        throw new Error(errors || 'Customer registration failed.');
+                    }
+
+                    customerId.value = customer.id;
+                    customerSearch.value = `${customer.code} - ${customer.name}`;
+                    customerResults.innerHTML = '';
+                    customerResults.hidden = true;
+                    customerResults.style.display = 'none';
+                } catch (error) {
+                    errorMessage.textContent = error.message;
+                    errorMessage.hidden = false;
+                    submitButton.disabled = false;
+                }
+            });
+
+            customerResults.appendChild(quickRegister);
+        }
+
+
+        // Show dropdown
+        customerResults.hidden = false;
+        customerResults.style.display = "block";
+
+
+    } catch (error) {
+
+        console.error("Customer search failed:", error);
+
+        customerResults.innerHTML = `
+            <div class="search-dropdown-item no-result">
+                Unable to search customers
+            </div>
+        `;
+
+        customerResults.hidden = false;
+        customerResults.style.display = "block";
+    }
+});
+
         // 1. Updated fetch function to pass selected Fiscal Year
         function fetchNextInvoiceNumber() {
             const fySelect = document.getElementById('fiscal_year');
@@ -534,7 +752,7 @@
             document.getElementById('lbl_received_amount').innerText = "0.00";
             document.getElementById('lbl_change').innerText = "0.00";
             document.getElementById('lbl_balance_due').innerText = "0.00";
-            document.getElementById('buyer_pan').value = "";
+           
             document.getElementById('narration').value = "";
             if(document.getElementById('split_cash_amount')) document.getElementById('split_cash_amount').value='0.00';
             if(document.getElementById('split_fonepay_amount')) document.getElementById('split_fonepay_amount').value='0.00';
@@ -638,7 +856,7 @@
                 const discountRatio = billDiscount / totalNet;
                 finalTaxable = taxableSubtotal - (taxableSubtotal * discountRatio);
                 finalNonTaxable = nonTaxableSubtotal - (nonTaxableSubtotal * discountRatio);
-                vatSum = (finalTaxable * 0.13);
+                vatSum = vatSum * (1 - discountRatio);
             }
 
             const rawGrandTotal = finalTaxable + finalNonTaxable + vatSum;
@@ -774,7 +992,7 @@
                             const pName = product.name || product.product_name || '';
                             const pVariant = product.variant || '';
                             const pStock = product.stock ?? product.closing_stock ?? 0;
-                            const pUnit = product.unit || 'Pcs';
+                            const pUnit = product.unit || 'unit';
                             const pPrice = product.price ?? 0;
                             const batchNo = product.batch_number || product.batch || '';
                             const expDate = product.expiry_date || '';
@@ -1199,7 +1417,7 @@
                 tender_amount: selectedMethod === 'SPLIT' ? splitAmounts.cash : grandTotal,
                 received_amount: selectedMethod === 'SPLIT' ? splitAmounts.cash : 0,
                 change_amount: 0,
-                buyer_pan: document.getElementById('buyer_pan').value,
+               
                 overall_discount_amount: overallDiscountAmount,
                 overall_discount_percent: overallDiscountPercent,
                 items: validItems.map(i => ({
@@ -1315,7 +1533,7 @@
                 change_amount: changeVal,
                 overall_discount_amount: overallDiscountAmount,
                 overall_discount_percent: overallDiscountPercent,
-                buyer_pan: document.getElementById('buyer_pan').value,
+               
                 items: validItems.map(i => ({
                     product_id: i.product_id,
                     quantity: Number(i.quantity) || 0,

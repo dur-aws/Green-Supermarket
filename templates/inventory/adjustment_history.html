@@ -1,0 +1,124 @@
+{% extends 'base.html' %} {% block content %} {% load static %}
+
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
+<div class="master-container">
+  <div class="sticky-header-panel">
+    <h1>Adjustment History</h1>
+    <div>
+        <a href="{% url 'stock_list' %}" class="btn btn-primary btn-add">Make Adjust</a>
+    </div>
+  </div>
+  <div class="scrollable-table-card">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Batch</th>
+          <th class="text-end">Change</th>
+          <th class="text-center">Reason</th>
+          <th class="text-end">Value</th>
+          <th>By</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for adjustment in adjustments %}
+        <tr>
+          <td>{{ adjustment.created_at|date:'Y-m-d H:i' }}</td>
+          <td>{{ adjustment.batch.batch_number }}</td>
+          <td class="text-end">{{ adjustment.quantity_change|floatformat:3 }}</td>
+          <td class="text-center">{{ adjustment.get_reason_code_display }}</td>
+          <td class="text-end">Rs. {{ adjustment.loss_value|floatformat:2 }}</td>
+          <td>{{ adjustment.adjusted_by_user.username }}</td>
+          <td>{{ adjustment.notes|default:'-' }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">No adjustments found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <!-- FIXED BOTTOM PAGINATION -->
+    <div class="pagination-footer">
+
+        <div>
+            Total {{ page_obj.paginator.count|default:adjustments|length }} records
+        </div>
+
+        {% if is_paginated %}
+        <ul class="pagination">
+
+            <!-- Previous -->
+            {% if page_obj.has_previous %}
+                <li>
+                    <a href="?page={{ page_obj.previous_page_number }}">&lt;</a>
+                </li>
+            {% endif %}
+
+            <!-- First Page -->
+            {% if page_obj.number > 3 %}
+                <li>
+                    <a href="?page=1">1</a>
+                </li>
+
+                {% if page_obj.number > 4 %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
+                {% endif %}
+            {% endif %}
+
+
+            <!-- Pages around current page -->
+            {% for num in page_obj.paginator.page_range %}
+
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+
+                    {% if page_obj.number == num %}
+                        <li class="active">
+                            <span>{{ num }}</span>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+
+                {% endif %}
+
+            {% endfor %}
+
+
+            <!-- Last Page -->
+            {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}
+
+                {% if page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
+                {% endif %}
+
+                <li>
+                    <a href="?page={{ page_obj.paginator.num_pages }}">
+                        {{ page_obj.paginator.num_pages }}
+                    </a>
+                </li>
+
+            {% endif %}
+
+
+            <!-- Next -->
+            {% if page_obj.has_next %}
+                <li>
+                    <a href="?page={{ page_obj.next_page_number }}">&gt;</a>
+                </li>
+            {% endif %}
+
+        </ul>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

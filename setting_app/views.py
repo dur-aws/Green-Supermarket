@@ -51,8 +51,10 @@ class LogActivityListView(RBACPermissionMixin, ListView):
     model = ActivityLog
     template_name = 'activityLog.html'
     context_object_name = 'activity_logs'
-    paginate_by = 15
 
+    module_name= 'setting_app'
+    required_permission = 'view'
+    paginate_by = 25
     def get_queryset(self):
         queryset = ActivityLog.objects.select_related('user', 'user__role').all()
         

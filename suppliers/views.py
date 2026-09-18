@@ -3,7 +3,8 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView, D
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db import transaction
 from django.db.models import Q, Sum
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
 from django.template.loader import render_to_string
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
@@ -11,7 +12,8 @@ from django.contrib.auth import get_user_model
 
 from accounts.mixins import RBACPermissionMixin
 from .mixins import SupplierAccessMixin
-from purchases.models import PurchaseOrder
+from purchases.models import PurchaseOrder, PurchaseDetail
+from purchases.services import ensure_vendor_receipt
 from .models import Supplier
 from .forms import SupplierAdminForm
 
@@ -26,7 +28,7 @@ class SupplierPurchaseOrderListView(RBACPermissionMixin, SupplierAccessMixin, Li
     model = PurchaseOrder
     template_name = 'suppliers/supplier_po_list.html'
     context_object_name = 'purchase_orders'
-    paginate_by = 10
+    paginate_by = 25
 
     # RBAC Settings
     module_name = 'suppliers'
@@ -35,7 +37,9 @@ class SupplierPurchaseOrderListView(RBACPermissionMixin, SupplierAccessMixin, Li
 
     def get_queryset(self):
         supplier = self.get_supplier()
-        queryset = PurchaseOrder.objects.select_related('supplier')
+        queryset = PurchaseOrder.objects.select_related('supplier').prefetch_related(
+            'purchasedetail_set__variant__product'
+        )
 
         if supplier:
             # Strictly filter POs for the logged-in supplier only
@@ -88,7 +92,7 @@ class SupplierPurchaseOrderActionView(RBACPermissionMixin, SupplierAccessMixin, 
 
     transitions = {
         'accept': ('PENDING', 'ACCEPTED', 'Purchase order accepted.'),
-        'deliver': ('ACCEPTED', 'RECEIVED', 'Purchase order marked as delivered.'),
+        'deliver': ('ACCEPTED', 'DELIVERED', 'Purchase order marked as delivered.'),
     }
 
     def post(self, request, pk, action):
@@ -108,9 +112,51 @@ class SupplierPurchaseOrderActionView(RBACPermissionMixin, SupplierAccessMixin, 
             else:
                 order.order_status = new_status
                 order.save(update_fields=['order_status'])
+                from dashboard.services import notify_purchase_event
+                notify_purchase_event(order, 'delivered', actor=request.user)
                 messages.success(request, success_message)
 
         return redirect('supplier_po_list')
+
+
+class SupplierPurchaseDetailResponseView(RBACPermissionMixin, SupplierAccessMixin, View):
+    module_name = 'suppliers'
+    required_permission = 'edit'
+    allow_staff = False
+
+    def post(self, request, pk, detail_id, response):
+        if response not in ('accept', 'not_available'):
+            return JsonResponse({'error': 'Unsupported response.'}, status=400)
+        order = get_object_or_404(PurchaseOrder, pk=pk, supplier=self.get_supplier())
+        detail = get_object_or_404(PurchaseDetail, pk=detail_id, purchase=order)
+        detail.supplier_response = 'ACCEPT' if response == 'accept' else 'NOT_AVAILABLE'
+        detail.supplier_responded_at = timezone.now()
+        detail.save(update_fields=['supplier_response', 'supplier_responded_at'])
+        messages.success(request, 'Purchase item response saved.')
+        return redirect('supplier_po_list')
+
+
+class SupplierVendorReceiptView(RBACPermissionMixin, SupplierAccessMixin, View):
+    module_name = 'suppliers'
+    required_permission = 'view'
+    allow_staff = False
+
+    def get(self, request, pk):
+        order = get_object_or_404(
+            PurchaseOrder.objects.prefetch_related('purchasedetail_set__variant__product'),
+            pk=pk,
+            supplier=self.get_supplier(),
+            order_status='RECEIVED',
+        )
+        receipt = ensure_vendor_receipt(order, order.received_by_user)
+        html = render_to_string(
+            'suppliers/vendor_receipt.html',
+            {'order': order, 'receipt': receipt},
+            request=request,
+        )
+        response = HttpResponse(html, content_type='text/html')
+        response['Content-Disposition'] = f'attachment; filename="{receipt.receipt_number}.html"'
+        return response
 
 
 # ==========================================
@@ -121,7 +167,7 @@ class SupplierListView(RBACPermissionMixin, ListView):
     model = Supplier
     template_name = 'suppliers/admin/supplier_list.html'
     context_object_name = 'suppliers'
-    paginate_by = 10
+    paginate_by = 25
 
     # RBAC Settings
     module_name = 'suppliers'

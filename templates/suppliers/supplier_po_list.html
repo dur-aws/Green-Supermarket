@@ -27,6 +27,7 @@
                     <th>VAT Amount</th>
                     <th>Total Amount</th>
                     <th>Payment Status</th>
+                    <th>Requested Items</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -49,6 +50,23 @@
                         {% endif %}
                     </td>
                     <td>
+                        {% for item in po.purchasedetail_set.all %}
+                        <div class="mb-2">
+                            <strong>{{ item.variant.product.product_name }}{% if item.variant.variant_name %} ({{ item.variant.variant_name }}){% endif %}</strong>
+                            <div>Qty: {{ item.ordered_quantity }} | Unit price: Rs. {{ item.agreed_unit_price }}</div>
+                            <div>Response: {{ item.get_supplier_response_display }}</div>
+                            {% if item.supplier_response == 'PENDING' %}
+                            <form method="post" action="{% url 'supplier_po_item_response' po.pk item.pk 'accept' %}" class="d-inline">
+                                {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-success">Accept</button>
+                            </form>
+                            <form method="post" action="{% url 'supplier_po_item_response' po.pk item.pk 'not_available' %}" class="d-inline">
+                                {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger">Not available</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% empty %}<span class="text-muted">No items</span>{% endfor %}
+                    </td>
+                    <td>
                         {% if po.order_status == 'PENDING' %}
                         <form method="post" action="{% url 'supplier_po_action' po.pk 'accept' %}">
                             {% csrf_token %}
@@ -59,8 +77,11 @@
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-success">Mark delivered</button>
                         </form>
+                        {% elif po.order_status == 'DELIVERED' %}
+                        <span class="text-info">Delivered; awaiting GRN</span>
                         {% elif po.order_status == 'RECEIVED' %}
-                        <span class="text-success">Delivered</span>
+                        <span class="text-success">Received</span>
+                        <a href="{% url 'supplier_vendor_receipt' po.pk %}" class="btn btn-sm btn-outline-dark">Download receipt</a>
                         {% else %}
                         <span class="text-muted">No action</span>
                         {% endif %}
@@ -68,7 +89,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">No purchase orders found for your account.</td>
+                    <td colspan="9" class="text-center text-muted py-4">No purchase orders found for your account.</td>
                 </tr>
                 {% endfor %}
             </tbody>

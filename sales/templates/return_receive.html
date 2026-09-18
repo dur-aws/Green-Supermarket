@@ -1,0 +1,21 @@
+{% extends 'base.html' %} {% load static %} {% block content %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}" />
+<div class="page-wrap">
+  <div class="page-header">
+    <h2>Receive and Inspect {{ rma.rma_number }}</h2>
+  </div>
+  <div class="form-card">
+    <form method="post">
+      {% csrf_token %}{{ form.non_field_errors }}{% for field in form %}
+      <div class="form-row">
+        <label class="form-label">{{ field.label }}</label>{{ field }}{{field.errors }}
+      </div>
+      {% endfor %}
+      <button class="form-btn btn-add-variant" type="submit">
+        Approve Inspection
+      </button>
+    </form>
+  </div>
+</div>
+<script src="{% static 'js/sales_returns.js' %}"></script>
+{% endblock %}

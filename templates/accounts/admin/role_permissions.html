@@ -2,23 +2,23 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/accounts.css' %}">
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container role-page">
-    <div class="page-heading">
+<div class="master-container">
+    <div class="sticky-header-panel">
         <div>
-            <p class="eyebrow">Role access</p>
-            <h2>Permissions for <strong>{{ role.get_role_name_display }}</strong></h2>
-            <p class="page-muted">Choose which actions this role can perform in each module.</p>
+            
+            <h4>Permissions for <strong>{{ role.get_role_name_display }}</strong></h4>
+            <p>Choose which actions this role can perform in each module.</p>
         </div>
         <a href="{% url 'role_list' %}" class="btn btn-export">Back to Roles</a>
     </div>
     
     <form method="post">
         {% csrf_token %}
-        <div class="table-card role-permission-table">
+        <div class="scrollable-table-card">
         <table class="styled-table">
             <thead>
                 <tr>
@@ -42,7 +42,7 @@
             </tbody>
         </table>
         </div>
-        <div class="role-actions">
+        <div>
             <a href="{% url 'role_list' %}" class="btn btn-export">Cancel</a>
             <button type="submit" class="btn btn-primary btn-add">Save Permissions</button>
         </div>

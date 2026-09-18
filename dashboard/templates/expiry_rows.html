@@ -9,29 +9,33 @@
         <span class="badge badge-secondary">{{ batch.batch_number }}</span>
     </td>
     <td>
-        <strong>{{ batch.variant.total_active_stock }}</strong> 
+        <strong>{{ batch.current_quantity|floatformat:3 }}</strong>
         <small>{{ batch.variant.primary_uom.notation}}</small>
     </td>
     <td>
         <span>{{ batch.expiry_date|date:"Y-m-d" }}</span>
         {% if batch.days_left < 0 %}
             <span class="badge badge-red">
-                Expired ({{ batch.days_left|add:"0" }}d)
+                Expired / Sale blocked ({{ batch.days_left }}d)
             </span>
         {% elif batch.days_left <= 12 %}
             <span class="badge badge-red" >
-                 ({{ batch.days_left }}d left)
+                Expiring soon ({{ batch.days_left }}d left)
             </span>
         {% else %}
             <span class="badge badge-amber">
-         ({{ batch.days_left }}d left)
+                Expiring ({{ batch.days_left }}d left)
             </span>
         {% endif %}
     </td>
     <td class="text-right">
-        {% if batch.days_left < 0 or batch.days_left <= 15 %}
-            <a href="#" class="btn btn-sm btn-danger" style="font-size: 0.75rem; padding: 2px 8px;">
-                Deduct
+        {% if batch.days_left < 0 %}
+            <a href="{% url 'wastage_create' batch.pk %}" class="btn btn-sm btn-danger" style="font-size: 0.75rem; padding: 2px 8px;">
+                Write off
+            </a>
+        {% elif batch.days_left <= 15 %}
+            <a href="{% url 'wastage_create' batch.pk %}" class="btn btn-sm btn-outline-danger" style="font-size: 0.75rem; padding: 2px 8px;">
+                Review
             </a>
         {% else %}
             <a href="{% url 'expiry_report' %}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem; padding: 2px 8px;">

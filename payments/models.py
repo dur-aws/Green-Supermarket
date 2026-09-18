@@ -5,7 +5,11 @@ from .choices import PAYMENT_METHOD_CHOICES, PAYMENT_STATUS_CHOICES
 
 class Payment(models.Model):
     transaction_id = models.AutoField(primary_key=True)
-    sale = models.ForeignKey('sales.Sale', on_delete=models.CASCADE, related_name='payment_transactions')
+    sale = models.ForeignKey('sales.Sale', on_delete=models.CASCADE, related_name='payment_transactions', null=True, blank=True)
+    purchase = models.ForeignKey(
+        'purchases.PurchaseOrder', on_delete=models.CASCADE,
+        related_name='purchase_payments', null=True, blank=True
+    )
 
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
         
@@ -71,7 +75,8 @@ class Payment(models.Model):
         
 
     def __str__(self):
-        return f"Payment #{self.transaction_id} - Sale #{self.sale.invoice_no} ({self.payment_method}: {self.amount})"
+        party = f"Sale #{self.sale.invoice_no}" if self.sale_id else f"Purchase #{self.purchase_id}"
+        return f"Payment #{self.transaction_id} - {party} ({self.payment_method}: {self.amount})"
 
 
 
@@ -159,6 +164,8 @@ class PaymentRefund(models.Model):
         ("PENDING", "Pending"),
         ("SUCCESS", "Success"),
         ("FAILED", "Failed"),
+        ("PAID", "Paid"),
+        ("COMPLETED", "Completed"),
     ]
 
     refund_id = models.BigAutoField(primary_key=True)
@@ -167,6 +174,11 @@ class PaymentRefund(models.Model):
         Payment,
         on_delete=models.PROTECT,
         related_name="refunds"
+    )
+
+    credit_memo = models.OneToOneField(
+        'sales.CreditMemo', on_delete=models.PROTECT, related_name='payment_refund',
+        null=True, blank=True
     )
 
     amount = models.DecimalField(
@@ -189,6 +201,17 @@ class PaymentRefund(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default="PENDING"
+    )
+
+    refund_method = models.CharField(max_length=20, blank=True, null=True)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='confirmed_refunds'
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    journal_entry = models.ForeignKey(
+        'accounting.JournalEntry', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='refund_records'
     )
 
     reason = models.TextField(

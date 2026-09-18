@@ -1,7 +1,33 @@
+<style>
+    .user-detail-link {
+        color: #15803d;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        transition: color 0.18s ease;
+    }
+
+    .user-detail-link:hover {
+        color: #166534;
+        text-decoration: underline;
+    }
+</style>
+
 {% for u in users %}
 <tr class="align-middle">
     <td>
-        <a href="{% url 'user_detail' u.id %}" style="text-decoration: none; color: #2e7d32; font-weight: 600;">
+        <a href="#"
+        class="user-detail-link"
+        data-user-id="{{ u.id }}"
+        data-username="{{ u.username }}"
+        data-first-name="{{ u.first_name }}"
+        data-last-name="{{ u.last_name }}"
+        data-email="{{ u.email }}"
+        data-phone="{{ u.phone|default:'-' }}"
+        data-role="{{ u.role.role_name|default:'-' }}"
+        data-status="{% if u.status == 1 and user.is_active %}Active{% else %}Inactive{% endif %}"
+        data-staff="{% if u.is_staff %}Enabled{% else %}Disabled{% endif %}"
+        data-superuser="{% if u.is_superuser %}Enabled{% else %}Disabled{% endif %}">
             {{ u.username }}
         </a>
     </td>
@@ -43,3 +69,87 @@
     <td colspan="6" style="text-align: center; color: #888888; padding: 2rem;">No user accounts </td>
 </tr>
 {% endfor %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+    const userDetailOverlay = document.getElementById("user-detail");
+
+    if (!userDetailOverlay) return;
+
+   
+
+    const profileList = userDetailOverlay.querySelector(".profile-list");
+
+    const editButton = userDetailOverlay.querySelector(".profile-card > .btn-primary");
+
+    document.addEventListener("click", function (e) {
+
+        const link = e.target.closest(".user-detail-link");
+
+        if (!link) return;
+
+        e.preventDefault();
+
+        const username = link.dataset.username || "-";
+        const firstName = link.dataset.firstName || "";
+        const lastName = link.dataset.lastName || "";
+
+        const email = link.dataset.email || "-";
+        const phone = link.dataset.phone || "-";
+        const role = link.dataset.role || "-";
+        const status = link.dataset.status || "-";
+        const staff = link.dataset.staff || "-";
+        const superuser = link.dataset.superuser || "-";
+        const userId = link.dataset.userId;
+
+        
+
+        // Update profile information
+        const values = profileList.querySelectorAll("dd");
+
+        values[0].textContent = username;
+        values[1].textContent = `${firstName} ${lastName}`.trim() || "-";
+        values[2].textContent = email;
+        values[3].textContent = phone;
+        values[4].textContent = role;
+        values[5].textContent = status;
+        values[6].textContent = staff;
+        values[7].textContent = superuser;
+
+        // Update edit URL
+        if (editButton && userId) {
+            editButton.href = `/users/${userId}/edit/`;
+        }
+
+        // Show overlay
+        userDetailOverlay.style.display = "flex";
+        document.body.style.overflow = "hidden";
+    });
+
+    // Close when clicking outside modal
+    userDetailOverlay.addEventListener("click", function (e) {
+
+        if (e.target === userDetailOverlay) {
+            closeUserDetail();
+        }
+
+    });
+
+    // Close with Escape
+    document.addEventListener("keydown", function (e) {
+
+        if (e.key === "Escape" &&
+            userDetailOverlay.style.display === "flex") {
+
+            closeUserDetail();
+        }
+
+    });
+
+    function closeUserDetail() {
+        userDetailOverlay.style.display = "none";
+        document.body.style.overflow = "";
+    }
+
+});
+</script>

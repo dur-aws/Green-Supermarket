@@ -3,10 +3,10 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/accounts.css' %}">
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 {% endblock %}
 
-<div class="container">
+<div class="page-wrap">
     <div class="form-card">
         <div
             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #e0e0e0; padding-bottom: 0.75rem;">
@@ -103,8 +103,8 @@
             {% endif %}
 
             <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
-                <a href="{% url 'user_list' %}" class="btn btn-export">Cancel</a>
-                <button type="submit" class="btn btn-primary btn-add">{% if object %}Save Changes{% else %}Create
+                <a href="{% url 'user_list' %}" class="form-btn btn-delete-variant">Cancel</a>
+                <button type="submit" class="form btn-add-variant">{% if object %}Save Changes{% else %}Create
                     Account{% endif %}</button>
             </div>
         </form>

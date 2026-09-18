@@ -15,7 +15,9 @@
                 <i class="fa-solid {% if alert.type == 'danger' %}fa-triangle-exclamation{% elif alert.type == 'warning' %}fa-circle-exclamation{% else %}fa-bell{% endif %}"></i>
             </div>
             <div class="notif-content">
-                <div class="notif-title">{{ alert.title }}</div>
+                <div class="notif-title">
+                    {% if alert.link %}<a href="{{ alert.link }}">{{ alert.title }}</a>{% else %}{{ alert.title }}{% endif %}
+                </div>
                 <div class="notif-desc">{{ alert.message }}</div>
                 <div class="notif-time">
                     <i class="fa-regular fa-clock"></i> {{ alert.created_at|date:"Y-m-d H:i:s" }}

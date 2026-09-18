@@ -179,7 +179,7 @@ class ProductListView(RBACPermissionMixin, LoginRequiredMixin, ProductFilterMixi
     model = ProductVariant
     template_name = 'products/product_list.html'
     context_object_name = 'products'
-    paginate_by = 100
+    paginate_by = 25
 
     module_name = 'products'
     required_permission = 'view'

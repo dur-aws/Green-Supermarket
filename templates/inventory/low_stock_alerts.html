@@ -5,9 +5,9 @@
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/master.css' %}" />{% endblock %}
 
 {% block content %}
-<div class="page-wrap">
+<div class="master-container">
 
-    <div class="page-header">
+    <div class="sticky-header-panel">
         <div>
             <h1>Low Stock Alerts</h1>
             <p class="page-sub">Products at or below their reorder level — {{ total }} item{{ total|pluralize }} need attention</p>
@@ -15,8 +15,8 @@
         <a href="{% url 'stock_in' %}" class="btn btn-primary">+ Restock</a>
     </div>
 
-    <div class="table-card">
-        <table class="data-table styled-table">
+    <div class="scrollable-table-card">
+        <table class="styled-table">
             <thead>
                 <tr>
                     <th>Code</th>
@@ -55,6 +55,85 @@
             </tbody>
         </table>
     </div>
+    <!-- FIXED BOTTOM PAGINATION -->
+    <div class="pagination-footer">
 
+        <div>
+            Total {{ page_obj.paginator.count|default:products|length }} records
+        </div>
+
+        {% if is_paginated %}
+        <ul class="pagination">
+
+            <!-- Previous -->
+            {% if page_obj.has_previous %}
+                <li>
+                    <a href="?page={{ page_obj.previous_page_number }}">&lt;</a>
+                </li>
+            {% endif %}
+
+            <!-- First Page -->
+            {% if page_obj.number > 3 %}
+                <li>
+                    <a href="?page=1">1</a>
+                </li>
+
+                {% if page_obj.number > 4 %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
+                {% endif %}
+            {% endif %}
+
+
+            <!-- Pages around current page -->
+            {% for num in page_obj.paginator.page_range %}
+
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+
+                    {% if page_obj.number == num %}
+                        <li class="active">
+                            <span>{{ num }}</span>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+
+                {% endif %}
+
+            {% endfor %}
+
+
+            <!-- Last Page -->
+            {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}
+
+                {% if page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
+                {% endif %}
+
+                <li>
+                    <a href="?page={{ page_obj.paginator.num_pages }}">
+                        {{ page_obj.paginator.num_pages }}
+                    </a>
+                </li>
+
+            {% endif %}
+
+
+            <!-- Next -->
+            {% if page_obj.has_next %}
+                <li>
+                    <a href="?page={{ page_obj.next_page_number }}">&gt;</a>
+                </li>
+            {% endif %}
+
+        </ul>
+        {% endif %}
+
+    </div>
 </div>
 {% endblock %}

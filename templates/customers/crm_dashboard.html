@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<main>
+    <div class="page-header"><h1>CRM Dashboard</h1><a href="{% url 'customer_list' %}" class="btn btn-secondary">Customer List</a></div>
+    <section class="stats-row">
+        <div class="stat-card"><span class="stat-value">{{ customer_count }}</span><span class="stat-label">Customers</span></div>
+        <div class="stat-card"><span class="stat-value">{{ member_count }}</span><span class="stat-label">Active Members</span></div>
+        <div class="stat-card"><span class="stat-value">{{ transaction_count }}</span><span class="stat-label">Completed Transactions</span></div>
+        <div class="stat-card"><span class="stat-value">{{ total_spending }}</span><span class="stat-label">Total Spending</span></div>
+        <div class="stat-card"><span class="stat-value">{{ average_bill }}</span><span class="stat-label">Average Bill</span></div>
+    </section>
+</main>
+{% endblock %}

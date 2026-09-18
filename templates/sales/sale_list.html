@@ -47,8 +47,8 @@
                 <!-- Actions -->
                 <div>
                     <a href="{% url 'sales_invoice' %}" class="btn btn-primary btn-add">+ New Invoice</a>
-                    <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}export=excel" class="btn btn-export">&#8595; Export</a>
-                    <button type="button" onclick="window.print()" class="btn btn-export"><i class="fa-solid fa-print"></i></button>
+                    <a href="{% url 'export_sales_record' %}" class="btn btn-export">&#8595; Export</a>
+                   
                 </div>
             </div>
        
@@ -83,7 +83,7 @@
                     <th>Invoice No.</th>
                     <th>Date</th>
                     <th>Party Name</th>
-                    <th class="text-center">Items</th>
+                    <th class="text-center">Total Quantity</th>
                     <th class="text-end">Sub Total</th>
                     <th class="text-end">Tax</th>
                     <th class="text-end">Grand Total</th>
@@ -98,13 +98,13 @@
                 <tr>
                     <td><input type="checkbox" name="sales_id" value="{{ sale.sales_id }}"></td>
                     <td>
-                        <a href="{% url 'sales_invoice_print' sale.sales_id %}" class="invoice-link">
+                        <a href="{% url 'sale_detail_view' sale.sales_id %}" class="invoice-link">
                             INV-{{ sale.invoice_no }}
                         </a>
                     </td>
                     <td>{{ sale.sale_date|date:"d M Y" }}</td>
                     <td>{{ sale.buyer_name|default:"Walk-in Customer" }}</td>
-                    <td class="text-center">{{ sale.saleitem_set.count|default:sale.items.count }}</td>
+                    <td class="text-center">{{ sale.total_quantity|default:"0.000"|floatformat:3 }}</td>
                     <td class="text-end">{{ sale.subtotal }}</td>
                     <td class="text-end">{{ sale.vat_total }}</td>
                     <td class="text-end"><strong>{{ sale.grand_total }}</strong></td>
@@ -123,7 +123,10 @@
                     <td>{{ sale.user.username }}</td>
                     <td class="text-center">
                         <div class="action-btn-group">
-                            <a href="{% url 'sales_invoice_print' sale.sales_id %}" target="_blank" class="btn-icon-action secondary" title="Print Invoice"><i class="fa-solid fa-print"></i></a>
+                           
+                            <a href="{% url 'sales_invoice_print' sale.sales_id %}" class="btn-icon-action secondary">
+                            <i class="fa-solid fa-print"></i>
+                            </a>                            
                         </div>
                     </td>
                 </tr>
@@ -138,30 +141,85 @@
 
     <!-- FIXED BOTTOM PAGINATION -->
     <div class="pagination-footer">
-        <div>Total {{ page_obj.paginator.count|default:sales|length }} records</div>
+
+        <div>
+            Total {{ page_obj.paginator.count|default:sales.count }} records
+        </div>
+
         {% if is_paginated %}
         <ul class="pagination">
+
+            <!-- Previous -->
             {% if page_obj.has_previous %}
-                <li><a href="?page={{ page_obj.previous_page_number }}">&lt;</a></li>
+                <li>
+                    <a href="?page={{ page_obj.previous_page_number }}">&lt;</a>
+                </li>
             {% endif %}
 
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li class="active"><span>{{ num }}</span></li>
-                {% else %}
-                    <li><a href="?page={{ num }}">{{ num }}</a></li>
+            <!-- First Page -->
+            {% if page_obj.number > 3 %}
+                <li>
+                    <a href="?page=1">1</a>
+                </li>
+
+                {% if page_obj.number > 4 %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
                 {% endif %}
+            {% endif %}
+
+
+            <!-- Pages around current page -->
+            {% for num in page_obj.paginator.page_range %}
+
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+
+                    {% if page_obj.number == num %}
+                        <li class="active">
+                            <span>{{ num }}</span>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+
+                {% endif %}
+
             {% endfor %}
 
-            {% if page_obj.has_next %}
-                <li><a href="?page={{ page_obj.next_page_number }}">&gt;</a></li>
+
+            <!-- Last Page -->
+            {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}
+
+                {% if page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
+                {% endif %}
+
+                <li>
+                    <a href="?page={{ page_obj.paginator.num_pages }}">
+                        {{ page_obj.paginator.num_pages }}
+                    </a>
+                </li>
+
             {% endif %}
+
+
+            <!-- Next -->
+            {% if page_obj.has_next %}
+                <li>
+                    <a href="?page={{ page_obj.next_page_number }}">&gt;</a>
+                </li>
+            {% endif %}
+
         </ul>
         {% endif %}
+
     </div>
-
 </div>
-
 <!-- Scripts -->
 <script>
     document.getElementById('select-all')?.addEventListener('change', function() {

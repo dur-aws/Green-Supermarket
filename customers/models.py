@@ -1,11 +1,23 @@
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Sum, Avg, Max
 from django.core.exceptions import ValidationError
 
 class Customer(models.Model):
+    TYPE_REGULAR = 'REGULAR'
+    TYPE_REGISTERED = 'REGISTERED'
+    TYPE_MEMBER = 'MEMBER'
+    CUSTOMER_TYPE_CHOICES = [
+        (TYPE_REGULAR, 'Regular'),
+        (TYPE_REGISTERED, 'Registered'),
+        (TYPE_MEMBER, 'Member'),
+    ]
+
     customer_id = models.AutoField(primary_key=True)
     customer_code = models.CharField(unique=True, max_length=20)
     customer_name = models.CharField(max_length=100)
+    customer_type = models.CharField(
+        max_length=10, choices=CUSTOMER_TYPE_CHOICES, default=TYPE_REGULAR
+    )
     pan_vat_number = models.CharField(max_length=20, blank=True, null=True, help_text="IRD PAN/VAT number for Tax Billing")
     phone = models.CharField(unique=True, max_length=20, blank=True, null=True)
     email = models.CharField(unique=True, max_length=100, blank=True, null=True)
@@ -53,10 +65,43 @@ class Customer(models.Model):
             self.account = acc
             super().save(update_fields=['account'])
 
+    def delete(self, *args, **kwargs):
+        self.status = 'INACTIVE'
+        self.save(update_fields=['status'])
+        return (1, {self._meta.label: 1})
+
     @property
     def transaction_count(self):
         from sales.models import Sale
-        return Sale.objects.filter(customer=self).count()
+        return Sale.objects.filter(customer=self, sale_status='COMPLETED').count()
+
+    @property
+    def total_spending(self):
+        from sales.models import Sale
+        return Sale.objects.filter(customer=self, sale_status='COMPLETED').aggregate(
+            total=Sum('grand_total')
+        )['total'] or 0
+
+    @property
+    def average_bill(self):
+        from sales.models import Sale
+        return Sale.objects.filter(customer=self, sale_status='COMPLETED').aggregate(
+            average=Avg('grand_total')
+        )['average'] or 0
+
+    @property
+    def total_discount(self):
+        from sales.models import Sale
+        return Sale.objects.filter(customer=self, sale_status='COMPLETED').aggregate(
+            total=Sum('discount_total')
+        )['total'] or 0
+
+    @property
+    def last_purchase(self):
+        from sales.models import Sale
+        return Sale.objects.filter(
+            customer=self, sale_status='COMPLETED'
+        ).aggregate(last=Max('sale_date'))['last']
 
     @property
     def current_scheme(self):
@@ -70,7 +115,7 @@ class Customer(models.Model):
 
     @property
     def is_member(self):
-        return self.membership_set.filter(status='ACTIVE').exists()
+        return self.memberships.filter(status='ACTIVE').exists()
 
 
 class CustomerScheme(models.Model):
@@ -78,9 +123,17 @@ class CustomerScheme(models.Model):
     scheme_name = models.CharField(max_length=50)
     minimum_transactions = models.IntegerField()
     maximum_transactions = models.IntegerField(blank=True, null=True)
-    discount_type = models.CharField(max_length=10, blank=True, null=True)
+    discount_type = models.CharField(
+        max_length=10,
+        choices=[('PERCENT', 'Percent'), ('FIXED', 'Fixed')],
+        default='PERCENT',
+    )
     discount_value = models.DecimalField(max_digits=5, decimal_places=2)
-    status = models.CharField(max_length=8, blank=True, null=True)
+    status = models.CharField(
+        max_length=8,
+        choices=[('ACTIVE', 'Active'), ('INACTIVE', 'Inactive')],
+        default='ACTIVE',
+    )
 
     class Meta:
         
@@ -91,14 +144,26 @@ class CustomerScheme(models.Model):
 
 
 class Membership(models.Model):
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('EXPIRED', 'Expired'),
+        ('CANCELLED', 'Cancelled'),
+    ]
     membership_id = models.AutoField(primary_key=True)
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='memberships')
     membership_type = models.CharField(max_length=50)
     start_date = models.DateField()
     expiry_date = models.DateField()
     membership_fee = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=9, blank=True, null=True)
+    status = models.CharField(max_length=9, choices=STATUS_CHOICES, default='ACTIVE')
 
     class Meta:
         
         db_table = 'membership'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.status == 'ACTIVE':
+            Customer.objects.filter(pk=self.customer_id).update(customer_type=Customer.TYPE_MEMBER)
+        elif not Membership.objects.filter(customer_id=self.customer_id, status='ACTIVE').exists():
+            Customer.objects.filter(pk=self.customer_id).update(customer_type=Customer.TYPE_REGISTERED)

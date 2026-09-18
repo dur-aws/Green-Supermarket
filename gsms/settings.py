@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'expenses',
     'costs',
     'accounting',
+    'wastage',
 ]
 
 MIDDLEWARE = [
@@ -66,6 +67,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'setting_app.middleware.SupplierModuleGuardMiddleware',
     'setting_app.middleware.AuditLogMiddleware',
 ]
 

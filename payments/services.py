@@ -15,6 +15,52 @@ from .models import Payment
 
 class PaymentProcessingService:
     @classmethod
+    @transaction.atomic
+    def record_purchase_payment(cls, purchase, method, amount, reference=None, user=None, is_instant_settlement=True):
+        """Record a full or partial supplier payment and its accounting receipt."""
+        purchase = purchase.__class__.objects.select_for_update().get(pk=purchase.pk)
+        purchase.update_payment_summary()
+        amount = Decimal(str(amount)).quantize(Decimal('0.01'))
+        if amount <= 0:
+            raise ValueError('Payment amount must be greater than zero.')
+        if amount > purchase.due_amount:
+            raise ValueError(f'Payment cannot exceed the due amount of {purchase.due_amount}.')
+
+        status = 'PAID' if is_instant_settlement else 'PENDING'
+        payment = Payment.objects.create(
+            purchase=purchase,
+            payment_method=method,
+            amount=amount,
+            status=status,
+            internal_reference=reference or PaymentProcess.generate_reference(),
+            created_by=user,
+            verified_at=timezone.now() if status == 'PAID' else None,
+        )
+        if status == 'PAID':
+            cls._settle_purchase_payment(payment, user=user)
+        return payment
+
+    @staticmethod
+    def _settle_purchase_payment(payment, user=None):
+        purchase = payment.purchase
+        purchase.update_payment_summary()
+        AccountingService.post_purchase_payment_journal_entry(payment, created_by=user)
+        PaymentReceipt.objects.get_or_create(
+            payment=payment,
+            defaults={
+                'voucher_no': f'PR-{payment.internal_reference}',
+                'party_type': 'SUPPLIER',
+                'payment_mode': payment.payment_method,
+                'amount': payment.amount,
+                'payment_date': timezone.now(),
+                'reference_number': payment.internal_reference,
+                'narration': f'Payment against purchase #{purchase.purchase_id}',
+                'supplier': purchase.supplier,
+            },
+        )
+        return purchase
+
+    @classmethod
     def record_payment(cls, sale, method, amount, reference=None, user=None, is_instant_settlement=False):
         """
         Records a payment towards a sale (supports Single, Digital Wallets, and Split Payments).
@@ -58,6 +104,10 @@ class PaymentProcessingService:
                 payment.provider_reference = gateway_ref
                 payment.verified_at = timezone.now()
                 payment.save(update_fields=['status', 'provider_reference', 'verified_at', 'updated_at'])
+
+                if payment.purchase_id:
+                    cls._settle_purchase_payment(payment)
+                    return payment
 
                 # Sync back to Sale
                 sale = payment.sale
@@ -291,6 +341,15 @@ class PaymentVerificationService:
 
         if payment.status not in ["PENDING", "PROCESSING"]:
             raise ValueError(f"Payment cannot be completed. Current status: {payment.status}")
+
+        if payment.purchase_id:
+            payment.status = "PAID"
+            payment.provider_transaction_id = provider_transaction_id
+            payment.provider_reference = provider_reference
+            payment.verified_at = timezone.now()
+            payment.save(update_fields=["status", "provider_transaction_id", "provider_reference", "verified_at"])
+            PaymentProcessingService._settle_purchase_payment(payment)
+            return payment
 
         sale = payment.sale
 

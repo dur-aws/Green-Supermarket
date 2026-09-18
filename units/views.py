@@ -17,7 +17,7 @@ class UnitOfMeasureListView(RBACPermissionMixin, ListView):
     model = UnitOfMeasure
     template_name = 'units/unit_list.html'
     context_object_name = 'uoms'
-    paginate_by = 10
+    paginate_by = 25
 
     # RBAC Mixin Settings
     module_name = 'units'

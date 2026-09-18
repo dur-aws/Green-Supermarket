@@ -29,6 +29,7 @@ from accounts.mixins import RBACPermissionMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from products.models import ProductVariant
 from sales.models import Sale
+from .services import notify_batch_state
 
 
 
@@ -387,7 +388,7 @@ def dashboard_expiry_rows(request):
     batches = InventoryBatch.objects.select_related(
         'variant', 'variant__product', 'variant__primary_uom'
     ).filter(
-        
+        current_quantity__gt=Decimal('0.000'),
         expiry_date__lte=today + timedelta(days=60)
     ).order_by('expiry_date')[:6]
 
@@ -409,14 +410,12 @@ def recent_notifications_api(request):
     """
     Returns the recent 5 notifications for the user along with unread counts.
     """
-    notifications_qs = Notification.objects.filter(
-        Q(user=request.user) | Q(user__isnull=True)
-    )[:5]
+    for batch in InventoryBatch.objects.select_related('variant__product').all():
+        notify_batch_state(batch)
 
-    unread_count = Notification.objects.filter(
-        Q(user=request.user) | Q(user__isnull=True),
-        is_read=False
-    ).count()
+    notifications_qs = Notification.objects.filter(user=request.user)[:5]
+
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
 
     data = []
     for item in notifications_qs:
@@ -442,9 +441,9 @@ def notification_history(request):
     """
     Renders the notification.html template showing all historical notifications.
     """
-    notifications = Notification.objects.filter(
-        Q(user=request.user) | Q(user__isnull=True)
-    )
+    for batch in InventoryBatch.objects.select_related('variant__product').all():
+        notify_batch_state(batch)
+    notifications = Notification.objects.filter(user=request.user)
 
     # Optional: Mark all as read when visiting history page
     notifications.filter(is_read=False).update(is_read=True)

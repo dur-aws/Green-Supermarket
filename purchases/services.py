@@ -1,10 +1,12 @@
 from decimal import Decimal, ROUND_HALF_UP
 
+from .models import VendorPurchaseReceipt
+
 
 TWO_PLACES = Decimal('0.01')
 
 
-def calculate_po_totals(line_items, tds_rate=Decimal('0.00')):
+def calculate_po_totals(line_items, tds_rate=Decimal('0.00'), freight_charge=Decimal('0.00')):
     """
     line_items: list of dicts like [{'quantity': ..., 'unit_price': ..., 'vat_percent': ...}, ...].
     VAT is determined by the product/variant taxability and defaults to 0 when not taxable.
@@ -27,7 +29,10 @@ def calculate_po_totals(line_items, tds_rate=Decimal('0.00')):
 
     subtotal = subtotal.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
     vat_amount = vat_amount.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
-    total_amount = (subtotal + vat_amount).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    freight_charge = max(Decimal('0.00'), Decimal(str(freight_charge or '0'))).quantize(
+        TWO_PLACES, rounding=ROUND_HALF_UP
+    )
+    total_amount = (subtotal + vat_amount + freight_charge).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
     tds_rate = Decimal(str(tds_rate or '0'))
     tds_amount = Decimal('0.00')
@@ -39,7 +44,21 @@ def calculate_po_totals(line_items, tds_rate=Decimal('0.00')):
     return {
         'subtotal': subtotal,
         'vat_amount': vat_amount,
+        'freight_charge': freight_charge,
         'total_amount': total_amount,
         'tds_amount': tds_amount,
         'net_payable_amount': net_payable,
     }
+
+
+def ensure_vendor_receipt(purchase_order, generated_by):
+    if purchase_order.order_status != 'RECEIVED':
+        return None
+    receipt, _ = VendorPurchaseReceipt.objects.get_or_create(
+        purchase=purchase_order,
+        defaults={
+            'receipt_number': f'VR-PO{purchase_order.pk}',
+            'generated_by': generated_by,
+        },
+    )
+    return receipt

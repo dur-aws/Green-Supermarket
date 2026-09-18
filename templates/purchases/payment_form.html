@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css'  %}">
+<div class="page-wrap" style="max-width: 300px;">
+    <div class="page-header">
+        <h3>Supplier Payment </h3>
+    </div>
+    <h2> Purchase #{{ purchase.purchase_id }}</h2>
+    <p>Supplier: {{ purchase.supplier.supplier_name }}</p>
+    <p>Outstanding due: <strong>Rs. {{ purchase.due_amount|floatformat:2 }}</strong></p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="mb-3">{{ form.amount.label_tag }}{{ form.amount }}{{ form.amount.errors }}</div>
+        <div class="mb-3">{{ form.payment_method.label_tag }}{{ form.payment_method }}{{ form.payment_method.errors }}</div>
+        <div class="mb-3">{{ form.reference.label_tag }}{{ form.reference }}{{ form.reference.errors }}</div>
+        <button type="submit" class="btn btn-success">Record Payment and Receipt</button>
+        <a href="{% url 'po_detail' purchase.purchase_id %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

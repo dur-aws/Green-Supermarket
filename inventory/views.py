@@ -17,16 +17,14 @@ class InventoryStockListView(RBACPermissionMixin, ListView):
     model = InventoryBatch
     template_name = 'inventory/stock_list.html'
     context_object_name = 'batches'
-
+    paginate_by = 25
     
     module_name = 'inventory'
     required_permission = 'view'
     
 
     def get_queryset(self):
-        return InventoryBatch.objects.select_related('variant',  'supplier')\
-                                     .filter(batch_status='ACTIVE')\
-                                     .order_by('batch_id')
+        return InventoryBatch.objects.select_related('variant', 'supplier').order_by('batch_id')
 
 class StockAdjustmentCreateView(RBACPermissionMixin, FormView):
     template_name = 'inventory/stock_adjustment_form.html'
@@ -44,6 +42,11 @@ class StockAdjustmentCreateView(RBACPermissionMixin, FormView):
         context['batch'] = self.batch
         return context
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['batch'] = self.batch
+        return kwargs
+
     def form_valid(self, form):
         try:
             process_stock_adjustment(
@@ -53,7 +56,6 @@ class StockAdjustmentCreateView(RBACPermissionMixin, FormView):
                 reason_code=form.cleaned_data['reason_code'],
                 notes=form.cleaned_data['notes']
             )
-            print("HI")
             messages.success(self.request, f"Stock adjustment saved for batch {self.batch.batch_number}.")
             return redirect('stock_list')
         except Exception as e:
@@ -64,7 +66,7 @@ class StockAdjustmentHistoryListView(RBACPermissionMixin, ListView):
     model = StockAdjustment
     template_name = 'inventory/adjustment_history.html'
     context_object_name = 'adjustments'
-    paginate_by = 50
+    paginate_by = 25
 
     module_name = "inventory"
-    permission_required = "view"
+    required_permission = "view"

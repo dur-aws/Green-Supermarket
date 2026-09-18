@@ -2,6 +2,9 @@ from django import forms
 from .models import StockAdjustment
 
 class StockAdjustmentForm(forms.ModelForm):
+    def __init__(self, *args, batch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.batch = batch
     class Meta:
         model = StockAdjustment
         fields = ['reason_code', 'quantity_change', 'notes']
@@ -15,6 +18,10 @@ class StockAdjustmentForm(forms.ModelForm):
         qty = self.cleaned_data.get('quantity_change')
         if qty == 0:
             raise forms.ValidationError("Adjustment quantity cannot be zero.")
+        if self.batch and self.batch.current_quantity + qty < 0:
+            raise forms.ValidationError(
+                f"Stock cannot become negative. Available: {self.batch.current_quantity}."
+            )
         return qty
 
 # class StockInForm(forms.Form):

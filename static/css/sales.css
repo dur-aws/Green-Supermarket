@@ -4,7 +4,7 @@
 
 .invoice-container {
   background-color: #ffffff;
-  padding: 16px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -61,7 +61,7 @@
 .invoice-meta-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px 24px;
+  gap: 8px 16px;
 }
 
 .form-group {
@@ -240,9 +240,15 @@
   color: #6b7280;
 }
 
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.font-bold { font-weight: 700; }
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+.font-bold {
+  font-weight: 700;
+}
 
 .subtotal-row {
   background-color: #f9fafb;
@@ -263,8 +269,12 @@
   cursor: pointer;
 }
 
-.btn-action.edit { background-color: #2563eb; }
-.btn-action.delete { background-color: #dc2626; }
+.btn-action.edit {
+  background-color: #2563eb;
+}
+.btn-action.delete {
+  background-color: #dc2626;
+}
 
 /* 5. Lower Pane (Narration, Tender, Summary) */
 .invoice-bottom-section {
@@ -395,79 +405,78 @@
 }
 
 .search-container {
-            position: relative;
-            width: 100%;
-        }
+  position: relative;
+  width: 240px;
+}
 
-        .search-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #ffffff;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            max-height: 180px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            display: none;
-        }
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: none;
+}
 
-        .search-dropdown-item {
-            padding: 6px 10px;
-            cursor: pointer;
-            font-size: 12px;
-            border-bottom: 1px solid #f3f4f6;
-        }
+.search-dropdown-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
 
-        .search-dropdown-item:hover {
-            background-color: #eef7f2;
-            color: #15803d;
-        }
+.search-dropdown-item:hover {
+  background-color: #eef7f2;
+  color: #15803d;
+}
 
-        .tbl-input {
-            width: 100%;
-            padding: 4px 6px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            font-size: 12px;
-            box-sizing: border-box;
-        }
+.tbl-input {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
 
-        .tbl-input:focus {
-            outline: none;
-            border-color: #15803d;
-        }
+.tbl-input:focus {
+  outline: none;
+  border-color: #15803d;
+}
 
-        .row-p {
-            font-weight: 600;
-            color: #1e3a8a;
-        }
+.row-p {
+  font-weight: 600;
+  color: #1e3a8a;
+}
 
-        .row-l {
-            font-weight: 600;
-            color: #4b5563;
-            background-color: #f8fafc;
-        }
+.row-l {
+  font-weight: 600;
+  color: #4b5563;
+  background-color: #f8fafc;
+}
 
-        .subtotal-grid-row {
-            font-weight: 700;
-            background-color: #f1f5f9;
-        }
+.subtotal-grid-row {
+  font-weight: 700;
+  background-color: #f1f5f9;
+}
 
-        .text-right-bold {
-            text-align: right;
-            font-weight: 700;
-        }
+.text-right-bold {
+  text-align: right;
+  font-weight: 700;
+}
 
-        
 /* Mobile Adjustments */
 @media (max-width: 992px) {
   .invoice-meta-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .invoice-bottom-section {
     flex-direction: column;
   }
@@ -480,7 +489,7 @@
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .left-actions,
   .right-actions {
     width: 100%;

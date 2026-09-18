@@ -108,6 +108,12 @@ class SaleService:
             raise SaleError(f"Cannot record sale: Fiscal Year {active_fy.name} is closed.")
 
         customer = Customer.objects.get(pk=customer_id)
+        scheme = customer.current_scheme
+        if scheme and overall_discount_amount == Decimal('0.00') and overall_discount_percent == Decimal('0.00'):
+            if scheme.discount_type == 'PERCENT':
+                overall_discount_percent = scheme.discount_value
+            else:
+                overall_discount_amount = scheme.discount_value
         today_ad = timezone.now().date()
 
         subtotal = Decimal('0.00')
@@ -209,6 +215,14 @@ class SaleService:
                     ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     for item in validated_items if item['is_vatable']
                 )
+                for item in validated_items:
+                    item['net_subtotal'] = (
+                        item['net_subtotal'] * (Decimal('1.00') - discount_ratio)
+                    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    item['line_total'] = (
+                        item['net_subtotal']
+                        + (item['net_subtotal'] * item['vat_percent'] / Decimal('100.00'))
+                    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         raw_grand_total = taxable_amount + non_taxable_amount + vat_total
         grand_total = raw_grand_total.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
         round_off = (grand_total - raw_grand_total).quantize(Decimal('0.01'))
@@ -289,11 +303,14 @@ class SaleService:
                 if primary_batch is None:
                     primary_batch = batch
 
+                previous_quantity = batch.current_quantity
                 deduct = min(batch.current_quantity, qty_needed)
                 batch.current_quantity -= deduct
                 if batch.current_quantity == Decimal('0.000'):
                     batch.batch_status = 'EXHAUSTED'
                 batch.save()
+                from dashboard.services import notify_stock_transition
+                notify_stock_transition(batch, previous_quantity)
                 qty_needed -= deduct
 
             SaleItem.objects.create(
@@ -328,6 +345,10 @@ class SaleService:
             )
             if method not in pending_methods:
                 paid_sum += amount
+
+        sale.paid_amount = paid_sum
+        sale.due_amount = max(Decimal('0.00'), grand_total - paid_sum)
+        sale.save(update_fields=['paid_amount', 'due_amount'])
 
         if not has_pending_payment and paid_sum != grand_total:
             raise PaymentMismatchError(

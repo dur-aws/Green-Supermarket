@@ -6,7 +6,37 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/master.css' %}" />
 {% endblock %}
+<style>
+     @media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-table, #print-table * {
+    visibility: visible;
+  }
+  #print-table {
+    position: absolute;
+    left: 0;
+    top: 0;     
+    margin: 20px;       /* add margins if needed */
+  }
 
+  /* Override scrollable container for printing */
+  .scrollable-table-card {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Optional: avoid breaking rows across pages */
+  #styled-table {
+    page-break-inside: auto;
+  }
+  #styled-table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+}
+</style>
 <div class="master-container">
     <!-- fixed -->
     <div class="sticky-header-container">
@@ -76,9 +106,9 @@
     </div>
 
     <!-- Data Table Card -->
-    <div class="scrollable-table-card">
+    <div id="print-table" class="scrollable-table-card">
         
-            <table class="styled-table">
+            <table id="styled-table" class="styled-table">
                 <thead>
                     <tr>
                         <th>Code</th>
@@ -102,28 +132,85 @@
                 </tbody>
             </table>
     </div>
-        <!-- FIXED BOTTOM PAGINATION -->
+     <!-- FIXED BOTTOM PAGINATION -->
     <div class="pagination-footer">
-        <div>total {{ products|length }} records</div>
+
+        <div>
+            Total {{ page_obj.paginator.count|default:products|length }} records
+        </div>
+
         {% if is_paginated %}
         <ul class="pagination">
+
+            <!-- Previous -->
             {% if page_obj.has_previous %}
-                <li><a href="?page={{ page_obj.previous_page_number }}">&lt;</a></li>
+                <li>
+                    <a href="?page={{ page_obj.previous_page_number }}">&lt;</a>
+                </li>
             {% endif %}
 
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li class="active"><span>{{ num }}</span></li>
-                {% else %}
-                    <li><a href="?page={{ num }}">{{ num }}</a></li>
+            <!-- First Page -->
+            {% if page_obj.number > 3 %}
+                <li>
+                    <a href="?page=1">1</a>
+                </li>
+
+                {% if page_obj.number > 4 %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
                 {% endif %}
+            {% endif %}
+
+
+            <!-- Pages around current page -->
+            {% for num in page_obj.paginator.page_range %}
+
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+
+                    {% if page_obj.number == num %}
+                        <li class="active">
+                            <span>{{ num }}</span>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+
+                {% endif %}
+
             {% endfor %}
 
-            {% if page_obj.has_next %}
-                <li><a href="?page={{ page_obj.next_page_number }}">&gt;</a></li>
+
+            <!-- Last Page -->
+            {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}
+
+                {% if page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
+                {% endif %}
+
+                <li>
+                    <a href="?page={{ page_obj.paginator.num_pages }}">
+                        {{ page_obj.paginator.num_pages }}
+                    </a>
+                </li>
+
             {% endif %}
+
+
+            <!-- Next -->
+            {% if page_obj.has_next %}
+                <li>
+                    <a href="?page={{ page_obj.next_page_number }}">&gt;</a>
+                </li>
+            {% endif %}
+
         </ul>
         {% endif %}
+
     </div>
       
     </div>

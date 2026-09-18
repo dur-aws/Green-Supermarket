@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="page-header">
+    <h2>Expiry Report</h2>
+    <div>
+      <a href="?status=EXPIRED" class="btn btn-outline-danger">Expired ({{ expired_count }})</a>
+      <a href="?status=CRITICAL" class="btn btn-outline-warning">Critical ({{ critical_count }})</a>
+      <a href="{% url 'stock_list' %}" class="btn btn-outline-secondary">Inventory</a>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="table-wrap">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Batch</th>
+            <th>Current Stock</th>
+            <th>Expiry Date</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for batch in batches %}
+          <tr>
+            <td>{{ batch.variant.product.product_name }} {{ batch.variant.variant_name }}</td>
+            <td>{{ batch.batch_number }}</td>
+            <td>{{ batch.current_quantity|floatformat:3 }} {{ batch.variant.primary_uom.notation }}</td>
+            <td>{{ batch.expiry_date|date:"Y-m-d" }}</td>
+            <td>
+              {% if batch.expiry_date < today %}
+                <span class="badge badge-red">Expired / Sale blocked</span>
+              {% else %}
+                <span class="badge badge-amber">Available until expiry</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'wastage_create' batch.pk %}" class="btn btn-sm btn-outline-danger">Write off</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="dash-table-empty">No stock matches this expiry filter.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

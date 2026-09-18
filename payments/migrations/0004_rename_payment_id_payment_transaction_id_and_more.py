@@ -12,30 +12,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='payment',
-            name='created_by',
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                to=settings.AUTH_USER_MODEL,
-            ),
-        ),
-        migrations.AddField(
-            model_name='fonepaytransaction',
-            name='payment_method',
-            field=models.CharField(
-                choices=[
-                    ('CASH', 'Cash'),
-                    ('CARD', 'Card / POS'),
-                    ('BANK_TRANSFER', 'Bank Transfer'),
-                    ('FONEPAY', 'Fonepay QR'),
-                    
-                    ('CREDIT', 'On Credit'),
-                    ('SPLIT', 'Split Payment'),
-                ],
-                max_length=20,
-            ),
-        ),
+       
     ]

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-
+<title>{{ title }}</title>
 <link rel="stylesheet" href="{% static 'css/form.css' %}" />
 
 <div class="page-wrap">
@@ -11,7 +11,7 @@
             <h1>{{ title }}</h1>
             <p class="page-sub">Enter supplier details and the items received</p>
         </div>
-        <a href="{% url 'po_list' %}" class="btn btn-clear">&larr; Back to list</a>
+        <a href="{% url 'po_list' %}" class="btn btn-clear">&larr; </a>
     </div>
 
     <form method="post" novalidate id="po-form">
@@ -76,7 +76,7 @@
         <div class="form-card">
             <div class="section-title-row">
                 <h2 class="section-title">Product Details & Quantities</h2>
-                <button type="button" id="add-item" class="btn btn-primary btn-sm">+ Add Item</button>
+                <button type="button" id="add-item" class="form-btn btn-add-variant">+ Add Item</button>
             </div>
             
             {{ formset.management_form }}
@@ -88,15 +88,16 @@
             {% endif %}
 
             <div class="table-responsive">
-                <table class="data-table styled-table" id="items-table">
+                <table class="data-table styled-table " id="items-table">
                     <thead>
                         <tr>
-                            <th>product *</th>
+                            <th>product</th>
                             <th>Ordered Qty</th>
                             <th>Agreed Price</th>
                             <th>Received Qty</th>
                             <th>Actual Price</th>
                             <th>Subtotal</th>
+                            <th>Batch NO</th>
                             <th>MFG Date</th>
                             <th>Harvest Date</th>
                             <th>Expiry Date</th>
@@ -124,6 +125,7 @@
                             <td>{{ item_form.received_quantity }}</td>
                             <td>{{ item_form.actual_unit_price }}</td>
                             <td>{{ item_form.subtotal }}</td>
+                            <td>{{ item_form.batch_no }}</td>
                             <td>{{ item_form.manufacture_date }}</td>
                             <td>{{ item_form.harvest_date }}</td>
                             <td>{{ item_form.expiry_date }}</td>
@@ -131,7 +133,7 @@
                                 {% if item_form.instance.pk %}
                                     <label class="delete-check">{{ item_form.DELETE }}</label>
                                 {% else %}
-                                    <button type="button" class="btn btn-clear btn-sm remove-item-btn">✕</button>
+                                    <button type="button" class="form-btn btn-delete-variant remove-item-btn">✕</button>
                                 {% endif %}
                             </td>
                         </tr>
@@ -188,6 +190,10 @@
                     <td>
                         {{ formset.empty_form.subtotal }}
                     </td>
+                    <!-- Batch NO -->
+                    <td>
+                        {{ formset.empty_form.batch_no }}
+                    </td>
 
 
                     <!-- Manufacture Date -->
@@ -213,7 +219,7 @@
 
                         <button
                             type="button"
-                            class="btn btn-clear btn-sm remove-item-btn">
+                            class="form-btn btn-delete-variant remove-item-btn">
                             ✕
                         </button>
 
@@ -238,6 +244,10 @@
                     <span>VAT (13%)</span>
                     {{ form.vat_amount }}
                 </div>
+                <div class="summary-row">
+                    <label for="{{ form.freight_charge.id_for_label }}">Freight Charge</label>
+                    {{ form.freight_charge }}
+                </div>
                 <div class="summary-row summary-divider">
                     <span>Gross Total</span>
                     {{ form.total_amount }}
@@ -258,8 +268,8 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{% url 'po_list' %}" class="btn btn-clear">Cancel</a>
+            <a href="{% url 'po_list' %}" class="form-btn btn-delete-variant">Cancel</a>
+            <button type="submit" class="form-btn btn-add-variant">Save</button>
         </div>
 
     </form>
@@ -326,7 +336,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Listen for inputs to schedule AJAX validation/calculation
     poForm.addEventListener("input", function (e) {
-        if (e.target.matches("input[name*='quantity'], input[name*='unit_price'], [name='tds_rate']")) {
+        if (e.target.matches("input[name*='quantity'], input[name*='unit_price'], [name='tds_rate'], [name='freight_charge']")) {
             scheduleCalculation();
         }
     });
@@ -364,8 +374,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const supplier = document.querySelector("[name='supplier']")?.value || "";
         const tdsRate = document.querySelector("[name='tds_rate']")?.value || "0";
+        const freightCharge = document.querySelector("[name='freight_charge']")?.value || "0";
         formData.append("supplier", supplier);
         formData.append("tds_rate", tdsRate);
+        formData.append("freight_charge", freightCharge);
 
         fetch(calcApiUrl, {
             method: "POST",
@@ -393,6 +405,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function applyTotals(data) {
         updateField("subtotal", data.subtotal);
         updateField("vat_amount", data.vat_amount);
+        updateField("freight_charge", data.freight_charge);
         updateField("total_amount", data.total_amount);
         updateField("tds_amount", data.tds_amount);
         updateField("net_payable_amount", data.net_payable_amount);

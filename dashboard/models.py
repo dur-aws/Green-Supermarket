@@ -20,6 +20,7 @@ class Notification(models.Model):
     message = models.TextField()
     type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='info')
     link = models.CharField(max_length=255, blank=True, null=True)
+    event_key = models.CharField(max_length=255, unique=True, blank=True, null=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -6,6 +6,26 @@ from .models import ActivityLog
 
 logger = logging.getLogger(__name__)
 
+
+class SupplierModuleGuardMiddleware:
+    """Keep supplier accounts inside their portal even for function-based URLs."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated and getattr(user, 'is_supplier_role', False):
+            allowed = (
+                request.path.startswith('/supplier/orders/')
+                or request.path.startswith('/dashboard/notifications/')
+                or request.path in ('/', '/users/logout/', '/users/login/')
+            )
+            if not allowed:
+                from django.core.exceptions import PermissionDenied
+                raise PermissionDenied('Supplier accounts may only access the supplier portal.')
+        return self.get_response(request)
+
 class AuditLogMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

@@ -1,0 +1,42 @@
+{% extends 'base.html' %} {% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+<div class="master-container">
+  <div class="sticky-header-panel">
+    <h2>Inventory Return Receipt {{ receipt.receipt_number }}</h2>
+  </div>
+  <div class="card">
+    <p>
+      RMA: {{ receipt.rma.rma_number }} | Invoice: {{receipt.rma.sale.invoice_no }}
+    </p>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Condition</th>
+          <th>Quantity</th>
+          <th>Disposition</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in receipt.items.all %}
+        <tr>
+          <td>{{ item.return_item.sale_item.variant.product.product_name }} {{ item.return_item.sale_item.variant.variant_name }}</td>
+          <td>{{ item.get_condition_display }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.disposition_note|default:'-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div style="display: flex; justify-content: center; gap: 0.75rem;">
+    {% if receipt.credit_memo %}
+    <a
+      class="btn btn-primary btn-add"
+      href="{% url 'credit_memo' receipt.credit_memo.pk %}"
+      >View Credit Memo</a
+    >{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

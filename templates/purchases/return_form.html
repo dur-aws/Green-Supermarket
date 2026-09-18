@@ -1,0 +1,34 @@
+{% extends 'base.html' %} {% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="page-wrap" style="max-width: 500px">
+  <div class="page-header">
+    <h1>
+      {% if view.purchase_return %}Edit{% else %}Record{% endif %} Purchase
+      Return
+    </h1>
+  </div>
+  <div class="form-card">
+    <div >
+      <strong>{{ batch.batch_number }}</strong><br />{{ batch.variant }}<br />
+      Active stock: {{ batch.current_quantity|floatformat:3 }}<br />
+      Expiry: {{ batch.expiry_date|date:'Y-m-d' }}<br />
+      Current unit cost: Rs. {{ batch.unit_cost_price|floatformat:2 }}
+    </div>
+    <form method="post">
+      {% csrf_token %}{{ form.non_field_errors }} {% for field in form %}
+      <div class="mb-3">
+        <label class="form-label fw-bold">{{ field.label }}</label>{{ field }}{{ field.errors }}
+      </div>
+      {% endfor %}
+      <a
+        href="{% url 'po_detail' batch.purchase_detail.purchase_id %}"class="form-btn btn-delete-variant">
+        Cancel
+      </a>
+        <button class="form-btn btn-add-variant" type="submit">
+        {% if view.purchase_return %}Update{% else %}Record{% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

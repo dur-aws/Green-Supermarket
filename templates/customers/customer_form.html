@@ -1,12 +1,18 @@
 {% extends 'base.html' %}
 {% block content %}
-<main>
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<div class="page-wrap" style="width: 400px;" >
     <h1>{{ title }}</h1>
     <form method="post" novalidate>
+        <div class="form-card">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Save</button>
-        <a href="{% url 'customer_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <a href="{% url 'customer_list' %}" class="from-btn btn-delete-variant">Cancel</a>
+            <button type="submit" class="form-btn btn-add-variant">Save</button>
+        </div>
     </form>
-</main>
+</div>
 {% endblock %}

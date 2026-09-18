@@ -1,29 +1,36 @@
 from decimal import Decimal
 from django.db import transaction
 from django.urls import reverse_lazy
-from django.shortcuts import redirect
-from django.views.generic import ListView, CreateView, UpdateView, DetailView
+from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, FormView
 from django.views.generic.edit import ModelFormMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
 from django.db.models import Q
 from django.template.loader import render_to_string
 from accounts.mixins import RBACPermissionMixin
-from inventory.services import create_inventory_batches_from_po, reconcile_po_inventory
+from inventory.models import InventoryBatch, PurchaseReturn
+from inventory.services import (
+    create_inventory_batches_from_po,
+    process_purchase_return,
+    reconcile_po_inventory,
+    update_purchase_return,
+)
 from .models import PurchaseOrder, PurchaseDetail
-from .forms import PurchaseOrderForm, PurchaseDetailFormSet
+from .forms import PurchaseOrderForm, PurchaseDetailFormSet, PurchaseReturnForm, PurchasePaymentForm
 from django.http import JsonResponse
 
 from decimal import Decimal, InvalidOperation
 from django.views import View
-from .services import calculate_po_totals
+from .services import calculate_po_totals, ensure_vendor_receipt
 from django.core.exceptions import ValidationError
+from payments.services import PaymentProcessingService
 
 class PurchaseOrderListView(RBACPermissionMixin, ListView):
     model = PurchaseOrder
     template_name = 'purchases/po_list.html'
     context_object_name = 'orders'
-    paginate_by = 15
+    paginate_by = 25
 
     module_name = 'purchases'
     required_permission = 'view'
@@ -115,7 +122,9 @@ class PurchaseOrderCreateView(RBACPermissionMixin, SuccessMessageMixin, CreateVi
                         for f in formset.forms if not f.cleaned_data.get('DELETE')
                     ]
 
-                totals = calculate_po_totals(line_items, tds_rate)
+                totals = calculate_po_totals(
+                    line_items, tds_rate, form.cleaned_data.get('freight_charge')
+                )
 
                 for field, value in totals.items():
                     setattr(self.object, field, value)
@@ -126,6 +135,12 @@ class PurchaseOrderCreateView(RBACPermissionMixin, SuccessMessageMixin, CreateVi
 
                 if self.object.order_status == 'RECEIVED':
                     create_inventory_batches_from_po(self.object)
+                    ensure_vendor_receipt(self.object, self.request.user)
+
+                from dashboard.services import notify_purchase_event
+                notify_purchase_event(self.object, 'created', actor=self.request.user)
+                if self.object.order_status == 'RECEIVED':
+                    notify_purchase_event(self.object, 'received', actor=self.request.user)
 
             messages.success(self.request, 'Purchase order saved')
             return redirect(self.get_success_url())
@@ -166,7 +181,9 @@ class PurchaseOrderCalculateView(RBACPermissionMixin, View):
                 supplier = Supplier.objects.filter(pk=supplier_id).only('pan_vat_number').first()
                 if supplier and supplier.pan_vat_number:
                     tds_rate = Decimal(str(request.POST.get('tds_rate', '0') or '0'))
-            totals = calculate_po_totals(items, tds_rate)
+            totals = calculate_po_totals(
+                items, tds_rate, request.POST.get('freight_charge', '0')
+            )
             return JsonResponse({k: str(v) for k, v in totals.items()})
 
         except (InvalidOperation, ValueError) as e:
@@ -236,7 +253,9 @@ class PurchaseOrderUpdateView(RBACPermissionMixin, SuccessMessageMixin, UpdateVi
                     tds_rate = self.object.tds_rate or Decimal('0.00')
                 else:
                     tds_rate = Decimal('0.00')
-                totals = calculate_po_totals(line_items_data, tds_rate)
+                totals = calculate_po_totals(
+                    line_items_data, tds_rate, form.cleaned_data.get('freight_charge')
+                )
                 for field, value in totals.items():
                     setattr(self.object, field, value)
 
@@ -248,6 +267,9 @@ class PurchaseOrderUpdateView(RBACPermissionMixin, SuccessMessageMixin, UpdateVi
                 if old_status != 'RECEIVED' and new_status == 'RECEIVED':
                     # First time receiving: Create new inventory batches ONCE (outside items loop)
                     create_inventory_batches_from_po(self.object)
+                    ensure_vendor_receipt(self.object, self.request.user)
+                    from dashboard.services import notify_purchase_event
+                    notify_purchase_event(self.object, 'received', actor=self.request.user)
                     messages.success(self.request, "Purchase Order received and inventory batches created.")
 
                 elif old_status == 'RECEIVED' and new_status == 'RECEIVED':
@@ -256,6 +278,11 @@ class PurchaseOrderUpdateView(RBACPermissionMixin, SuccessMessageMixin, UpdateVi
                         purchase_order=self.object,
                         user=self.request.user
                     )
+                    from accounting.services import AccountingService
+                    AccountingService.post_purchase_receipt_journal_entry(
+                        self.object, created_by=self.request.user
+                    )
+                    ensure_vendor_receipt(self.object, self.request.user)
                     messages.success(self.request, "Purchase Order updated and inventory reconciled successfully.")
 
         except ValidationError as e:
@@ -275,3 +302,115 @@ class PurchaseOrderDetailView(RBACPermissionMixin, DetailView):
 
     module_name = 'purchases'
     required_permission = 'view'
+
+
+class PurchasePaymentCreateView(RBACPermissionMixin, FormView):
+    template_name = 'purchases/payment_form.html'
+    form_class = PurchasePaymentForm
+    module_name = 'purchases'
+    required_permission = 'edit'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.purchase = get_object_or_404(
+            PurchaseOrder.objects.select_related('supplier'), pk=kwargs['pk']
+        )
+        self.purchase.update_payment_summary()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['purchase'] = self.purchase
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['purchase'] = self.purchase
+        return context
+
+    def form_valid(self, form):
+        try:
+            PaymentProcessingService.record_purchase_payment(
+                self.purchase,
+                form.cleaned_data['payment_method'],
+                form.cleaned_data['amount'],
+                reference=form.cleaned_data['reference'] or None,
+                user=self.request.user,
+            )
+        except ValueError as error:
+            form.add_error('amount', str(error))
+            return self.form_invalid(form)
+        messages.success(self.request, 'Supplier payment and receipt recorded.')
+        return redirect('po_detail', pk=self.purchase.pk)
+
+
+class PurchaseReturnListView(RBACPermissionMixin, ListView):
+    model = PurchaseReturn
+    template_name = 'purchases/return_list.html'
+    context_object_name = 'returns'
+    paginate_by = 50
+    module_name = 'purchases'
+    required_permission = 'view'
+
+    def get_queryset(self):
+        return PurchaseReturn.objects.select_related(
+            'batch__variant__product', 'purchase_order__supplier', 'returned_by'
+        )
+
+
+class PurchaseReturnCreateView(RBACPermissionMixin, FormView):
+    template_name = 'purchases/return_form.html'
+    form_class = PurchaseReturnForm
+    module_name = 'purchases'
+    required_permission = 'edit'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.purchase_return = None
+        if kwargs.get('return_id'):
+            self.purchase_return = get_object_or_404(
+                PurchaseReturn.objects.select_related(
+                    'batch__variant__product', 'batch__purchase_detail__purchase__supplier'
+                ), pk=kwargs['return_id']
+            )
+            self.batch = self.purchase_return.batch
+        else:
+            self.batch = get_object_or_404(
+                InventoryBatch.objects.select_related('variant__product', 'purchase_detail__purchase__supplier'),
+                pk=kwargs['batch_id'],
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['batch'] = self.batch
+        kwargs['existing_return'] = self.purchase_return
+        if self.purchase_return and not self.request.POST:
+            kwargs['initial'] = {
+                'quantity': self.purchase_return.quantity,
+                'reason': self.purchase_return.reason,
+                'notes': self.purchase_return.notes,
+            }
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['batch'] = self.batch
+        return context
+
+    def form_valid(self, form):
+        try:
+            if self.purchase_return:
+                update_purchase_return(
+                    self.purchase_return.pk, self.request.user,
+                    form.cleaned_data['quantity'],
+                    notes=form.cleaned_data['notes'], reason=form.cleaned_data['reason'],
+                )
+            else:
+                process_purchase_return(
+                    self.batch.pk, self.request.user, form.cleaned_data['quantity'],
+                    notes=form.cleaned_data['notes'], reason=form.cleaned_data['reason'],
+                )
+        except ValidationError as error:
+            form.add_error(None, error.message)
+            return self.form_invalid(form)
+        messages.success(self.request, 'Purchase return updated and supplier balance recalculated.' if self.purchase_return else 'Purchase return recorded and stock adjusted.')
+        return redirect('purchase_return_list')

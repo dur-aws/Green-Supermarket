@@ -1,0 +1,52 @@
+{% extends 'base.html' %} 
+{% block title %}Wastage{% endblock%} 
+{% block content %}
+{% load static %} 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
+{% endblock %}
+<div class="master-container">
+  <div class="sticky-header-panel">
+    <div>
+      <h4>Wastage Ledger</h4>
+      <p class="page-sub">Recorded losses and their inventory value</p>
+    </div>
+    <div>
+      <a href="{% url 'stock_list' %}" class="btn btn-primary btn-add">Make Wastage</a>
+    </div>
+  </div>
+    <div class="scrollable-table-card">
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Batch</th>
+            <th>Product</th>
+            <th class="text-rignt">Quantity</th>
+            <th class="text-right">Value</th>
+            <th>Reason</th>
+            <th>Recorded By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for wastage in wastages %}
+          <tr>
+            <td>{{ wastage.created_at|date:'Y-m-d H:i' }}</td>
+            <td>{{ wastage.batch.batch_number }}</td>
+            <td>{{wastage.batch.variant.product.product_name}} {{ wastage.batch.variant.variant_name }}</td>
+            <td class="text-right">{{ wastage.quantity|floatformat:3 }}</td>
+            <td class="text-right">Rs. {{ wastage.total_value|floatformat:2 }}</td>
+            <td>{{ wastage.reason }}</td>
+            <td>{{ wastage.recorded_by.username }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="empty-row">No wastage recorded.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endblock %}
+</div>

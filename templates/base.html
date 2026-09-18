@@ -144,6 +144,7 @@
 
     <div class="app-container">
       <!-- ================= SIDEBAR ================= -->
+      {% if not request.user.is_supplier_role %}
       <aside class="sidebar">
         <div class="sidebar-search">
           <input type="text" placeholder="Search Menu..." id="menu-search" />
@@ -202,6 +203,8 @@
               <a href=" {% url 'stock_list' %}" data-module="stock-list"
                 >Stocks</a
               >
+              <a href="{% url 'adjustment_history' %}" data-module="stock-adjustments">Adjustments</a>
+              <a href="{% url 'wastage_list' %}" data-module="wastage">Wastage</a>
               <!-- <a href="{" data-module="stock-in">Stock In</a>
             <a href="{}" data-module="stock-out">Stock Out</a>
             <a href="" data-module="stock-adjustment">Stock Adjustment</a>
@@ -220,9 +223,9 @@
               <a href="{% url 'po_list' %}" data-module="purchase-order"
                 >Purchase Orders</a
               >
-              <!-- <a href="#" data-module="purchase-invoice">Purchase Invoice</a>
-            <a href="#" data-module="purchase-return">Purchase Return</a>
-            <a href="#" data-module="supplier-payment">Supplier Payments</a> -->
+            <a href="#" data-module="purchase-invoice">Purchase Invoice</a>
+            <a href="{% url 'purchase_return_list' %}" data-module="purchase-return">Purchase Return</a>
+            <a href="#" data-module="supplier-payment">Supplier Payments</a>
             </div>
           </div>
 
@@ -236,7 +239,7 @@
             <div class="submenu active-submenu" id="submenu-sales">
               <a href="{% url 'sales_invoice' %}" data-module="sales_invoice">Sales Invoice</a>
               <a href="#" data-module="counter-invoice">Counter Invoice</a>
-              <a href="#" data-module="sales-return">Sales Return</a>
+              <a href="{% url 'sales_return_list' %}" data-module="sales-return">Sales Return</a>
               <a href="#" data-module="receipt">Receipt</a>
               <a href="#" data-module="payment">Payment</a>
               <a href="#" data-module="journal">Journal</a>
@@ -269,6 +272,7 @@
             </a>
             <div class="submenu" id="submenu-reports">
               <a href="{% url 'sales_list' %}" data-module="sales-report">Sales Report</a>
+              <a href="{% url 'crm_reports' %}" data-module="crm-report">Customer Report</a>
               <a href="#" data-module="purchase-report">Purchase Report</a>
               <a href="#" data-module="inventory_batch-report"
                 >Inventory Report</a
@@ -285,6 +289,7 @@
             </a>
             <div class="submenu" id="submenu-accounting">
               <a href="#" data-module="chart-accounts">Chart of Accounts</a>
+              <a href="{% url 'journal_view' %}" data-module="journal">Journal</a>
               <a href="{% url 'fiscal_year_list' %}" data-module="fiscal-year">Fiscal Year</a>
             </div>
           </div>
@@ -322,17 +327,18 @@
           <div class="copyright">&copy; 2025 All Rights Reserved</div>
         </footer>
       </aside>
+      {% endif %}
 
       <!-- ================= MAIN CONTENT AREA ================= -->
       <div class="main">
-      <div class="top-nav-tabs">
+      {% comment %} <div class="top-nav-tabs">
         <a href="{% url 'sales_invoice' %}" class="tab-item">
           <i class="fa-regular fa-file-lines"></i> Sales Invoice
         </a>
         <a href="{% url 'dashboard' %}" class="tab-item">Dashboard</a>
         
         
-      </div>
+      </div> {% endcomment %}
       <main class="content-body">{% block content %} {% endblock %}</main>
     </div>
   </div>
@@ -420,7 +426,7 @@
 
       async function fetchRecentNotifications() {
         try {
-          const response = await fetch("notifications/api/recent/", {
+          const response = await fetch("{% url 'recent_notifications_api' %}", {
             headers: { "X-Requested-With": "XMLHttpRequest" }
           });
           if (!response.ok) throw new Error("Failed to load notifications");

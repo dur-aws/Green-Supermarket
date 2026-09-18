@@ -6,7 +6,7 @@
         <span class="truncate-cell" data-full="{{ customer.customer_code }}">{{ customer.customer_code }}</span>
     </td>
     <td>
-        <span class="truncate-cell" data-full="{{ customer.customer_name }}">{{ customer.customer_name }}</span>
+        <a href="#" class="customer-name-link" data-code="{{ customer.customer_code }}" data-name="{{ customer.customer_name }}" data-phone="{{ customer.phone|default:'-' }}" data-email="{{ customer.email|default:'-' }}" data-type="{{ customer.get_customer_type_display }}" data-status="{{ customer.status }}">{{ customer.customer_name }}</a>
     </td>
     <td>
         <span class="truncate-cell" data-full="{{ customer.phone|default:'-' }}">{{ customer.phone|default:"-" }}</span>
@@ -20,13 +20,13 @@
     </td>
     <td><span class="badge {{ customer.status|lower }}">{{ customer.status }}</span></td>
     <td class="action-links">
-        <a href="{% url 'customer_profile' customer.pk %}" class="action-link view">View</a>
-        <a href="{% url 'customer_edit' customer.pk %}" class="action-link edit">Edit</a>
-        <a href="{% url 'membership_add' customer.pk %}" class="action-link membership">+ Membership</a>
+        <a href="{% url 'customer_profile' customer.pk %}" class="icon-btn icon-edit"><i class="fa-solid fa-eye"></i></a>
+        <a href="{% url 'customer_edit' customer.pk %}" class="icon-btn icon-edit"><i class="fa-solid fa-pen"></i></a>
+        <a href="{% url 'membership_add' customer.pk %}" class="icon-btn icon-edit"><i class="fa-solid fa-plus"></i></a>
           <form method="post" action="{% url 'customer_deactivate' customer.pk %}" style="display: inline;" onsubmit="return confirm('Change status for {{ customer.customer_name|escapejs }}?');">
               {% csrf_token %}
-              <button type="submit" class="action-link deactivate">
-           {% if customer.status == 'ACTIVE' %}Deactivate{% else %}Activate{% endif %}
+              <button type="submit" class="action-link {% if customer.status == 'ACTIVE' %}deactivate{% else %}active{% endif %}">
+           {% if customer.status == 'ACTIVE' %}D{% else %}A{% endif %}
               </button>
           </form>
     </td>
@@ -55,6 +55,7 @@ document.addEventListener('click', function (e) {
         document.querySelectorAll('.truncate-cell.show-tip').forEach(el => el.classList.remove('show-tip'));
     }
 });
+
 </script>
 
     </body>

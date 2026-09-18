@@ -4,15 +4,16 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/master.css' %}" />
 
-<div class="container">
+<div class="master-container">
     <!-- Filter Bar -->
+     <div class="sticky-header-panel">
     <div class="filter-bar">
         <div class="search-box">
             <span class="search-icon">&#128269;</span>
             <input type="text" id="po-search" placeholder="Search by Invoice No or Supplier..." value="{{ query }}"
                 class="search-input" autocomplete="off" />
         </div>
-        <div class="filter-right">
+        <div class="">
             <a href="{% url 'po_create' %}" class="btn btn-primary btn-add">+ Create PO</a>
             <a href="#" class="btn btn-export">&#8595; Export</a>
         </div>
@@ -25,11 +26,11 @@
             <strong id="showing-count">{{ orders|length }}</strong>
         </div>
     </div>
-
+    </div>
     <!-- Data Table -->
-    <div class="table-card">
-        <div class="table-responsive">
-            <table class="data-table styled-table">
+    <div class="scrollable-table-card">
+      
+            <table class="styled-table">
                 <thead>
                     <tr>
                         <th>Order ID</th>
@@ -49,7 +50,6 @@
                     {% include 'purchases/po_rows.html' %}
                 </tbody>
             </table>
-        </div>
     </div>
 </div>
 

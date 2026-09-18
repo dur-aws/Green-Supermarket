@@ -4,8 +4,6 @@ PAYMENT_METHOD_CHOICES = (
     ('CARD', 'Card / POS'),
     ('BANK_TRANSFER', 'Bank Transfer'),
     ('FONEPAY', 'Fonepay QR'),
-    ('ESEWA', 'eSewa Wallet'),
-    ('KHALTI', 'Khalti Wallet'),
     ('CREDIT', 'On Credit'),
     ('SPLIT', 'Split Payment'),
 )
@@ -26,4 +24,6 @@ SALE_STATUS_CHOICES = (
     ('PENDING', 'Pending Confirmation'),
     ('COMPLETED', 'Completed'),
     ('CANCELLED', 'Cancelled'),
+    ('PARTIALLY_CREDITED', 'Partially Credited'),
+    ('FULLY_CREDITED', 'Fully Credited'),
 )

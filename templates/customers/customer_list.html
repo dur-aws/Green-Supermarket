@@ -1,105 +1,336 @@
-{% extends 'base.html' %}
-{% load static %}
-{% block content %}
-<link rel="stylesheet" href="{% static 'css/customers.css' %}">
+{% extends 'base.html' %} {% load static %} {% block content %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
 
-<main class="customers-page">
-    <div class="page-header">
-        <h1>Customers</h1>
-        <div class="header-actions">
-            <a href="{% url 'customer_add' %}" class="btn btn-primary">+ Add Customer</a>
+<div class="master-container">
+    <div class="sticky-header-panel">
+        <div class="filter-bar">
+            <!-- Search + filter row -->
+            <div class="search-box">
+                <span class="search-icon">&#128269;</span>
+                <input
+                type="text"
+                id="customer-search"
+                class="search-input"
+                placeholder="Search by code, name, phone or email..."
+                value="{{ query }}"
+                autocomplete="off"
+                />
+            </div>
+            <!-- Submodule toolbar -->
+            <div class="">
+                <a href="{% url 'customer_list' %}" class="btn bg-success"
+                >All Customers</a
+                >
+                <a href="{% url 'customer_add' %}" class="btn bg-success"
+                >Add Customer</a
+                >
+                <a href="{% url 'customer_list' %}?member=member" class="btn bg-success"
+                >Members</a
+                >
+                <a
+                href="{% url 'customer_list' %}?member=non_member"
+                class="btn bg-success"
+                >Non-Members</a
+                >
+                <a
+                href="{% url 'customer_list' %}?status=INACTIVE"
+                class="btn bg-success"
+                >Inactive</a
+                >
+            </div>
+
+            <div class="">
+            <select id="status-select" class="filter-select">
+                <option value="" {% if not status_filter %}selected{% endif %}>
+                All Status
+                </option>
+                <option
+                value="ACTIVE"
+                {%
+                if
+                status_filter=""
+                ="ACTIVE"
+                %}selected{%
+                endif
+                %}
+                >
+                Active
+                </option>
+                <option
+                value="INACTIVE"
+                {%
+                if
+                status_filter=""
+                ="INACTIVE"
+                %}selected{%
+                endif
+                %}
+                >
+                Inactive
+                </option>
+            </select>
+            </div>
+            <div class="">
+            <select id="member-select" class="filter-select">
+                <option value="" {% if not member_filter %}selected{% endif %}>
+                All Types
+                </option>
+                <option
+                value="member"
+                {%
+                if
+                member_filter=""
+                ="member"
+                %}selected{%
+                endif
+                %}
+                >
+                Members
+                </option>
+                <option
+                value="non_member"
+                {%
+                if
+                member_filter=""
+                ="non_member"
+                %}selected{%
+                endif
+                %}
+                >
+                Non-Members
+                </option>
+            </select>
+            </div>
+        
+            <div class="">
+                
+                
+                <a href="{% url 'customer_add' %}" class="btn btn-primary btn-add"
+                    >+ Add Customer</a
+                >
+            </div>
+        
         </div>
-    </div>
-
-    
-    <!-- Submodule toolbar -->
-    <nav class="submodule-toolbar">
-        <a href="{% url 'customer_list' %}" class="tool-link active">All Customers</a>
-        <a href="{% url 'customer_add' %}" class="tool-link">Add Customer</a>
-        <a href="{% url 'customer_list' %}?member=member" class="tool-link">Members</a>
-        <a href="{% url 'customer_list' %}?member=non_member" class="tool-link">Non-Members</a>
-        <a href="{% url 'customer_list' %}?status=INACTIVE" class="tool-link">Inactive</a>
-        <a href="{% url 'customer_search_api' %}" class="tool-link disabled" title="Used internally by Sales module">Search API</a>
-    </nav>
-
-    <!-- Search + filter row -->
-    <div class="filter-row">
-        <input type="text" id="customer-search" class="form-control search-input"
-               placeholder="Search by code, name or phone..." value="{{ query }}">
-
-        <select id="status-select" class="form-control filter-select">
-            <option value="" {% if not status_filter %}selected{% endif %}>All Status</option>
-            <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
-            <option value="INACTIVE" {% if status_filter == 'INACTIVE' %}selected{% endif %}>Inactive</option>
-        </select>
-
-        <select id="member-select" class="form-control filter-select">
-            <option value="" {% if not member_filter %}selected{% endif %}>All Types</option>
-            <option value="member" {% if member_filter == 'member' %}selected{% endif %}>Members</option>
-            <option value="non_member" {% if member_filter == 'non_member' %}selected{% endif %}>Non-Members</option>
-        </select>
-    </div>
-    
-    <!-- Quick stats -->
-    {% comment %} <section class="stats-row">
-        <div class="stat-card">
-            <span class="stat-value">{{ total_count }}</span>
-            <span class="stat-label">Total Customers</span>
+        
+        <div class="stat-strip">
+            <div class="stat-item">
+                <span class="stat-label"> Total Customers: </span>
+                <strong id="stat-total">{{total_count }}</strong>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label"> Active: </span>
+                <strong id="stat-green" class="stat-green">{{active_count }}</strong>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label"> Member Customers</span>
+                <strong id="stat-orange" class="stat-orange">{{member_count }}</strong>
+            </div>
         </div>
-        <div class="stat-card">
-            <span class="stat-value">{{ active_count }}</span>
-            <span class="stat-label">Active Customers</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value">{{ member_count }}</span>
-            <span class="stat-label">Active Members</span>
-        </div>
-    </section> {% endcomment %}
-    <div class="stat-strip">
-        <span>Total Customerds: <strong id="stat-total">{{total_count }}</strong></span>
-        <span>Active: <strong class="stat-green" id="stat-active">{{ active_count }}</strong></span>
-        <span>active Members: <strong class="stat-orange" id="stat-low">{{ member_count }}</strong></span>
-    </div>
-    
-    <table class="table customer-table" id="customer-table">
+  </div>
+  <div class="scrollable-table-card">
+    <table class="styled-table" id="customer-table">
         <thead>
-            <tr>
-                <th>Code</th><th>Name</th><th>Phone</th><th>Type</th><th>Status</th><th>Actions</th>
-            </tr>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
         </thead>
         <tbody id="customer-rows">
-            {% include 'customers/customer_rows.html' %}
+        {% include 'customers/customer_rows.html' %}
         </tbody>
     </table>
-</main>
+  </div>
+  <!-- FIXED BOTTOM PAGINATION -->
+    <div class="pagination-footer">
+
+        <div>
+            Total {{ page_obj.paginator.count|default:customers|length }} records
+        </div>
+
+        {% if is_paginated %}
+        <ul class="pagination">
+
+            <!-- Previous -->
+            {% if page_obj.has_previous %}
+                <li>
+                    <a href="?page={{ page_obj.previous_page_number }}">&lt;</a>
+                </li>
+            {% endif %}
+
+            <!-- First Page -->
+            {% if page_obj.number > 3 %}
+                <li>
+                    <a href="?page=1">1</a>
+                </li>
+
+                {% if page_obj.number > 4 %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
+                {% endif %}
+            {% endif %}
+
+
+            <!-- Pages around current page -->
+            {% for num in page_obj.paginator.page_range %}
+
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+
+                    {% if page_obj.number == num %}
+                        <li class="active">
+                            <span>{{ num }}</span>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+
+                {% endif %}
+
+            {% endfor %}
+
+
+            <!-- Last Page -->
+            {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}
+
+                {% if page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                    <li class="pagination-dots">
+                        <span>...</span>
+                    </li>
+                {% endif %}
+
+                <li>
+                    <a href="?page={{ page_obj.paginator.num_pages }}">
+                        {{ page_obj.paginator.num_pages }}
+                    </a>
+                </li>
+
+            {% endif %}
+
+
+            <!-- Next -->
+            {% if page_obj.has_next %}
+                <li>
+                    <a href="?page={{ page_obj.next_page_number }}">&gt;</a>
+                </li>
+            {% endif %}
+
+        </ul>
+        {% endif %}
+
+    </div>
+
+  <div id="customer-detail-modal" class="modal-overlay" hidden>
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="customer-detail-title"
+    >
+      <button type="button" class="modal-close" aria-label="Close">
+        &times;
+      </button>
+      <h2 id="customer-detail-title" data-detail="name"></h2>
+      <p><strong>Code:</strong> <span data-detail="code"></span></p>
+      <p><strong>Phone:</strong> <span data-detail="phone"></span></p>
+      <p><strong>Email:</strong> <span data-detail="email"></span></p>
+      <p><strong>Type:</strong> <span data-detail="type"></span></p>
+      <p><strong>Status:</strong> <span data-detail="status"></span></p>
+    </div>
+  </div>
+</div>
+<style>
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.35);
+  }
+  .modal-overlay[hidden] {
+    display: none;
+  }
+  .modal-card {
+    position: relative;
+    width: min(420px, 100%);
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+  }
+  .modal-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    border: 0;
+    background: transparent;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+</style>
 
 <script>
-const searchInput = document.getElementById('customer-search');
-const statusSelect = document.getElementById('status-select');
-const memberSelect = document.getElementById('member-select');
-let debounceTimer;
+  const searchInput = document.getElementById("customer-search");
+  const statusSelect = document.getElementById("status-select");
+  const memberSelect = document.getElementById("member-select");
+  let debounceTimer;
 
-function refreshRows() {
+  function refreshRows() {
     const params = new URLSearchParams({
-        q: searchInput.value,
-        status: statusSelect.value,
-        member: memberSelect.value
+      q: searchInput.value,
+      status: statusSelect.value,
+      member: memberSelect.value,
     });
     fetch(`{% url 'customer_list' %}?${params.toString()}`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      headers: { "X-Requested-With": "XMLHttpRequest" },
     })
-    .then(res => res.json())
-    .then(data => {
-        document.getElementById('customer-rows').innerHTML = data.rows_html;
-    });
-}
+      .then((res) => res.json())
+      .then((data) => {
+        document.getElementById("customer-rows").innerHTML = data.rows_html;
+      });
+  }
 
-searchInput.addEventListener('input', function () {
+  searchInput.addEventListener("input", function () {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(refreshRows, 350);
-});
+  });
 
-statusSelect.addEventListener('change', refreshRows);
-memberSelect.addEventListener('change', refreshRows);
+  statusSelect.addEventListener("change", refreshRows);
+  memberSelect.addEventListener("change", refreshRows);
+
+  document
+    .getElementById("customer-rows")
+    .addEventListener("click", function (e) {
+      const link = e.target.closest(".customer-name-link");
+      if (!link) return;
+      e.preventDefault();
+      const modal = document.getElementById("customer-detail-modal");
+      modal.querySelector('[data-detail="name"]').textContent =
+        link.dataset.name;
+      modal.querySelector('[data-detail="code"]').textContent =
+        link.dataset.code;
+      modal.querySelector('[data-detail="phone"]').textContent =
+        link.dataset.phone;
+      modal.querySelector('[data-detail="email"]').textContent =
+        link.dataset.email;
+      modal.querySelector('[data-detail="type"]').textContent =
+        link.dataset.type;
+      modal.querySelector('[data-detail="status"]').textContent =
+        link.dataset.status;
+      modal.hidden = false;
+    });
+
+  const customerModal = document.getElementById("customer-detail-modal");
+  customerModal.addEventListener("click", (event) => {
+    if (event.target === customerModal || event.target.closest(".modal-close"))
+      customerModal.hidden = true;
+  });
 </script>
 {% endblock %}

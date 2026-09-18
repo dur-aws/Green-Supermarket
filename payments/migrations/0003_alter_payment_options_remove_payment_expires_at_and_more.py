@@ -19,12 +19,7 @@ class Migration(migrations.Migration):
             options={},
         ),
       
-        
-       
-        
-      
-        
-        
+
         migrations.AlterField(
             model_name='payment',
             name='sale',

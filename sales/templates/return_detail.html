@@ -1,0 +1,46 @@
+{% extends 'base.html' %} {% block content %} {% load static %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}" />
+<div class="master-container">
+  <div class="sticky-header-panel">
+    
+      <h2>{{ rma.rma_number }}</h2>
+      <span>{{ rma.get_status_display }}</span>
+   
+  </div>
+  <div class="card">
+    <p>Invoice: <strong>{{ rma.sale.invoice_no }}</strong></p>
+    <p>Reason: {{ rma.reason|default:'-' }}</p>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Requested</th>
+          <th>Received</th>
+          <th>Refund/unit</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in rma.items.all %}
+        <tr>
+          <td>{{ item.sale_item.variant.product.product_name }} {{ item.sale_item.variant.variant_name }}</td>
+          <td>{{ item.quantity_requested }}</td>
+          <td>{{ item.quantity_received }}</td>
+          <td>{{ item.unit_refund_amount }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div style="display: flex; justify-content: center; gap: 0.75rem;">
+    {% if rma.status == 'DRAFT' %}<a
+      class="btn bg-success"
+      href="{% url 'sales_return_receive' rma.pk %}"
+      >Receive & Inspect</a
+    >{% endif %}{% if rma.inventory_receipt.credit_memo %}<a
+      class="btn bg-success"
+      href="{% url 'credit_memo' rma.inventory_receipt.credit_memo.pk %}"
+      >View Credit Memo</a
+    >{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

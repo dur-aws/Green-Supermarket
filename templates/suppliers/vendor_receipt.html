@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{ receipt.receipt_number }}</title></head>
+<body>
+    <h1>Green Supermarket Vendor Receipt</h1>
+    <p>Receipt: {{ receipt.receipt_number }}</p>
+    <p>Purchase Order: PO-{{ order.purchase_id }} | Received: {{ order.received_date|date:"Y-m-d" }}</p>
+    <p>Supplier: {{ order.supplier.supplier_name }}</p>
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead><tr><th>Product</th><th>Quantity</th><th>Unit price</th><th>Subtotal</th></tr></thead>
+        <tbody>
+        {% for item in order.purchasedetail_set.all %}
+        <tr>
+            <td>{{ item.variant.product.product_name }}{% if item.variant.variant_name %} ({{ item.variant.variant_name }}){% endif %}</td>
+            <td>{{ item.received_quantity|default:item.ordered_quantity }}</td>
+            <td>{{ item.actual_unit_price|default:item.agreed_unit_price }}</td>
+            <td>{{ item.subtotal }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p>Total: {{ order.total_amount }} | GRN status: Verified / Received</p>
+</body>
+</html>

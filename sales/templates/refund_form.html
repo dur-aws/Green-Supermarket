@@ -1,0 +1,22 @@
+{% extends 'base.html' %} {% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
+<div class="page-wrap" style="width: 400px;">
+  <div class="page-header"><h2>Manual Refund</h2></div>
+  <div class="form-card">
+    <p>
+      Credit memo: {{ credit_memo.memo_number }} | Amount: {{credit_memo.amount|floatformat:2 }}
+    </p>
+    <form method="post">
+      {% csrf_token %}{{ form.non_field_errors }}{{ form.method.label_tag }}
+      {{form.method }}{{ form.method.errors }}<button
+        class="btn btn-primary"
+        type="submit"
+      >
+        Create Pending Refund
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

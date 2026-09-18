@@ -13,12 +13,14 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 import nepali_datetime
+from openpyxl import Workbook
 
 from products.models import Product, ProductVariant
 from inventory.models import InventoryBatch
 from sales.exceptions import SaleError
 from sales.services import InvoiceNumberService, SaleCancelService, SaleService
 from sales.models import Sale, SaleItem
+from customers.models import Customer
 from accounts.mixins import RBACPermissionMixin
 from accounting.models import FiscalYear
 
@@ -33,6 +35,7 @@ class SalesInvoiceView(RBACPermissionMixin, LoginRequiredMixin, PermissionRequir
         context['today_date'] = timezone.now().strftime('%Y-%m-%d')
         context['fiscal_years'] = FiscalYear.objects.all().order_by('-is_active', '-name')
         context['active_fiscal_year'] = FiscalYear.objects.filter(is_active=True).first()
+        context['default_customer'] = Customer.objects.filter(pk=1, status='ACTIVE').first()
         return context
 
 
@@ -109,27 +112,38 @@ def product_search_api(request):
     return JsonResponse({'results': results})
 
 from django.views.decorators.http import require_POST
-from .models import Sale
-from payments.services import PaymentProcess
+
 from payments.services import FonepayService
+from payments.models import Payment
+
 
 @require_POST
 def create_fonepay_payment(request):
     try:
         data = json.loads(request.body)
-        sale_id = data.get("sales_id")
+        sale_id = data.get("sale_id") or data.get("sales_id")
 
         if not sale_id:
             return JsonResponse({"success": False, "message": "Sale ID is required."}, status=400)
 
         sale = Sale.objects.get(sales_id=sale_id)
 
-        result = PaymentProcess.create_payment(
-            sale=sale,
-            payment_method="FONEPAY"
-        )
-
-        payment = sale.payment_transactions.get(transaction_id=result["payment_id"])
+        requested_amount = data.get('amount')
+        requested_amount = Decimal(str(requested_amount)) if requested_amount is not None else None
+        payment = sale.payment_transactions.filter(
+            payment_method='FONEPAY', status='PENDING'
+        ).order_by('-created_at').first()
+        if payment is None:
+            payment = Payment.objects.create(
+                sale=sale,
+                payment_method='FONEPAY',
+                amount=requested_amount or sale.grand_total,
+                status='PENDING',
+                created_by=request.user if request.user.is_authenticated else None,
+            )
+        elif requested_amount is not None and payment.amount != requested_amount:
+            payment.amount = requested_amount
+            payment.save(update_fields=['amount', 'updated_at'])
         payment = FonepayService.generate_qr(payment)
 
         return JsonResponse({
@@ -156,14 +170,16 @@ def checkout_api(request):
         print(data)
         idempotency_key = data.get('idempotency_key', '')
         fiscal_year = data.get('fiscal_year', '')
-        customer_id = data.get('customer_id', 1)
+        customer_id = data.get('customer_id')
+        if not customer_id:
+            raise SaleError('Select or register a customer before completing the sale.')
         narration = data.get('narration', '')
         bs_date = data.get('bs_date', '')
         
         tender_amount = data.get('tender_amount', '0.00')
         received_amount = data.get('received_amount', '0.00')
         change_amount = data.get('change_amount', '0.00')
-        buyer_pan = data.get('buyer_pan', '')
+       
         
         items_data = data.get('items', [])
         payments_data = data.get('payments', [])
@@ -182,7 +198,7 @@ def checkout_api(request):
             tender_amount=tender_amount,
             received_amount=received_amount,
             change_amount=change_amount,
-            buyer_pan=buyer_pan,
+          
             bs_date=bs_date,
             fiscal_year=fiscal_year,
             overall_discount_amount=overall_discount_amount,  
@@ -265,20 +281,26 @@ class SalesInvoiceDetailView(RBACPermissionMixin, LoginRequiredMixin, Permission
 
 class SalesHistoryView(RBACPermissionMixin, LoginRequiredMixin, ListView):
     model = Sale
-    permission_required = 'sales.view_sale'
-    template_name = 'sales_list.html'
+    template_name = 'sales/sale_list.html'
     context_object_name = 'sales'
-    paginate_by = 15
+    paginate_by = 25
 
+    module_name = 'sales'
+    required_permission = 'view'
     def get_queryset(self):
-        queryset = Sale.objects.select_related('customer', 'user').prefetch_related('items').order_by('-sale_date', '-invoice_no')
-
+        queryset = Sale.objects.select_related('customer', 'user').annotate(
+            total_quantity=Coalesce(
+                Sum('items__quantity'),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=3),
+            )
+        ).prefetch_related('items').order_by('-sale_date', '-invoice_no')
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
                 Q(invoice_no__icontains=q) |
                 Q(buyer_name__icontains=q) |
-                Q(customer__name__icontains=q)
+                Q(customer__customer_name__icontains=q)
             )
 
         from_date_str = self.request.GET.get('from_date')
@@ -303,7 +325,7 @@ class SalesHistoryView(RBACPermissionMixin, LoginRequiredMixin, ListView):
             queryset = queryset.filter(payment_status=status)
 
         return queryset
-
+   
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         filtered_qs = self.get_queryset()
@@ -316,7 +338,7 @@ class SalesHistoryView(RBACPermissionMixin, LoginRequiredMixin, ListView):
         
         context['totals'] = totals
         return context
-
+    
     def render_to_response(self, context, **response_kwargs):
         if self.request.GET.get('export') == 'excel':
             return self.export_to_csv(self.get_queryset())
@@ -328,7 +350,7 @@ class SalesHistoryView(RBACPermissionMixin, LoginRequiredMixin, ListView):
 
         writer = csv.writer(response)
         writer.writerow([
-            'Invoice No', 'Date', 'Party Name', 'Items Count', 
+            'Invoice No', 'Date', 'Party Name', 'Total Quantity', 
             'Sub Total', 'vat', 'Grand Total', 'Received Amount', 'Status', 'User'
         ])
 
@@ -338,7 +360,7 @@ class SalesHistoryView(RBACPermissionMixin, LoginRequiredMixin, ListView):
                 f"{sale.fiscal_year}/{sale.invoice_no}",
                 sale.sale_date.strftime('%Y-%m-%d'),
                 party_name,
-                sale.items.count(),
+                sale.total_quantity,
                 sale.subtotal,
                 sale.amount,
                 sale.grand_total,
@@ -348,3 +370,49 @@ class SalesHistoryView(RBACPermissionMixin, LoginRequiredMixin, ListView):
             ])
 
         return response
+@login_required
+
+@permission_required('sales.edit_sale', raise_exception=True)
+
+def export_sales_record(request):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = 'Sales Report'
+
+    # Header row
+    sheet.append([
+        'Invoice No', 'Sale Date', 'Buyer Name', 
+        'Total Items', 'Subtotal', 'VAT', 'Grand Total',
+        'Received', 'Due', 'User'
+    ])
+
+    # Fetch sales data
+    sales_records = Sale.objects.annotate(
+        total_quantity=Coalesce(
+            Sum('items__quantity'),
+            Value(0),
+            output_field=DecimalField(max_digits=12, decimal_places=3)
+        )
+    ).order_by('invoice_no')
+
+    for record in sales_records:
+        sheet.append([
+            record.invoice_no,
+            record.sale_date.strftime('%Y-%m-%d %H:%M'),
+            record.buyer_name,
+            record.total_quantity,  
+            record.subtotal,
+            record.vat_total,
+            record.grand_total,
+            record.received_amount,
+            record.due_amount,
+            record.user.username if record.user else ''
+        ])
+
+    # Prepare response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="sales_report.xlsx"'
+    workbook.save(response)
+    return response

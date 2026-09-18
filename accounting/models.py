@@ -170,6 +170,13 @@ class PaymentReceipt(models.Model):
         null=True
     )
 
+    supplier = models.ForeignKey(
+        "suppliers.Supplier",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )

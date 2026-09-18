@@ -105,15 +105,7 @@ class RoleListView(RBACPermissionMixin, ListView):
         return Role.objects.annotate(user_count=Count('customuser')).order_by('role_name')
 
 
-class AdminUserDetailView(RBACPermissionMixin, DetailView):
-    model = User
-    template_name = 'accounts/admin/user_detail.html'
-    context_object_name = 'user_obj'
-    pk_url_kwarg = 'user_id'
 
-    # RBAC permission
-    module_name = 'accounts'
-    required_permission = 'view'
 
 class AdminUserSearchView(RBACPermissionMixin, ListView):
     model = User

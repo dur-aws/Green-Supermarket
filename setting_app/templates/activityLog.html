@@ -8,56 +8,56 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="master-container">
+    <div class="sticky-header-panel">
+
+        <!-- Header Title -->
+        <div>
+            <h2 style="margin: 0; color: #2e7d32;">System Activity & Audit Logs</h2>
+            <a href="{% url 'user_list' %}" class="btn btn-export">← Back to Users</a>
+        </div>
     
-    <!-- Header Title -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h2 style="margin: 0; color: #2e7d32;">System Activity & Audit Logs</h2>
-        <a href="{% url 'user_list' %}" class="btn btn-export">← Back to Users</a>
-    </div>
-
-    <!-- Filter Bar -->
-    <form method="get" class="filter-bar">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" name="q" class="search-input" placeholder="Search by username or details..." value="{{ request.GET.q }}">
-        </div>
-
-        <div class="filter-select-group">
-            <select name="action" class="filter-select" onchange="this.form.submit()">
-                <option value="">All Action Types</option>
-                {% for code, label in action_choices %}
-                    <option value="{{ code }}" {% if request.GET.action == code %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-right">
-            <span class="showing-text">Showing <strong>{{ activity_logs|length }}</strong> entries</span>
-        </div>
-    </form>
-    <!-- Stat Strip -->
-    <div class="stat-strip">
-        <div class="stat-item">
-            <span class="stat-label">Total Recorded Logs:</span>
-            <span class="stat-green">{{ total_logs }}</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-            <span class="stat-label">Logins:</span>
-            <span class="stat-green">{{ login_count }}</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-            <span class="stat-label">Access Violations:</span>
-            <span class="stat-red">{{ denied_count }}</span>
+        <!-- Filter Bar -->
+        <form method="get" class="filter-bar">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" name="q" class="search-input" placeholder="Search by username or details..." value="{{ request.GET.q }}">
+            </div>
+    
+            <div>
+                <select name="action" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All Action Types</option>
+                    {% for code, label in action_choices %}
+                        <option value="{{ code }}" {% if request.GET.action == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+    
+            
+        </form>
+        <!-- Stat Strip -->
+        <div class="stat-strip">
+            <div class="stat-item">
+                <span class="stat-label">Total Recorded Logs:</span>
+                <span class="stat-green">{{ total_logs }}</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-label">Logins:</span>
+                <span class="stat-green">{{ login_count }}</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-label">Access Violations:</span>
+                <span class="stat-red">{{ denied_count }}</span>
+            </div>
         </div>
     </div>
 
 
     <!-- Styled Table Card -->
-    <div class="table-card">
-        <div class="table-responsive">
+    <div class="scrollable-table-card">
+        
             <table class="styled-table">
                 <thead>
                     <tr>
@@ -94,7 +94,7 @@
                             {% elif log.action_type == 'ACCESS_DENIED' or log.action_type == 'SYSTEM_ERROR' %}
                                 <span class="badge bg-danger">{{ log.action_type }}</span>
                             {% elif log.action_type == 'DELETE' %}
-                                <span class="badge bg-danger" style="background-color: #fff3e0; color: #e65100;">Delete</span>
+                                <span class="badge bg-danger" >Delete</span>
                             {% elif log.action_type == 'CREATE' %}
                                 <span class="badge bg-success">Create</span>
                             {% else %}
@@ -127,24 +127,90 @@
                 </tbody>
             </table>
         </div>
-    </div>
+        <div class="pagination-footer">
+    
+            <div>
+                Total {{ page_obj.paginator.count|default:activity_logs|length }} records
+            </div>
+    
+            {% if is_paginated %}
+            <ul class="pagination">
+    
+                <!-- Previous -->
+                {% if page_obj.has_previous %}
+                    <li>
+                        <a href="?page={{ page_obj.previous_page_number }}">&lt;</a>
+                    </li>
+                {% endif %}
+    
+                <!-- First Page -->
+                {% if page_obj.number > 3 %}
+                    <li>
+                        <a href="?page=1">1</a>
+                    </li>
+    
+                    {% if page_obj.number > 4 %}
+                        <li class="pagination-dots">
+                            <span>...</span>
+                        </li>
+                    {% endif %}
+                {% endif %}
+    
+    
+                <!-- Pages around current page -->
+                {% for num in page_obj.paginator.page_range %}
+    
+                    {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+    
+                        {% if page_obj.number == num %}
+                            <li class="active">
+                                <span>{{ num }}</span>
+                            </li>
+                        {% else %}
+                            <li>
+                                <a href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+    
+                    {% endif %}
+    
+                {% endfor %}
+    
+    
+                <!-- Last Page -->
+                {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}
+    
+                    {% if page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                        <li class="pagination-dots">
+                            <span>...</span>
+                        </li>
+                    {% endif %}
+    
+                    <li>
+                        <a href="?page={{ page_obj.paginator.num_pages }}">
+                            {{ page_obj.paginator.num_pages }}
+                        </a>
+                    </li>
+    
+                {% endif %}
+    
+    
+                <!-- Next -->
+                {% if page_obj.has_next %}
+                    <li>
+                        <a href="?page={{ page_obj.next_page_number }}">&gt;</a>
+                    </li>
+                {% endif %}
+    
+            </ul>
+            {% endif %}
+    
+        </div>
 
-    <!-- Simple Pagination -->
-    {% if is_paginated %}
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem;">
-        <div>
-            {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}" class="btn btn-export">← Previous Page</a>
-            {% endif %}
-        </div>
-        <span style="font-size: 0.85rem; color: #666666;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        <div>
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}" class="btn btn-export">Next Page →</a>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
+    
+    <!-- Smart Pagination -->
+
+
 
 </div>
 {% endblock %}

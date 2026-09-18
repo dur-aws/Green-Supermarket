@@ -1,0 +1,27 @@
+{% extends 'base.html' %} {% block content %} {% load static %}
+<link rel="stylesheet" href="{% static 'css/form.css' %}" />
+<div class="page-wrap" style="max-width: 600px">
+  <div class="page-header">
+    <h3>Record Wastage</h3>
+  </div>
+  <div class="form-card">
+    <div>
+      <strong>{{ batch.batch_number }}</strong><br />{{batch.variant.product.product_name}} {{ batch.variant }}<br />
+      Active stock: {{ batch.current_quantity|floatformat:3 }}<br />
+      Expiry: {{ batch.expiry_date|date:'Y-m-d' }}<br />
+      Current unit cost (COGS): Rs. {{ batch.unit_cost_price|floatformat:2 }}
+    </div>
+    <form method="post">
+      {% csrf_token %}{{ form.non_field_errors }} {% for field in form %}
+      <div >
+        <label class="form-label fw-bold">{{ field.label }}</label>{{ field }}{{ field.errors }}
+      </div>
+      {% endfor %}
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <a href="{% url 'stock_list' %}" class="form-btn btn-delete-variant">Cancel</a>
+                <button type="submit" class="form-btn btn-add-variant" >save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
