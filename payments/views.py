@@ -1,12 +1,73 @@
 import json
 
+from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.generic import ListView
 
+from accounts.mixins import RBACPermissionMixin
 from sales.models import Sale
 
+from .models import Payment
 from .services import PaymentProcess
 from .services import FonepayService
+
+
+class PaymentHistoryView(RBACPermissionMixin, ListView):
+    model = Payment
+    template_name = "payments/payment_history.html"
+    context_object_name = "payments"
+    paginate_by = 25
+    module_name = "sales"
+    required_permission = "view"
+
+    def get_queryset(self):
+        queryset = Payment.objects.select_related(
+            "sale", "purchase", "purchase__supplier", "created_by"
+        ).order_by("-created_at", "-transaction_id")
+
+        payment_type = self.request.GET.get("type", "").strip().lower()
+        if payment_type == "sales":
+            queryset = queryset.filter(sale__isnull=False)
+        elif payment_type == "purchases":
+            queryset = queryset.filter(purchase__isnull=False)
+
+        method = self.request.GET.get("method", "").strip().upper()
+        if method in {"CASH", "FONEPAY"}:
+            queryset = queryset.filter(payment_method=method)
+
+        query = self.request.GET.get("q", "").strip()
+        if query:
+            queryset = queryset.filter(
+                Q(internal_reference__icontains=query)
+                | Q(provider_transaction_id__icontains=query)
+                | Q(sale__invoice_no__icontains=query)
+                | Q(sale__buyer_name__icontains=query)
+                | Q(purchase__invoice_number__icontains=query)
+                | Q(purchase__supplier__supplier_name__icontains=query)
+            )
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        filtered_payments = self.get_queryset()
+        query_params = self.request.GET.copy()
+        query_params.pop("page", None)
+        context.update(
+            {
+                "query": self.request.GET.get("q", "").strip(),
+                "payment_type": self.request.GET.get("type", "").strip().lower(),
+                "payment_method": self.request.GET.get("method", "").strip().upper(),
+                "total_amount": filtered_payments.filter(status="PAID").aggregate(
+                    total=Sum("amount")
+                )["total"]
+                or 0,
+                "paid_count": filtered_payments.filter(status="PAID").count(),
+                "pagination_query": query_params.urlencode(),
+            }
+        )
+        return context
 
 
 @require_POST

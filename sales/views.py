@@ -1,6 +1,6 @@
 import json
 import csv
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from datetime import datetime
 from django.db import models, transaction
 from django.db.models import Q, Sum, F, DecimalField, Value
@@ -75,6 +75,7 @@ def product_search_api(request):
     # Query Active, Non-Expired Inventory Batches ordered by Expiry (FEFO)
     batches = InventoryBatch.objects.filter(
         Q(variant__product__product_name__icontains=query) |
+        Q(variant__variant_name__icontains=query) |
         Q(variant__barcode__icontains=query) |
         Q(variant__sku__icontains=query) |
         Q(batch_number__icontains=query),
@@ -115,6 +116,7 @@ from django.views.decorators.http import require_POST
 
 from payments.services import FonepayService
 from payments.models import Payment
+from payments.services import PaymentProcessingService
 
 
 @require_POST
@@ -167,7 +169,7 @@ def create_fonepay_payment(request):
 def checkout_api(request):
     try:
         data = json.loads(request.body)
-        print(data)
+        
         idempotency_key = data.get('idempotency_key', '')
         fiscal_year = data.get('fiscal_year', '')
         customer_id = data.get('customer_id')
@@ -279,6 +281,41 @@ class SalesInvoiceDetailView(RBACPermissionMixin, LoginRequiredMixin, Permission
     permission_required = 'sales.view_sale'
 
 
+@login_required
+@permission_required('sales.change_sale', raise_exception=True)
+@require_POST
+def record_sale_payment(request, sales_id):
+    sale = get_object_or_404(Sale, pk=sales_id)
+    try:
+        data = json.loads(request.body)
+        amount = Decimal(str(data.get('amount', '0.00'))).quantize(Decimal('0.01'))
+        method = str(data.get('method', 'CASH')).upper()
+        if amount <= Decimal('0.00'):
+            raise SaleError('Payment amount must be greater than zero.')
+        if method not in {'CASH', 'CARD', 'FONEPAY'}:
+            raise SaleError('Choose a valid settlement method.')
+        if amount > sale.due_amount:
+            raise SaleError(f'Payment cannot exceed the due amount of {sale.due_amount}.')
+
+        payment = PaymentProcessingService.record_payment(
+            sale=sale,
+            method=method,
+            amount=amount,
+            user=request.user,
+            is_instant_settlement=True,
+        )
+        sale.refresh_from_db()
+        return JsonResponse({
+            'status': 'success',
+            'payment_id': payment.transaction_id,
+            'paid_amount': str(sale.paid_amount),
+            'due_amount': str(sale.due_amount),
+            'payment_status': sale.payment_status,
+        })
+    except (ValueError, TypeError, InvalidOperation, SaleError) as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
+
+
 class SalesHistoryView(RBACPermissionMixin, LoginRequiredMixin, ListView):
     model = Sale
     template_name = 'sales/sale_list.html'
@@ -370,6 +407,44 @@ class SalesHistoryView(RBACPermissionMixin, LoginRequiredMixin, ListView):
             ])
 
         return response
+from django.template.loader import render_to_string
+class SaleSearchView(RBACPermissionMixin, LoginRequiredMixin,  ListView):
+    model = Sale
+    template_name = 'sales/sale_list.html'
+    module_name = 'sales'
+    required_permission = 'view'
+
+
+
+    def get_queryset(self):
+        queryset = Sale.objects.all()
+        query = self.request.GET.get('q', '').strip()
+
+        if query:
+            queryset = queryset.filter(
+                Q(invoice_no__icontains=query) | 
+                Q(buyer_name__icontains=query)
+            )
+
+        return queryset.order_by('-sale_date', '-invoice_no')
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest' or self.request.GET.get('format') == 'json':
+            queryset = self.get_queryset()
+            rows_html = render_to_string(
+                'sales/sales_rows.html', 
+                {'sales': queryset}, 
+                request=self.request
+            )
+            return JsonResponse({
+                'rows_html': rows_html,
+                
+            })
+
+        return super().render_to_response(context, **response_kwargs)
+
+
+        
 @login_required
 
 @permission_required('sales.edit_sale', raise_exception=True)

@@ -1,83 +1,86 @@
-{% extends 'base.html' %} {% block content %} {% load static %}
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
 <link rel="stylesheet" href="{% static 'css/master.css' %}" />
+
 <div class="master-container">
+
+  <!-- Header Panel -->
   <div class="sticky-header-panel">
     <div class="filter-bar">
       <h3>
         {{ customer.customer_name }}
         <small>({{ customer.customer_code }})</small>
       </h3>
-      <a
-        href="{% url 'customer_edit' customer.pk %}"
-        class="btn btn-primary btn-add"
-        >Edit</a
-      >
+      <a href="{% url 'customer_edit' customer.pk %}" class="btn btn-primary btn-add">Edit</a>
     </div>
-    <div class="card">
-      <div class="stat-strip">
-            <div class="stat-item">
-                <label for="" class="stat-label"> Phone: </label>
-                <strong>{{ customer.phone|default:"-" }}</strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Email: </label>
-                <strong>{{ customer.email|default:"-" }}</strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Address: </label>
-                <strong>{{ customer.address|default:"-" }}</strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Type: </label>
-                <strong>{{ customer.get_customer_type_display }}</strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Status: </label>
-                <strong>{{ customer.status|default:"-" }}</strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Member: </label>
-                <strong>  {% if is_member %}Yes{% else %}No{% endif %} </strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Transaction: </label>
-                <strong>  {{transaction_count}} </strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Total Spending: </label>
-                <strong> {{total_spending}}  </strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Average Bill: </label>
-                <strong>  {{average_bill}} </strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Total Discount: </label>
-                <strong> {{total_discount}}  </strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Last Purchase: </label>
-                <strong>  {{last_purchase|default:"-"}} </strong>
-            </div>
-            <div class="stat-item">
-                <label for="" class="stat-label"> Current Scheme: </label>
-                <strong> {% if current_scheme %}{{ current_scheme.scheme_name }} ({{
-            current_scheme.discount_value }}% off) {% else %} No scheme applied
-            {%endif %} </strong>
-            </div>
+
+    <!-- Stats -->
+    <div class="stat-strip">
+      <div class="stat-item">
+        <label class="stat-label">Phone:</label>
+        <strong>{{ customer.phone|default:"-" }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Email:</label>
+        <strong>{{ customer.email|default:"-" }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Address:</label>
+        <strong>{{ customer.address|default:"-" }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Type:</label>
+        <strong>{{ customer.get_customer_type_display }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Status:</label>
+        <strong>{{ customer.status|default:"-" }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Member:</label>
+        <strong>{% if is_member %}Yes{% else %}No{% endif %}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Transaction:</label>
+        <strong>{{ transaction_count }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Total Spending:</label>
+        <strong>{{ total_spending }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Average Bill:</label>
+        <strong>{{ average_bill }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Total Discount:</label>
+        <strong>{{ total_discount }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Last Purchase:</label>
+        <strong>{{ last_purchase|default:"-" }}</strong>
+      </div>
+      <div class="stat-item">
+        <label class="stat-label">Current Scheme:</label>
+        <strong>
+          {% if current_scheme %}
+            {{ current_scheme.scheme_name }} ({{ current_scheme.discount_value }}% off)
+          {% else %}
+            No scheme applied
+          {% endif %}
+        </strong>
       </div>
     </div>
   </div>
-  <div class="card">
-    <div>
+
+  <!-- Membership History -->
+  <div class="scrollable-table-card">
+    <div class="filter-bar" >
       <h3>Membership History</h3>
-      <a
-        href="{% url 'membership_add' customer.pk %}"
-        class="btn btn-primary btn-add"
-        >+ Membership</a
-      >
+      <a href="{% url 'membership_add' customer.pk %}" class="btn btn-primary btn-add">+ Membership</a>
     </div>
-    <div class="scrollable-table-card">
+    <div>
       <table class="styled-table">
         <thead>
           <tr>
@@ -99,20 +102,14 @@
             <td>{{ m.status }}</td>
             <td>
               {% if m.status == 'ACTIVE' %}
-              <form
-                method="post"
-                action="{% url 'membership_update_status' m.pk 'EXPIRED' %}"
-                style="display: inline"
-              >
-                {% csrf_token %}<button type="submit">Expire</button>
-              </form>
-              <form
-                method="post"
-                action="{% url 'membership_update_status' m.pk 'CANCELLED' %}"
-                style="display: inline"
-              >
-                {% csrf_token %}<button type="submit">Cancel</button>
-              </form>
+                <form method="post" action="{% url 'membership_update_status' m.pk 'EXPIRED' %}" style="display:inline">
+                  {% csrf_token %}
+                  <button type="submit">Expire</button>
+                </form>
+                <form method="post" action="{% url 'membership_update_status' m.pk 'CANCELLED' %}" style="display:inline">
+                  {% csrf_token %}
+                  <button type="submit">Cancel</button>
+                </form>
               {% endif %}
             </td>
           </tr>
@@ -124,25 +121,16 @@
         </tbody>
       </table>
     </div>
-    
-  </div>
+  
 
-  <div class="card">
-    <div class="sticky-header-panel">
-      <div>
-        <h3>Purchase History</h3>
-        <a
-          href="{% url 'customer_purchase_history' customer.pk %}"
-          class="btn btn-primary btn-add"
-          >All Purchases</a
-        ><a
-          href="{% url 'customer_payment_history' customer.pk %}"
-          class="btn btn-primary btn-add"
-          >Payments</a
-        >
-      </div>
+    <!-- Purchase History -->
+  
+    <div class="filter-bar">
+      <h3>Purchase History</h3>
+      <a href="{% url 'customer_purchase_history' customer.pk %}" class="btn btn-primary btn-add">All Purchases</a>
+      <a href="{% url 'customer_payment_history' customer.pk %}" class="btn btn-primary btn-add">Payments</a>
     </div>
-    <div class="scrollable-table-card">
+    <div>
       <table class="styled-table">
         <thead>
           <tr>
@@ -155,11 +143,7 @@
         <tbody>
           {% for sale in sales|slice:':10' %}
           <tr>
-            <td>
-              <a href="{% url 'sale_detail_view' sale.pk %}"
-                >{{ sale.invoice_no }}</a
-              >
-            </td>
+            <td><a href="{% url 'sale_detail_view' sale.pk %}">{{ sale.invoice_no }}</a></td>
             <td>{{ sale.sale_date }}</td>
             <td>{{ sale.sale_status }}</td>
             <td>{{ sale.grand_total }}</td>
@@ -173,5 +157,6 @@
       </table>
     </div>
   </div>
-  {% endblock %}
+
 </div>
+{% endblock %}

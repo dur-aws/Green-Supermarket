@@ -1,0 +1,98 @@
+GREEN SUPERMARKET MANAGEMENT SYSTEM
+ACADEMIC PROJECT SUMMARY AND MODERNIZATION HANDOFF
+
+Project context
+---------------
+GSMS is a BIM 6th-semester Summer Project for Tribhuvan University. It is an ERP-oriented management system for a sustainability-focused supermarket. The business sells vegetables, fruits, grains, herbal products, cotton and other low-impact clothing, handicrafts, reusable products, and other products intended to reduce plastic use.
+
+The project should remain a focused academic ERP solution rather than attempting to become a full enterprise system like SAP. The main academic value is the integration of purchasing, inventory, sales, payments, accounting, reporting, user roles, and sustainability information in one system.
+
+Current functional scope
+------------------------
+- Custom users and roles: admin, manager, staff, and supplier.
+- Role/module permissions and supplier portal restriction.
+- Product, product variant, category, and unit management.
+- Customer and supplier management.
+- Purchase orders, supplier responses, receiving, vendor receipts, payments, and purchase returns.
+- Batch-level inventory, expiry tracking, FEFO stock selection, stock adjustments, wastage, and notifications.
+- Point of sale with invoices, discounts, VAT, Nepali fiscal years, partial/credit/split payments, and idempotency support.
+- Sales returns, RMAs, inventory return receipts, credit memos, and refunds.
+- Expenses, costs, journal entries, chart of accounts, fiscal-year controls, and accounting reports.
+- Dashboard, sales trends, exports, expiry reports, payment history, and audit activity logs.
+- Green-business potential: sustainable product classification, plastic reduction, reusable bags, local products, organic products, and wastage monitoring.
+
+Confirmed current problems
+--------------------------
+1. The clean Django test database cannot be created. `python manage.py test --noinput` fails with MySQL error 1824 because a migration references `product_variant` before the referenced table exists.
+2. `Sale.save()` is declared twice in sales/models.py. The later definition replaces the earlier fiscal-year validation and sales-account assignment.
+3. gsms/settings.py contains development-insecure values: DEBUG=True, a hard-coded SECRET_KEY, empty ALLOWED_HOSTS, and database credentials in source code.
+4. Invoice number generation is not concurrency-safe and is called twice during sale creation.
+5. Payment allows invalid ownership states because both sale and purchase are nullable without an XOR constraint.
+6. Important purchase relationships use DO_NOTHING and need deliberate protected/cancellation behavior.
+7. Monetary, quantity, discount, VAT, stock, and return invariants are not consistently enforced at database level.
+8. Authorization is spread across decorators, mixins, middleware, and view logic; every sensitive URL and object ownership boundary needs tests.
+9. relational_database.txt describes an older schema and conflicts with the current Django models/migrations.
+10. The dependency file is misspelled as requrements.txt and Django version documentation is inconsistent.
+11. Time handling mixes USE_TZ=False, timezone.now(), zoneinfo, and custom Kathmandu timestamps.
+12. Automated coverage is uneven, with important apps having few or no tests.
+
+Recommended modernization boundaries
+------------------------------------
+- Preserve existing URLs, templates, workflows, model meaning, database data, and academic features unless a change is required to repair a confirmed bug.
+- Do not blindly delete all migrations or drop the database. First inspect migration dependencies, back up data, and create a migration recovery plan.
+- Standardize project layout incrementally. Keep each Django app responsible for its own models, forms, services, views, URLs, migrations, tests, and templates.
+- Use Django's built-in timezone utilities and the nepali-datetime library consistently for Nepali calendar conversion.
+- Use environment variables for secrets and database configuration.
+- Finish each change with focused tests and a clean migration test.
+
+Academic success criteria
+-------------------------
+The system should demonstrate this integrated workflow:
+Supplier -> Purchase Order -> Goods Received -> Batch Inventory Updated -> Customer Sale -> Payment Recorded -> Stock Reduced -> Accounting Updated -> Report Generated
+
+It should also demonstrate:
+Expired/Damaged Product -> Wastage or Stock Adjustment -> Inventory Reduced -> Loss Report Generated
+
+Suggested green differentiators:
+- Sustainable/organic/local/plastic-free product attributes.
+- Packaging type and plastic-use tracking.
+- Reusable bag issue/return records.
+- Food wastage and estimated loss reporting.
+- Green impact dashboard showing plastic avoided, local products sold, sustainable sales, and waste reduced.
+
+Recommended implementation order
+--------------------------------
+1. Repair migration dependencies and verify a clean database can migrate.
+2. Merge the duplicate Sale.save() methods and add regression tests.
+3. Externalize secrets and database settings; add development/production configuration.
+4. Standardize models and add database constraints for payment ownership, positive amounts, valid quantities, stock, discounts, VAT, dates, and returns.
+5. Make invoice numbering concurrency-safe.
+6. Standardize timezone and Nepali date handling.
+7. Audit and test role permissions and supplier data isolation.
+8. Rename/recreate requirements.txt with supported package versions.
+9. Refresh schema documentation from the live Django models and migrations.
+10. Expand high-value tests before adding optional features such as barcode POS, cashier shifts, stocktaking, loyalty, reorder intelligence, and green-impact analytics.
+
+Validation commands
+-------------------
+- python manage.py check
+- python manage.py makemigrations --check --dry-run
+- python manage.py migrate --plan
+- python manage.py test --noinput
+- python manage.py test <app_name> --noinput
+
+Current assessment
+------------------
+GSMS is a good academic project foundation and already contains a meaningful ERP workflow. The current modernization pass has merged the duplicate Sale.save() implementation, added server-side discount validation, made invoice numbering lock the fiscal-year row and generate once, added payment ownership/amount constraints, standardized audit/notification timestamps on Django timezone-aware values, externalized settings secrets, improved fresh superuser creation, and created requirements.txt.
+
+Validation status after this pass:
+- python manage.py check: passed.
+- python manage.py makemigrations: generated corrective model migrations, but warned that MySQL is unavailable and legacy nullable fields require deliberate backfill.
+- python manage.py test --noinput: blocked before tests because the configured MySQL server is not running.
+- Migration history was preserved; no migration files were deleted and no database was dropped.
+
+Remaining blockers:
+- Start the configured MySQL service and confirm DB_PORT/credentials through environment variables.
+- Repair or verify the legacy ProductVariant migration/table dependency on a clean database.
+- Backfill legacy Sale.fiscal_year and Sale.bs_date values before restoring strict non-null constraints.
+- Add focused regression tests for the changes and complete the authorization audit.

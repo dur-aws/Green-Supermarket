@@ -17,8 +17,8 @@ class Migration(migrations.Migration):
             name='Payment',
             fields=[
                 ('payment_id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('payment_method', models.CharField(choices=[('CASH', 'Cash'), ('CARD', 'Card'), ('BANK', 'Bank Transfer'), ('FONEPAY_QR', 'Fonepay QR'), ('CREDIT', 'Credit')], max_length=20)),
-                ('provider', models.CharField(choices=[('CASH', 'Cash'), ('CARD', 'Card'), ('BANK', 'Bank'), ('FONEPAY', 'Fonepay'), ('INTERNAL', 'Internal')], default='INTERNAL', max_length=20)),
+                ('payment_method', models.CharField(choices=[('CASH', 'Cash'), ('CARD', 'Card'), ('FONEPAY_QR', 'Fonepay QR'), ('CREDIT', 'Credit')], max_length=20)),
+                ('provider', models.CharField(choices=[('CASH', 'Cash'), ('CARD', 'Card'),  ('FONEPAY', 'Fonepay'), ('INTERNAL', 'Internal')], default='INTERNAL', max_length=20)),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=12)),
                 ('currency', models.CharField(default='NPR', max_length=3)),
                 ('status', models.CharField(choices=[('PENDING', 'Pending'), ('PROCESSING', 'Processing'), ('SUCCESS', 'Success'), ('FAILED', 'Failed'), ('CANCELLED', 'Cancelled'), ('EXPIRED', 'Expired'), ('REFUNDED', 'Refunded')], default='PENDING', max_length=20)),

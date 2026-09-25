@@ -10,3 +10,7 @@ class UnitOfMeasure(models.Model):
     class Meta:
         managed = False
         db_table = 'unit_of_measure'
+
+    def __str__(self):
+        return self.unit_name
+    

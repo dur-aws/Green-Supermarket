@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Expenses{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/master.css' %}">{% endblock %}
+
+{% block content %}
+<div class="master-container expense-page" id="expense-list-page">
+    <div class="sticky-header-panel">
+        <div class="filter-bar">
+            <form method="get" class="search-box" id="expense-search-form">
+                <span class="search-icon" aria-hidden="true">&#128269;</span>
+                <input type="search" name="q" id="expense-search" class="search-input" value="{{ request.GET.q|default:'' }}" placeholder="Search expenses">
+            </form>
+            <a href="{% url 'expense_create' %}" class="btn btn-primary btn-add" id="new-expense-button">+ Record Expense</a>
+        </div>
+    </div>
+    <div class="scrollable-table-card">
+        <table class="styled-table" id="expense-table">
+            <thead>
+                <tr>
+                    <th>Date (BS)</th>
+                    <th>Expense</th>
+                    <th>Particulars</th>
+                    <th>Paid From</th>
+                    <th>Reference</th>
+                    <th>Fiscal Year</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-center">Ledger</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.bs_date }}</td>
+                    <td>{{ expense.get_expense_type_display }}</td>
+                    <td>{{ expense.description }}</td>
+                    <td>{{ expense.get_payment_account_code_display }}</td>
+                    <td>{{ expense.reference_number|default:'-' }}</td>
+                    <td>{{ expense.fiscal_year.name }}</td>
+                    <td class="text-end">{{ expense.amount|floatformat:2 }}</td>
+                    <td class="text-center">{% if expense.journal_entry %}<span class="badge bg-success">JV-{{ expense.journal_entry.entry_id }}</span>{% else %}<span class="badge bg-warning">Pending</span>{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center py-4 text-muted">No expenses recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination-footer">
+        <div>Total {{ page_obj.paginator.count }} records</div>
+        {% if is_paginated %}
+        <ul class="pagination" aria-label="Expense pages">
+            {% if page_obj.has_previous %}<li><a href="?q={{ request.GET.q|urlencode }}&amp;page={{ page_obj.previous_page_number }}">&lt;</a></li>{% endif %}
+            {% for num in page_obj.paginator.page_range %}
+                {% if num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+                    {% if page_obj.number == num %}<li class="active"><span>{{ num }}</span></li>{% else %}<li><a href="?q={{ request.GET.q|urlencode }}&amp;page={{ num }}">{{ num }}</a></li>{% endif %}
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}<li><a href="?q={{ request.GET.q|urlencode }}&amp;page={{ page_obj.next_page_number }}">&gt;</a></li>{% endif %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

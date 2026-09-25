@@ -253,7 +253,9 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   const REFRESH_MS = 1000000; // auto-refresh every 60s
-  let currentPeriod = "weekly";
+  initPeriodToggle();
+    // Initial chart
+  loadSalesTrend("weekly");
 
   function fmtMoney(n) {
     const num = Number(n || 0);
@@ -475,6 +477,32 @@ async function loadSalesTrend(period) {
 
     }
 }
+function initPeriodToggle() {
+
+    const buttons =
+        document.querySelectorAll(".period-btn");
+
+    buttons.forEach(button => {
+
+        button.addEventListener("click", function () {
+
+            const period =
+                this.dataset.period;
+
+            // Change active button
+            buttons.forEach(btn => {
+                btn.classList.remove("is-active");
+            });
+
+            this.classList.add("is-active");
+
+            // Load selected chart
+            loadSalesTrend(period);
+
+        });
+
+    });
+}
   /* ---------------- ROW-PARTIAL WIDGETS ---------------- */
   async function loadPartial(endpoint, targetId, emptyColspan) {
     const target = document.getElementById(targetId);
@@ -496,7 +524,7 @@ async function loadSalesTrend(period) {
   /* ---------------- REFRESH ORCHESTRATION ---------------- */
   function refreshAll() {
     loadExpiryAlerts();
-    loadSalesTrend(currentPeriod);
+    
     loadPartial(ENDPOINTS.expiryRows, "expiryRows", 5); 
     loadPartial(ENDPOINTS.recentSales, "recentSalesRows", 6);
     loadPartial(ENDPOINTS.lowStock, "lowStockRows", 6);

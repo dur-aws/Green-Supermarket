@@ -23,10 +23,9 @@
                     <span class="search-icon">&#128269;</span>
                     <input
                         type="text"
-                        name="q"
                         id="sales-search"
-                        placeholder="Search invoice or party..."
-                        value="{{ request.GET.q|default:'' }}"
+                        placeholder="Search ..."
+                        value="{{ query|default:'' }}"
                         class="search-input"
                         autocomplete="off"
                     />
@@ -47,7 +46,7 @@
                 <!-- Actions -->
                 <div>
                     <a href="{% url 'sales_invoice' %}" class="btn btn-primary btn-add">+ New Invoice</a>
-                    <a href="{% url 'export_sales_record' %}" class="btn btn-export">&#8595; Export</a>
+                    <a href="{% url 'export_sales_record' %}" class="btn btn-secondary">&#8595; Export</a>
                    
                 </div>
             </div>
@@ -93,48 +92,8 @@
                     <th class="text-center">Action</th>
                 </tr>
             </thead>
-            <tbody>
-                {% for sale in sales %}
-                <tr>
-                    <td><input type="checkbox" name="sales_id" value="{{ sale.sales_id }}"></td>
-                    <td>
-                        <a href="{% url 'sale_detail_view' sale.sales_id %}" class="invoice-link">
-                            INV-{{ sale.invoice_no }}
-                        </a>
-                    </td>
-                    <td>{{ sale.sale_date|date:"d M Y" }}</td>
-                    <td>{{ sale.buyer_name|default:"Walk-in Customer" }}</td>
-                    <td class="text-center">{{ sale.total_quantity|default:"0.000"|floatformat:3 }}</td>
-                    <td class="text-end">{{ sale.subtotal }}</td>
-                    <td class="text-end">{{ sale.vat_total }}</td>
-                    <td class="text-end"><strong>{{ sale.grand_total }}</strong></td>
-                    <td class="text-end amount-received {% if sale.grand_total > 0 %}paid{% else %}zero{% endif %}">
-                        {{ sale.tender_amount|default:sale.grand_total }}
-                    </td>
-                    <td class="text-center">
-                        {% if sale.payment_status == 'PAID' %}
-                            <span class="badge bg-success">Paid</span>
-                        {% elif sale.payment_status == 'PARTIAL' %}
-                            <span class="badge bg-warning">Pending</span>
-                        {% else %}
-                            <span class="badge bg-danger">Unpaid</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ sale.user.username }}</td>
-                    <td class="text-center">
-                        <div class="action-btn-group">
-                           
-                            <a href="{% url 'sales_invoice_print' sale.sales_id %}" class="btn-icon-action secondary">
-                            <i class="fa-solid fa-print"></i>
-                            </a>                            
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="12" class="text-center py-4 text-muted">No sales records found.</td>
-                </tr>
-                {% endfor %}
+            <tbody id="sales-table-body">
+                    {% include 'sales/sales_rows.html' %}
             </tbody>
         </table>
     </div>
@@ -227,7 +186,45 @@
         checkboxes.forEach(cb => cb.checked = this.checked);
     });
     
-    
+        
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("sales-search");
+        
+        const tableBody = document.getElementById("sales-table-body");
 
-</script>
+        let debounceTimer = null;
+        const searchApiUrl = "{% url 'sales_search' %}";
+        
+        function runSearch() {
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) {
+                params.set('q', searchInput.value.trim());
+            }
+
+            // Send request with JSON format flag
+            fetch(searchApiUrl + '?' + params.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (res) {
+                    return res.json();
+                })
+                .then(function (data) {
+                    tableBody.innerHTML = data.rows_html;
+                   
+                })
+                .catch(function (error) {
+                    console.error("AJAX Search Error:", error);
+                });
+        }
+
+        // Debounced keystroke input listener
+        searchInput.addEventListener("input", function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, 250);
+        });
+    });
+    </script>
+
 {% endblock %}

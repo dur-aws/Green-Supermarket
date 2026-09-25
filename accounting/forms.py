@@ -1,6 +1,6 @@
 from django import forms
 import nepali_datetime
-from .models import FiscalYear
+from .models import Account, FiscalYear, JournalEntry, JournalItem
 from django.core.exceptions import ValidationError
 
 class FiscalYearForm(forms.ModelForm):
@@ -30,3 +30,39 @@ class FiscalYearForm(forms.ModelForm):
     #     except Exception:
     #         raise ValidationError("Invalid Nepali date format. Use YYYY-MM-DD.")
     #     return date_str
+
+
+class JournalEntryForm(forms.ModelForm):
+    class Meta:
+        model = JournalEntry
+        fields = ['entry_date', 'bs_date', 'description', 'fiscal_year']
+        widgets = {
+            'entry_date': forms.DateInput(attrs={'type': 'date'}),
+            'bs_date': forms.TextInput(attrs={'placeholder': 'YYYY-MM-DD'}),
+            'description': forms.TextInput(),
+        }
+
+
+class JournalItemForm(forms.ModelForm):
+    class Meta:
+        model = JournalItem
+        fields = ['account', 'debit', 'credit']
+        widgets = {
+            'account': forms.Select(),
+            'debit': forms.NumberInput(attrs={'step': '0.01', 'min': '0'}),
+            'credit': forms.NumberInput(attrs={'step': '0.01', 'min': '0'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['account'].queryset = Account.objects.filter(is_active=True).order_by('account_code')
+
+    def clean(self):
+        cleaned = super().clean()
+        debit = cleaned.get('debit') or 0
+        credit = cleaned.get('credit') or 0
+        if debit and credit:
+            raise forms.ValidationError('A line can contain a debit or a credit, not both.')
+        if not debit and not credit and not self.cleaned_data.get('DELETE'):
+            raise forms.ValidationError('Enter a debit or credit amount.')
+        return cleaned

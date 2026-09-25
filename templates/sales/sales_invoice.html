@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
+{% block content %}
 {% load static %}
 
-{% block content %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}">
 
 <style>
@@ -298,24 +298,31 @@
             
         <div class="form-group">
             <label for="payment_method">Payment Method<span class="required">*</span></label>
-            <select id="payment_method" name="payment_method">
+            <select id="payment_method"  name="payment_method">
                 <option value="CASH" selected>CASH</option>
-                <option value="CARD">CARD / POS</option>
-                <option value="FONEPAY">FONEPAY (Dynamic QR)</option>
-                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CARD">CARD</option>
+                <option value="FONEPAY">FONEPAY QR</option>
                 <option value="CREDIT">On Credit</option>
                 <option value="SPLIT">Split Payment</option>
             </select>
-            <div id="split_payment_details" class="split-payment-panel" style="display:none;">
-                <div class="split-payment-header"><div><strong>Split Payment</strong><small>Cash + Fonepay Dynamic QR</small></div><span id="split_payment_status" class="split-status">Enter amounts</span></div>
-                <div class="split-payment-fields">
-                    <div class="split-method-field"><label>Cash</label><div class="split-input-wrap"><span>NPR</span><input type="text" id="split_cash_amount" value="0.00" oninput="validateNumericInput(this)"></div></div>
-                    <div class="split-method-field"><label>Fonepay</label><div class="split-input-wrap split-fonepay-input"><span>NPR</span><input type="text" id="split_fonepay_amount" value="0.00" oninput="validateNumericInput(this)"><span class="fonepay-mini-badge">QR</span></div></div>
-                </div>
-                <div class="split-payment-summary"><div><span>Grand Total</span><strong id="split_grand_total">NPR 0.00</strong></div><div><span>Split Total</span><strong id="split_entered_total">NPR 0.00</strong></div><div><span>Remaining</span><strong id="split_remaining_total">NPR 0.00</strong></div></div>
-                <div id="split_fonepay_hint" class="split-fonepay-hint" style="display:none;"><i class="fa-solid fa-qrcode"></i> Fonepay amount will open in the centered QR popup.</div>
-            </div>
             
+        </div>
+        <div class="form-group">
+        <div id="split_payment_details" class="split-payment-panel" style="display:none;">
+            <div class="split-payment-header"><span id="split_payment_status" class="split-status"></span></div>
+            <div class="split-payment-fields">
+                
+                <div class="split-method-field"><label>Cash</label>
+                    <div class="split-input-wrap"><input type="text" id="split_cash_amount" value="0.00" oninput="validateNumericInput(this)"></div></div>
+                <div class="split-method-field"><label for="split_secondary_method">Secondary method</label>
+                    <select id="split_secondary_method">
+                        <option value="FONEPAY">Fonepay QR</option>
+                        <option value="CARD">Card / POS</option>
+                    </select>
+                    <div class="split-input-wrap split-fonepay-input"><input type="text" id="split_secondary_amount" value="0.00" oninput="validateNumericInput(this)"></div></div>
+            </div>
+            <div class="split-payment-summary"><div><span>Grand Total</span><strong id="split_grand_total">NPR 0.00</strong></div><div><span>Split Total</span><strong id="split_entered_total">NPR 0.00</strong></div><div><span>Remaining</span><strong id="split_remaining_total">NPR 0.00</strong></div></div>
+        </div>
         </div>
     </div>
 
@@ -736,7 +743,7 @@ customerSearch.addEventListener("input", async function () {
         fetchNextInvoiceNumber();
 
         function initRows() {
-            items = [{ product_id: null }];
+            items = [{ variant_id: null }];
             overallDiscountPercent = 0.00;
             overallDiscountAmount = 0.00;
             activePaymentTransactionId = null;
@@ -755,7 +762,7 @@ customerSearch.addEventListener("input", async function () {
            
             document.getElementById('narration').value = "";
             if(document.getElementById('split_cash_amount')) document.getElementById('split_cash_amount').value='0.00';
-            if(document.getElementById('split_fonepay_amount')) document.getElementById('split_fonepay_amount').value='0.00';
+            if(document.getElementById('split_secondary_amount')) document.getElementById('split_secondary_amount').value='0.00';
 
             renderTable();
         }
@@ -773,7 +780,7 @@ customerSearch.addEventListener("input", async function () {
             items.forEach((item, index) => {
                 const tr = document.createElement('tr');
 
-                if (!item.product_id) {
+                if (!item.variant_id) {
                     tr.innerHTML = `
                         <td class="text-center row-p">${index + 1}(P)</td>
                         <td>
@@ -926,10 +933,10 @@ customerSearch.addEventListener("input", async function () {
 
         function selectProduct(index, product) {
             const isVatable = product.is_vatable !== undefined ? product.is_vatable : true;
-            const vatPct = isVatable ? parseFloat(product.vat || product.vat_percent || 13.00) : 0.00;
+            const vatPct = isVatable ? parseFloat(product.vat || product.vat_percent ) : 0.00;
 
             items[index] = {
-                product_id: product.id || product.product_id,
+                variant_id: product.variant_id ,
                 product_name: product.name || product.product_name,
                 variant_name: product.variant || '',
                 stock: parseFloat(product.stock || product.closing_stock || 0),
@@ -943,7 +950,7 @@ customerSearch.addEventListener("input", async function () {
             };
 
             if (parseInt(index) === items.length - 1) {
-                items.push({ product_id: null });
+                items.push({ variant_id: null });
             }
             renderTable();
         }
@@ -1099,8 +1106,8 @@ customerSearch.addEventListener("input", async function () {
                 if (!Number.isInteger(idx) || !items[idx]) return;
 
                 items.splice(idx, 1);
-                if (items.length === 0 || items[items.length - 1].product_id !== null) {
-                    items.push({ product_id: null });
+                if (items.length === 0 || items[items.length - 1].variant_id !== null) {
+                    items.push({ variant_id: null });
                 }
                 renderTable();
             });
@@ -1124,14 +1131,14 @@ customerSearch.addEventListener("input", async function () {
                 change = Math.max(0, received - grandTotal);
                 balance = Math.max(0, grandTotal - received);
             } else if (method === 'CREDIT') {
-                // Credit sale: nothing is received at checkout.
-                tender = 0;
-                received = 0;
-                change = 0;
-                balance = grandTotal;
+                // Credit sale: record any amount the buyer pays now.
+                received = Math.max(0, tender);
+                change = Math.max(0, received - grandTotal);
+                balance = Math.max(0, grandTotal - received)
+                
             } else if (method === 'SPLIT') {
                 const a = getSplitAmounts();
-                received = a.cash + a.fonepay;
+                received = a.cash + a.secondary;
                 change = Math.max(0, received - grandTotal);
                 balance = Math.max(0, grandTotal - received);
             } else {
@@ -1165,7 +1172,10 @@ customerSearch.addEventListener("input", async function () {
                 }
 
                 if (fonepayBtn) {
-                    fonepayBtn.style.display = (method === 'FONEPAY' || method === 'SPLIT') ? '' : 'none';
+                    fonepayBtn.style.display = (
+                        method === 'FONEPAY'
+                        || (method === 'SPLIT' && document.getElementById('split_secondary_method')?.value === 'FONEPAY')
+                    ) ? '' : 'none';
                 }
 
                 calculateChange();
@@ -1173,16 +1183,16 @@ customerSearch.addEventListener("input", async function () {
             });
         }
 
-        ['split_cash_amount','split_fonepay_amount'].forEach(id => { const el=document.getElementById(id); if(el){ el.addEventListener('input',updateSplitPaymentUI); el.addEventListener('change',updateSplitPaymentUI); } });
+        ['split_cash_amount','split_secondary_amount','split_secondary_method'].forEach(id => { const el=document.getElementById(id); if(el){ el.addEventListener('input',updateSplitPaymentUI); el.addEventListener('change',function(){ updateSplitPaymentUI(); if(id === 'split_secondary_method') document.getElementById('payment_method').dispatchEvent(new Event('change')); }); } });
 
-        function getSplitAmounts(){ return { cash: parseFloat(document.getElementById('split_cash_amount')?.value)||0, fonepay: parseFloat(document.getElementById('split_fonepay_amount')?.value)||0 }; }
+        function getSplitAmounts(){ return { cash: parseFloat(document.getElementById('split_cash_amount')?.value)||0, secondary: parseFloat(document.getElementById('split_secondary_amount')?.value)||0, secondaryMethod: document.getElementById('split_secondary_method')?.value || 'FONEPAY' }; }
         function updateSplitPaymentUI(){
-            const total=parseFloat(document.getElementById('lbl_grand_total')?.innerText)||0, a=getSplitAmounts(), paid=a.cash+a.fonepay, rem=total-paid;
+            const total=parseFloat(document.getElementById('lbl_grand_total')?.innerText)||0, a=getSplitAmounts(), paid=a.cash+a.secondary, rem=total-paid;
             document.getElementById('split_grand_total').innerText=`NPR ${total.toFixed(2)}`; document.getElementById('split_entered_total').innerText=`NPR ${paid.toFixed(2)}`; document.getElementById('split_remaining_total').innerText=`NPR ${Math.abs(rem)<.005?'0.00':rem.toFixed(2)}`;
             const st=document.getElementById('split_payment_status'); if(Math.abs(rem)<=.01&&paid>0){st.textContent='Ready';st.style.background='#e7f6ed';st.style.color='#138a4b';}else if(rem>0){st.textContent=`NPR ${rem.toFixed(2)} left`;st.style.background='#fff7e6';st.style.color='#b45309';}else{st.textContent='Over by NPR '+Math.abs(rem).toFixed(2);st.style.background='#feecec';st.style.color='#dc2626';}
-            document.getElementById('split_remaining_total').style.color=rem>.01?'#b45309':(rem<-.01?'#dc2626':'#138a4b'); document.getElementById('split_fonepay_hint').style.display=a.fonepay>0?'block':'none'; calculateChange();
+            document.getElementById('split_remaining_total').style.color=rem>.01?'#b45309':(rem<-.01?'#dc2626':'#138a4b'); document.getElementById('split_fonepay_hint').style.display=(a.secondaryMethod === 'FONEPAY' && a.secondary > 0)?'block':'none'; calculateChange();
         }
-        function getPaymentEntries(grandTotal){ const method=document.getElementById('payment_method')?.value||'CASH'; if(method!=='SPLIT')return [{method,amount:grandTotal}]; const a=getSplitAmounts(); return [{method:'CASH',amount:a.cash},{method:'FONEPAY',amount:a.fonepay}].filter(p=>p.amount>0); }
+        function getPaymentEntries(grandTotal){ const method=document.getElementById('payment_method')?.value||'CASH'; if(method==='CREDIT')return [{method,amount:Math.max(0,parseFloat(document.getElementById('tender_input')?.value)||0)}]; if(method!=='SPLIT')return [{method,amount:grandTotal}]; const a=getSplitAmounts(); return [{method:'CASH',amount:a.cash},{method:a.secondaryMethod,amount:a.secondary}].filter(p=>p.amount>0); }
 
         function calculateBottomTotals(subtotal, discount, taxable, nonTaxable, vat, roundOff, grandTotal) {
             document.getElementById('lbl_subtotal').innerText = subtotal.toFixed(2);
@@ -1373,6 +1383,41 @@ customerSearch.addEventListener("input", async function () {
             document.getElementById('btn_confirm_qr_payment').disabled = true;
         });
 
+        document.getElementById('btn_confirm_qr_payment').addEventListener('click', async function () {
+            const paymentId = document.getElementById('qr_modal_payment_id').value;
+            if (!paymentId) {
+                alert('No QR payment is awaiting confirmation.');
+                return;
+            }
+
+            this.disabled = true;
+            try {
+                const response = await fetch('{% url "verify_fonepay_payment" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: new URLSearchParams({
+                        payment_id: paymentId,
+                        provider_reference: 'DEMO-CONFIRMED-' + paymentId
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || data.status !== 'success') {
+                    throw new Error(data.message || 'Payment confirmation failed.');
+                }
+                document.getElementById('qr_modal_status').textContent = 'Payment confirmed';
+                document.getElementById('qr_modal_status').style.color = '#16a34a';
+                if (pollingInterval) clearInterval(pollingInterval);
+                fonepayPending = false;
+                setTimeout(() => { document.getElementById('qr_modal').style.display = 'none'; }, 500);
+            } catch (error) {
+                this.disabled = false;
+                alert(error.message);
+            }
+        });
+
         // Dynamic QR Button Listener
         document.getElementById("btn_fonepay").addEventListener("click", async function () {
             if (fonepayPending) {
@@ -1385,7 +1430,7 @@ customerSearch.addEventListener("input", async function () {
                 return;
             }
 
-            const validItems = items.filter(i => i.product_id !== null);
+            const validItems = items.filter(i => i.variant_id !== null);
             if (validItems.length === 0) {
                 alert('Please select at least one product before initiating dynamic payment!');
                 return;
@@ -1421,7 +1466,7 @@ customerSearch.addEventListener("input", async function () {
                 overall_discount_amount: overallDiscountAmount,
                 overall_discount_percent: overallDiscountPercent,
                 items: validItems.map(i => ({
-                    product_id: i.product_id,
+                    variant_id: i.variant_id,
                     quantity: i.quantity,
                     price: i.price,
                     discount: i.discount,
@@ -1484,7 +1529,7 @@ customerSearch.addEventListener("input", async function () {
                 return;
             }
 
-            const validItems = items.filter(i => i.product_id !== null);
+            const validItems = items.filter(i => i.variant_id !== null);
             if (validItems.length === 0) {
                 alert('Please select at least one product!');
                 return;
@@ -1528,14 +1573,14 @@ customerSearch.addEventListener("input", async function () {
                 customer_id: document.getElementById('party_ac').value,
                 narration: document.getElementById('narration').value,
                 bs_date: currentBsDate,
-                tender_amount: method === 'CASH' ? tenderVal : grandTotal,
+                tender_amount: (method === 'CASH' || method === 'CREDIT') ? tenderVal : grandTotal,
                 received_amount: receivedVal,
                 change_amount: changeVal,
                 overall_discount_amount: overallDiscountAmount,
                 overall_discount_percent: overallDiscountPercent,
                
                 items: validItems.map(i => ({
-                    product_id: i.product_id,
+                    variant_id: i.variant_id,
                     quantity: Number(i.quantity) || 0,
                     price: Number(i.price) || 0,
                     discount: Number(i.discount) || 0,

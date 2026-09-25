@@ -1,24 +1,27 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+<div class="master-container">
+    <div class="sticky-header-panel">
+    <div class="">
         <h2>Supplier Portal — Purchase Orders</h2>
         <span class="badge bg-info text-dark fs-6">Vendor: {{ request.user.supplier_profile.supplier_name }}</span>
     </div>
 
     <!-- Filter Buttons -->
-    <div class="btn-group mb-3">
-        <a href="{% url 'supplier_po_list' %}" class="btn btn-outline-secondary">All Orders</a>
-        <a href="{% url 'supplier_po_list' %}?payment_status=UNPAID" class="btn btn-outline-warning">Unpaid / Pending</a>
-        <a href="{% url 'supplier_po_list' %}?payment_status=PAID" class="btn btn-outline-success">Completed & Paid</a>
-        <a href="{% url 'supplier_payables' %}" class="btn btn-outline-primary">PO Summary</a>
+    <div class="">
+        <a href="{% url 'supplier_po_list' %}" class="btn bg-success">All Orders</a>
+        <a href="{% url 'supplier_po_list' %}?payment_status=UNPAID" class="btn bg-success">Unpaid / Pending</a>
+        <a href="{% url 'supplier_po_list' %}?payment_status=PAID" class="btn bg-success">Completed & Paid</a>
+        <a href="{% url 'supplier_payables' %}" class="btn bg-success">PO Summary</a>
     </div>
-
+    </div>
     <!-- Purchase Orders Table -->
-    <div class="table-responsive bg-white shadow-sm rounded">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    <div class="scrollable-table-card">
+        <table class="styled-table">
+            <thead >
                 <tr>
                     <th>PO Number / Invoice</th>
                     <th>Date</th>
@@ -51,18 +54,20 @@
                     </td>
                     <td>
                         {% for item in po.purchasedetail_set.all %}
-                        <div class="mb-2">
-                            <strong>{{ item.variant.product.product_name }}{% if item.variant.variant_name %} ({{ item.variant.variant_name }}){% endif %}</strong>
-                            <div>Qty: {{ item.ordered_quantity }} | Unit price: Rs. {{ item.agreed_unit_price }}</div>
+                        <div>
+                            <strong class="stat-label">{{ item.variant.product.product_name }}({{ item.variant.variant_name }})</strong>
+                            <div>Qty: {{ item.ordered_quantity }} | target price: Rs. {{ item.agreed_unit_price }}</div>
                             <div>Response: {{ item.get_supplier_response_display }}</div>
+                            
                             {% if item.supplier_response == 'PENDING' %}
                             <form method="post" action="{% url 'supplier_po_item_response' po.pk item.pk 'accept' %}" class="d-inline">
-                                {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-success">Accept</button>
+                                {% csrf_token %}<button type="submit" class="btn icon-btn icon-edit">Accept</button>
                             </form>
                             <form method="post" action="{% url 'supplier_po_item_response' po.pk item.pk 'not_available' %}" class="d-inline">
-                                {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger">Not available</button>
+                                {% csrf_token %}<button type="submit" class="btn action-link deactivate">Not available</button>
                             </form>
                             {% endif %}
+                            
                         </div>
                         {% empty %}<span class="text-muted">No items</span>{% endfor %}
                     </td>
@@ -70,12 +75,12 @@
                         {% if po.order_status == 'PENDING' %}
                         <form method="post" action="{% url 'supplier_po_action' po.pk 'accept' %}">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-primary">Accept</button>
+                            <button type="submit" class="btn icon-btn icon-edit">Accept</button>
                         </form>
                         {% elif po.order_status == 'ACCEPTED' %}
                         <form method="post" action="{% url 'supplier_po_action' po.pk 'deliver' %}">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-success">Mark delivered</button>
+                            <button type="submit" class="btn bg-success">Mark delivered</button>
                         </form>
                         {% elif po.order_status == 'DELIVERED' %}
                         <span class="text-info">Delivered; awaiting GRN</span>

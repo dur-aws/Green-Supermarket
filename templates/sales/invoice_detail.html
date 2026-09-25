@@ -1,60 +1,294 @@
-{% extends 'base.html' %}
+ {% extends 'base.html' %}
+
 
 {% block content %}
 {% load static %}
-<link rel="stylesheet" href="{% static 'css/master.css' %}">
-<div class="master-container">
-    <div class="sticky-header-panel">
-        <h2>Invoice # {{ sale.invoice_no }}</h2>
-        <div>
-            <button onclick="window.print()" class="btn btn-export"><i class="fa-solid fa-print"></i></button>
-            <a href="{% url 'sales_list' %}" class="btn btn-outline-dark">Back to List</a>
+
+<link rel="stylesheet" href="{% static 'css/sales.css' %}">
+
+<style>
+    .readonly-field {
+        background-color: #f8fafc;
+        border: 1px solid #cbd5e1;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #334155;
+        font-weight: 500;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .badge-status {
+        display: inline-block;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+    .badge-paid { background-color: #dcfce7; color: #15803d; }
+    .badge-partial { background-color: #fef3c7; color: #b45309; }
+    .badge-unpaid { background-color: #fee2e2; color: #dc2626; }
+    .payment-settlement { margin: 18px 0; padding: 14px; border: 1px solid #cbd5e1; border-radius: 4px; }
+    .payment-settlement form { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+    .payment-settlement label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .payment-settlement input, .payment-settlement select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
+    .payment-message { margin-top: 8px; font-size: 12px; }
+</style>
+
+<div class="invoice-container">
+    <!-- 1. Header Bar -->
+    <div class="invoice-header-bar">
+        <div class="title-section">
+            <i class="fa-regular fa-file-lines invoice-icon"></i>
+            <h2>Invoice Detail #{{ sale.invoice_no }}</h2>
+        </div>
+           
+        <div class="fiscal-year-selector">
+            <label>Fiscal Year:</label>
+            <span class="readonly-field" style="width: auto; font-weight: 700;">
+                {{ sale.fiscal_year.name|default:"Active Year" }}
+            </span>
         </div>
     </div>
 
-    <div class="card ">
-        <div class=stat-strip>
-            <div class="stat-item">
-                <p><strong class="stat-label">Customer:</strong> {{ sale.buyer_name }}</p>
-                <p><strong class="stat-label">Date:</strong> {{ sale.sale_date|date:"d M Y" }}</p>
-            </div>
-            <div class="stat-item">
-                <p><strong class="stat-label">Status:</strong> <span class="badge bg-success">{{ sale.payment_status }}</span></p>
-                <p><strong class="stat-label">Cashier:</strong> {{ sale.user.username }}</p>
+    <!-- 2. Metadata Grid -->
+    <div class="invoice-meta-grid">
+        <div class="form-group">
+            <label>Invoice No.</label>
+            <input type="text" value="{{ sale.invoice_no }}" class="readonly-input" readonly />
+        </div>
+
+        <div class="form-group">
+            <label>Ref. No.</label>
+            <input type="text" value="{{ sale.ref_no|default:'N/A' }}" class="readonly-field" readonly />
+        </div>
+
+        <div class="form-group">
+            <label>Counter User</label>
+            <input type="text" value="{{ sale.user.username }}" class="readonly-input" readonly />
+        </div>
+
+        <div class="form-group">
+            <label>Customer</label>
+            <input type="text" value="{{ sale.buyer_name }}" class="readonly-field" readonly />
+        </div>
+
+        <div class="form-group">
+            <label>Date</label>
+            <input type="text" value="{{ sale.sale_date|date:'d M Y' }}" class="readonly-field" readonly />
+        </div>
+
+        <div class="form-group">
+            <label>Payment Status</label>
+            <div style="flex-grow: 1;">
+                {% if sale.payment_status == 'PAID' %}
+                    <span class="badge-status badge-paid">Paid</span>
+                {% elif sale.payment_status == 'PARTIAL' %}
+                    <span class="badge-status badge-partial">Partial</span>
+                {% else %}
+                    <span class="badge-status badge-unpaid">Unpaid</span>
+                {% endif %}
             </div>
         </div>
-        
-        <table class="styled-table">
+    </div>
+
+    <!-- 3. Product Items Table -->
+    <div class="table-responsive">
+        <table class="invoice-table">
             <thead>
                 <tr>
-                    <th>Item</th>
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Unit Price</th>
-                    <th class="text-end">Discount</th>
-                    <th class="text-end">Total</th>
+                    <th rowspan="2" class="col-sn">S.N.</th>
+                    <th rowspan="2" class="col-particulars">Particulars</th>
+                    <th rowspan="2" class="col-batch">Batch No.</th>
+                    <th colspan="2" class="col-quantity">Quantity</th>
+                    <th colspan="2" class="col-alt-unit">Alt. Unit 1</th>
+                    <th rowspan="2" class="col-rate">Rate</th>
+                    <th colspan="2" class="col-discount">Discount</th>
+                    <th rowspan="2" class="col-tax">VAT (%)</th>
+                    <th rowspan="2" class="col-amount">Amount</th>
+                </tr>
+                <tr>
+                    <th>Actual</th>
+                    <th>Unit</th>
+                    <th>Qty.</th>
+                    <th>Unit</th>
+                    <th>Amount</th>
+                    <th>%</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in sale.items.all %}
                 <tr>
-                    <td>{{ item.variant.product.product_name }} {{ item.variant.variant_name }}</td>
-                    <td class="text-end">{{ item.quantity }}</td>
-                    <td class="text-end">Rs. {{ item.unit_price }}</td>
-                    <td class="text-end">Rs. {{ item.discount_amount }}</td>
-                    <td class="text-end">Rs. {{ item.line_total }}</td>
+                    <td class="text-center row-p">{{ forloop.counter }}(P)</td>
+                    <td><strong>{{ item.variant.product.product_name }} {{ item.variant.variant_name }}</strong></td>
+                    <td class="text-center">{{ item.batch.batch_no|default:"-" }}</td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-center">{{ item.variant.product.unit|default:"Pcs" }}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right">Rs. {{ item.unit_price|floatformat:2 }}</td>
+                    <td class="text-right">Rs. {{ item.discount_amount|floatformat:2 }}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">{{ item.vat_percent }}</td>
+                    <td class="text-right font-bold">Rs. {{ item.net_subtotal|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="12" class="text-center py-3 text-muted">No line items found.</td>
                 </tr>
                 {% endfor %}
+
+                <!-- Subtotal Row -->
+                <tr class="subtotal-grid-row">
+                    <td colspan="2" class="text-right font-bold">SUB TOTAL :-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center font-bold">{{ sale.total_quantity|default:"-" }}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right-bold">Rs. {{ sale.subtotal|floatformat:2 }}</td>
+                </tr>
+
+                <!-- Discount Ledger Row -->
+                <tr class="row-l">
+                    <td class="text-center row-l">1(L)</td>
+                    <td><strong>DISCOUNT</strong></td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">Rs. {{ sale.discount_total|floatformat:2 }}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right-bold">Rs. {{ sale.discount_total|floatformat:2 }}</td>
+                </tr>
+
+                <!-- VAT Ledger Row -->
+                <tr class="row-l">
+                    <td class="text-center row-l">2(L)</td>
+                    <td><strong>VAT (13%)</strong></td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-center">-</td>
+                    <td class="text-center">13%</td>
+                    <td class="text-right-bold">Rs. {{ sale.vat_total|floatformat:2 }}</td>
+                </tr>
             </tbody>
         </table>
+    </div>
 
-        <div class="card">
-            <div class="">
-                <p><strong class="stat-label">Subtotal:</strong> Rs. {{ sale.subtotal }}</p>
-                <p><strong class="stat-label">Total Discount:</strong> Rs. {{ sale.discount_total }}</p>
-                <p><strong class="stat-label">Tax (VAT):</strong> Rs. {{ sale.vat_total }}</p>
-                <h4><strong class="stat-label">Grand Total:</strong> Rs. {{ sale.grand_total }}</h4>
+    <!-- 4. Lower Section (Narration & Summary) -->
+    <div class="invoice-bottom-section">
+        <div class="left-pane">
+            <div class="form-group narration-group">
+                <label>Narration</label>
+                <textarea rows="3" class="readonly-field" readonly>{{ sale.narration|default:"N/A" }}</textarea>
+            </div>
+        </div>
+        
+        <div class="right-pane summary-card">
+            <div class="summary-row">
+                <span>Sub Total</span>
+                <span class="summary-val highlight-green">Rs. {{ sale.subtotal|floatformat:2 }}</span>
+            </div>
+            <div class="summary-row">
+                <span>Discount Total</span>
+                <span class="summary-val">Rs. {{ sale.discount_total|floatformat:2 }}</span>
+            </div>
+            <div class="summary-row">
+                <span>Tax Total (VAT)</span>
+                <span class="summary-val">Rs. {{ sale.vat_total|floatformat:2 }}</span>
+            </div>
+            <div class="summary-row grand-total-row">
+                <span class="grand-total-label">Grand Total</span>
+                <span class="grand-total-val">Rs. {{ sale.grand_total|floatformat:2 }}</span>
+            </div>
+            <div class="summary-row">
+                <span>Tender / Received</span>
+                <span class="summary-val">Rs. {{ sale.tender_amount|default:sale.grand_total|floatformat:2 }}</span>
+            </div>
+            <div class="summary-row">
+                <span>Change Amount</span>
+                <span class="summary-val highlight-green">Rs. {{ sale.change_amount|default:"0.00"|floatformat:2 }}</span>
             </div>
         </div>
     </div>
+
+    {% if sale.due_amount > 0 %}
+    <div class="payment-settlement">
+        <strong>Record Payment</strong>
+        <form id="sale-payment-form">
+            {% csrf_token %}
+            <div>
+                <label for="settlement_amount">Amount Due: Rs. {{ sale.due_amount|floatformat:2 }}</label>
+                <input id="settlement_amount" type="number" min="0.01" max="{{ sale.due_amount }}" step="0.01" required>
+            </div>
+            <div>
+                <label for="settlement_method">Method</label>
+                <select id="settlement_method">
+                    <option value="CASH">Cash</option>
+                    <option value="CARD">Card / POS</option>
+                    <option value="FONEPAY">Fonepay QR</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-money-bill-wave"></i> Apply Payment</button>
+        </form>
+        <div id="payment-message" class="payment-message" role="status"></div>
+    </div>
+    {% endif %}
+
+    <!-- 5. Footer Actions -->
+    <div class="invoice-footer-actions">
+        <div class="left-actions">
+            <a href="{% url 'sales_list' %}" class="btn btn-outline">
+                <i class="fa-solid fa-arrow-left"></i> Back to Sales List
+            </a>
+        </div>
+
+        <div class="right-actions">
+            <a href="{% url 'sales_invoice_print' sale.sales_id %}"  class="btn btn-primary">
+                <i class="fa-solid fa-print"></i> Print Invoice
+            </a>
+        </div>
+    </div>
 </div>
+{% if sale.due_amount > 0 %}
+<script>
+    document.getElementById('sale-payment-form').addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const message = document.getElementById('payment-message');
+        const amount = document.getElementById('settlement_amount').value;
+        const method = document.getElementById('settlement_method').value;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        try {
+            const response = await fetch('{% url "record_sale_payment" sale.sales_id %}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                body: JSON.stringify({amount, method})
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Unable to record payment.');
+            message.textContent = `Payment recorded. Remaining due: Rs. ${data.due_amount}`;
+            message.style.color = '#15803d';
+            window.setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+            message.textContent = error.message;
+            message.style.color = '#dc2626';
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

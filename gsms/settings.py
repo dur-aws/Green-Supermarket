@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 import pymysql
 
 pymysql.install_as_MySQLdb()
@@ -23,12 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-x(m00+$+pry0q4+gwe0=x0a7*b6#(752-a0ur^yn%i&0!om*)0'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-development-only-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in {'1', 'true', 'yes'}
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host.strip()]
 
 
 # Application definition
@@ -97,11 +98,11 @@ WSGI_APPLICATION = 'gsms.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'gsms_db',
-        'USER': 'root',
-        'PASSWORD': 'bitm890',
-        'HOST': 'localhost',
-        'PORT': '3307',
+        'NAME': os.environ.get('DB_NAME', 'gsms_db'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'bitm890'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '3307'),
     }
 }
 
@@ -138,7 +139,7 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Kathmandu'
-USE_TZ = False
+USE_TZ = True
 
 USE_I18N = True
 

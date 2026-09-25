@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment History{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="master-container " id="payment-history-page">
+    <div class="sticky-header-panel " id="payment-history-header">
+        <div class="filter-bar" id="payment-filter-bar">
+            <div class="search-box" id="payment-search-box">
+                <span class="search-icon" aria-hidden="true">&#128269;</span>
+                <input
+                    type="search"
+                    name="q"
+                    id="payment-search"
+                    class="search-input"
+                    form="payment-filter-form"
+                    value="{{ query }}"
+                    placeholder="Search invoice, supplier or reference"
+                    autocomplete="off"
+                >
+            </div>
+
+            <form method="get" id="payment-filter-form" class="payment-filter-form">
+                <label class="sr-only" for="payment-type-filter">Transaction type</label>
+                <select name="type" id="payment-type-filter" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All transactions</option>
+                    <option value="sales" {% if payment_type == 'sales' %}selected{% endif %}>Sales</option>
+                    <option value="purchases" {% if payment_type == 'purchases' %}selected{% endif %}>Purchases</option>
+                </select>
+
+                <label class="sr-only" for="payment-method-filter">Payment method</label>
+                <select name="method" id="payment-method-filter" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All methods</option>
+                    <option value="CASH" {% if payment_method == 'CASH' %}selected{% endif %}>Cash</option>
+                    <option value="FONEPAY" {% if payment_method == 'FONEPAY' %}selected{% endif %}>Fonepay</option>
+                </select>
+                <button type="submit" class="btn btn-primary btn-add" id="payment-filter-submit">Apply</button>
+                <a href="{% url 'payment_history' %}" class="btn btn-secondary" id="payment-filter-reset">Reset</a>
+            </form>
+        </div>
+
+        <div class="stat-strip payment-stat-strip" id="payment-stat-strip">
+            <div class="stat-item">
+                <span class="stat-label">Paid transactions:</span>
+                <strong class="stat-total">{{ paid_count }}</strong>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Paid amount:</span>
+                <strong class="stat-green">Rs. {{ total_amount|floatformat:2 }}</strong>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Showing:</span>
+                <strong class="stat-total">{{ page_obj.paginator.count|default:payments|length }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="scrollable-table-card payment-table-card" id="payment-table-card">
+        <table class="styled-table payment-history-table" id="payment-history-table">
+            <thead>
+                <tr>
+                    <th>Transaction</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Invoice / PO</th>
+                    <th>Party</th>
+                    <th>Method</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-end">Amount</th>
+                    <th>Reference</th>
+                    <th>Recorded by</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td class="payment-transaction-id">#{{ payment.transaction_id }}</td>
+                    <td>{{ payment.created_at|date:"d M Y, H:i" }}</td>
+                    <td>
+                        {% if payment.sale %}
+                            <span class="badge bg-success">Sale</span>
+                        {% else %}
+                            <span class="badge bg-warning">Purchase</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if payment.sale %}
+                            {{ payment.sale.invoice_no }}
+                        {% elif payment.purchase %}
+                            {{ payment.purchase.invoice_number|default:"PO-"|add:payment.purchase.purchase_id }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if payment.sale %}
+                            {{ payment.sale.buyer_name|default:"Walk-in customer" }}
+                        {% elif payment.purchase %}
+                            {{ payment.purchase.supplier.supplier_name|default:"-" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ payment.get_payment_method_display }}</td>
+                    <td class="text-center">
+                        {% if payment.status == 'PAID' %}
+                            <span class="badge bg-success">Paid</span>
+                        {% elif payment.status == 'FAILED' or payment.status == 'CANCELLED' %}
+                            <span class="badge bg-danger">{{ payment.get_status_display }}</span>
+                        {% else %}
+                            <span class="badge bg-warning">{{ payment.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end"><strong>Rs. {{ payment.amount|floatformat:2 }}</strong></td>
+                    <td>{{ payment.internal_reference|default:payment.provider_reference|default:"-" }}</td>
+                    <td>{{ payment.created_by.username|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center py-4 text-muted">No payment records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination-footer payment-pagination" id="payment-pagination">
+        <div>Total {{ page_obj.paginator.count|default:payments|length }} records</div>
+        {% if is_paginated %}
+        <ul class="pagination" aria-label="Payment history pages">
+            {% if page_obj.has_previous %}
+            <li><a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Previous page">&lt;</a></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+                    {% if page_obj.number == num %}
+                    <li class="active"><span>{{ num }}</span></li>
+                    {% else %}
+                    <li><a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ num }}">{{ num }}</a></li>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li><a href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}" aria-label="Next page">&gt;</a></li>
+            {% endif %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

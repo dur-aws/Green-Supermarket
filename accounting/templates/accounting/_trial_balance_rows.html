@@ -1,0 +1,15 @@
+{% for row in page_obj %}
+<tr>
+  <td>{{ row.account.account_code }}</td>
+  <td>{{ row.account.account_name }}</td>
+  <td>{{ row.parent_account.account_name|default:'-' }}</td>
+  <td>{{ row.account.get_account_type_display }}</td>
+  <td class="text-right">{{ row.opening_balance|floatformat:2 }} {{ row.opening_side }}</td>
+  <td class="text-right">{{ row.period_debit|floatformat:2 }}</td>
+  <td class="text-right">{{ row.period_credit|floatformat:2 }}</td>
+  <td class="text-right">{{ row.closing_debit|floatformat:2 }}</td>
+  <td class="text-right">{{ row.closing_credit|floatformat:2 }}</td>
+</tr>
+{% empty %}
+<tr><td colspan="9" class="empty-row">No posted balances found for the selected filters.</td></tr>
+{% endfor %}

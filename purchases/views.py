@@ -22,7 +22,7 @@ from django.http import JsonResponse
 
 from decimal import Decimal, InvalidOperation
 from django.views import View
-from .services import calculate_po_totals, ensure_vendor_receipt
+from .services import calculate_po_totals, ensure_vendor_receipt, get_variant_vat_percent
 from django.core.exceptions import ValidationError
 from payments.services import PaymentProcessingService
 
@@ -115,9 +115,9 @@ class PurchaseOrderCreateView(RBACPermissionMixin, SuccessMessageMixin, CreateVi
                 tds_rate = Decimal(str(form.cleaned_data.get('tds_rate') or '0.00')) if supplier and supplier.pan_vat_number else Decimal('0.00')
                 line_items = [
                         {
-                            'quantity': f.cleaned_data['received_quantity'] or f.cleaned_data['ordered_quantity'],
+                            'quantity': f.cleaned_data['received_quantity'] if f.cleaned_data['received_quantity'] is not None else f.cleaned_data['ordered_quantity'],
                             'unit_price': f.cleaned_data['actual_unit_price'] or f.cleaned_data['agreed_unit_price'],
-                            'vat_percent': Decimal(getattr(f.cleaned_data.get('variant'), 'vat_status', '0'))
+                            'vat_percent': get_variant_vat_percent(f.cleaned_data.get('variant'))
                         }
                         for f in formset.forms if not f.cleaned_data.get('DELETE')
                     ]
@@ -170,8 +170,7 @@ class PurchaseOrderCalculateView(RBACPermissionMixin, View):
                 if variant_id:
                     from products.models import ProductVariant
                     variant = ProductVariant.objects.filter(pk=variant_id).first()
-                    if variant and getattr(variant, 'is_vatable', False):
-                        vat_percent = Decimal(str(getattr(variant, 'vat_status', 0)))
+                    vat_percent = get_variant_vat_percent(variant)
                 items.append({'quantity': qty, 'unit_price': price, 'vat_percent': str(vat_percent)})
                 index += 1
 
@@ -209,14 +208,14 @@ class PurchaseOrderUpdateView(RBACPermissionMixin, SuccessMessageMixin, UpdateVi
         
         return context
 
-        
     def form_valid(self, form):
         context = self.get_context_data()
         formset = context['formset']
-
+        
         if not formset.is_valid():
             return self.render_to_response(self.get_context_data(form=form, formset=formset))
-
+        
+        
         try:
             with transaction.atomic():
                 # Get existing status from database before modification
@@ -233,31 +232,37 @@ class PurchaseOrderUpdateView(RBACPermissionMixin, SuccessMessageMixin, UpdateVi
                 # 2. Save line items and aggregate totals
                 items = formset.save(commit=False)
                 line_items_data = []
+               
+                for f in formset.forms:
+                    if f.cleaned_data and not f.cleaned_data.get('DELETE', False):
+                        received_quantity = f.cleaned_data.get('received_quantity')
+                        qty = received_quantity if received_quantity is not None else (f.cleaned_data.get('ordered_quantity') or Decimal('0.00'))
+                        price = f.cleaned_data.get('actual_unit_price') or f.cleaned_data.get('agreed_unit_price') or Decimal('0.00')
+                        variant = f.cleaned_data.get('variant')
+                        vat_percent = get_variant_vat_percent(variant)
 
-                for item in items:
-                    item.purchase = self.object
-                    qty = item.received_quantity or item.ordered_quantity or Decimal('0.00')
-                    price = item.actual_unit_price or item.agreed_unit_price or Decimal('0.00')
-                    item.subtotal = qty * price
-                    variant = item.variant
-                    vat_percent = Decimal('0.00')
-                    if variant and getattr(variant, 'is_vatable', False):
-                        vat_percent = getattr(variant, 'vat_percent', Decimal('0.00')) or Decimal('0.00')
-                    item.save()
-                    line_items_data.append({'quantity': qty, 'unit_price': price, 'vat_percent': str(vat_percent)})
+                        instance = f.save(commit=False)
+                        instance.purchase = self.object
+                        instance.subtotal = (qty * price).quantize(Decimal('0.01'))
+                        instance.save()
+
+                        line_items_data.append({'quantity': qty, 'unit_price': price, 'vat_percent': str(vat_percent)})
 
                 formset.save_m2m()
-
+                
                 # 3. Recalculate PO Financial Totals
                 if self.object.supplier and self.object.supplier.pan_vat_number:
                     tds_rate = self.object.tds_rate or Decimal('0.00')
                 else:
                     tds_rate = Decimal('0.00')
+                
                 totals = calculate_po_totals(
                     line_items_data, tds_rate, form.cleaned_data.get('freight_charge')
                 )
+                
                 for field, value in totals.items():
-                    setattr(self.object, field, value)
+                    if value is not None:
+                        setattr(self.object, field, value)
 
                 self.object.save()
 

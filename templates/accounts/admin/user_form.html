@@ -12,7 +12,7 @@
             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #e0e0e0; padding-bottom: 0.75rem;">
             <h2 style="margin: 0; color: #2e7d32;">{% if object %}Edit User: {{ object.username }}{% else %}Create New
                 User Account{% endif %}</h2>
-            <a href="{% url 'user_list' %}" class="btn btn-export">← Back to List</a>
+            <a href="{% url 'user_list' %}" class="btn btn-secondary">← Back to List</a>
         </div>
 
         <form method="post" novalidate>

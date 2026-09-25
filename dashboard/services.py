@@ -16,7 +16,7 @@ User = get_user_model()
 def _event_time(value=None):
     value = value or timezone.now()
     if timezone.is_naive(value):
-        return value
+        value = timezone.make_aware(value, timezone.get_current_timezone())
     return timezone.localtime(value)
 
 
@@ -90,14 +90,14 @@ def notify_batch_state(batch, now=None):
     now = _event_time(now)
     expiry_at = batch.expiry_at
     if expiry_at is None and batch.expiry_date:
-        expiry_at = datetime.combine(batch.expiry_date, time.min)
+        expiry_at = timezone.make_aware(
+            datetime.combine(batch.expiry_date, time.min),
+            timezone.get_current_timezone(),
+        )
     if expiry_at is None:
         return
-    if timezone.is_naive(expiry_at) != timezone.is_naive(now):
-        if timezone.is_naive(expiry_at):
-            expiry_at = timezone.make_aware(expiry_at)
-        else:
-            expiry_at = timezone.make_naive(expiry_at)
+    if timezone.is_naive(expiry_at):
+        expiry_at = timezone.make_aware(expiry_at, timezone.get_current_timezone())
 
     product_name = batch.variant.product.product_name
     batch_name = batch.batch_no or batch.batch_number

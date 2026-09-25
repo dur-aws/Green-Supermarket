@@ -23,7 +23,9 @@
         </div> -->
           <div class="brand-info">
             <h1 class="brand-title">GSM</h1>
-            <span class="brand-subtitle">Green Supermarket Management System</span>
+            <span class="brand-subtitle"
+              >Green Supermarket Management System</span
+            >
           </div>
         </div>
         <button
@@ -53,29 +55,33 @@
       </button>
       <div class="header-right" id="header-right-drawer">
         <div class="action-icons">
-          <button title="Grid View" class="icon-btn">
-            <i class="fa-solid fa-border-all"></i>
-          </button>
-          <button title="Notifications" class="icon-btn" id="notification-bell-btn">
+          <button
+            title="Notifications"
+            class="icon-btn"
+            id="notification-bell-btn"
+          >
             <i class="fa-regular fa-bell"></i>
-            <span class="notification-badge" id="notifBadge" style="display: none;">0</span>
+            <span
+              class="notification-badge"
+              id="notifBadge"
+              style="display: none"
+              >0</span
+            >
           </button>
-          <button title="Calculator" class="icon-btn">
-            <i class="fa-solid fa-calculator"></i>
-          </button>
-          <button title="Print" class="icon-btn">
-            <i class="fa-solid fa-print"></i>
-          </button>
-          <button title="Reports" class="icon-btn">
-            <i class="fa-solid fa-file-lines"></i>
-          </button>
-          <button title="Help" class="icon-btn">
-            <i class="fa-solid fa-circle-question"></i>
-          </button>
+
           {% if request.user.is_authenticated %}
-          <form method="post" action="{% url 'logout' %}" onsubmit="return confirm('Are you sure you want to log out?');">
+          <form
+            method="post"
+            action="{% url 'logout' %}"
+            onsubmit="return confirm('Are you sure you want to log out?');"
+          >
             {% csrf_token %}
-            <button type="submit" class="icon-btn" title="Log out" aria-label="Log out">
+            <button
+              type="submit"
+              class="icon-btn"
+              title="Log out"
+              aria-label="Log out"
+            >
               <i class="fa-solid fa-right-from-bracket"></i>
             </button>
           </form>
@@ -93,39 +99,39 @@
             </span>
           </div>
         </div>
-        <div class="alert-messages">
-                {% if messages %} {% for message in messages %} {% if message.tags == 'error' or message.tags == 'danger' %}
-                <div class="alert-item alert-danger">
-                  <span class="alert-icon">⛔</span>
-                  <span class="alert-text"
-                    ><strong>Error:</strong> {{ message }}</span
-                  >
-                  <button class="alert-close" aria-label="Dismiss">✕</button>
-                </div>
-                {% elif message.tags == 'warning' %}
-                <div class="alert-item alert-warning">
-                  <span class="alert-icon">⚠️</span>
-                  <span class="alert-text"
-                    ><strong>Warning:</strong> {{ message }}</span
-                  >
-                  <button class="alert-close" aria-label="Dismiss">✕</button>
-                </div>
-                {% elif message.tags == 'success' %}
-                <div class="alert-item alert-success">
-                  <span class="alert-icon">✅</span>
-                  <span class="alert-text">{{ message }}</span>
-                  <button class="alert-close" aria-label="Dismiss">✕</button>
-                </div>
-                {% else %}
-                <div class="alert-item alert-info">
-                  <span class="alert-icon">ℹ️</span>
-                  <span class="alert-text">{{ message }}</span>
-                  <button class="alert-close" aria-label="Dismiss">✕</button>
-                </div>
-                {% endif %} {% endfor %} {% endif %}
-          </div>
       </div>
     </header>
+    <div class="alert-messages">
+      {% if messages %} {% for message in messages %} {% if message.tags == 'error' or message.tags == 'danger' %}
+      <div class="alert-item alert-danger">
+        <span class="alert-icon">⛔</span>
+        <span class="alert-text"
+          ><strong>Error:</strong> {{ message }}</span
+        >
+        <button class="alert-close" aria-label="Dismiss">✕</button>
+      </div>
+      {% elif message.tags == 'warning' %}
+      <div class="alert-item alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <span class="alert-text"
+          ><strong>Warning:</strong> {{ message }}</span
+        >
+        <button class="alert-close" aria-label="Dismiss">✕</button>
+      </div>
+      {% elif message.tags == 'success' %}
+      <div class="alert-item alert-success">
+        <span class="alert-icon">✅</span>
+        <span class="alert-text">{{ message }}</span>
+        <button class="alert-close" aria-label="Dismiss">✕</button>
+      </div>
+      {% else %}
+      <div class="alert-item alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <span class="alert-text">{{ message }}</span>
+        <button class="alert-close" aria-label="Dismiss">✕</button>
+      </div>
+      {% endif %} {% endfor %} {% endif %}
+    </div>
     <!-- Notification Popup Overlay -->
     <div class="notif-modal-overlay" id="notifModalOverlay">
       <div class="notif-card">
@@ -137,7 +143,9 @@
           <li class="notif-empty">Loading notifications...</li>
         </ul>
         <div class="notif-footer">
-          <a href="{% url 'notification_history' %}" class="notif-history-link">History</a>
+          <a href="{% url 'notification_history' %}" class="notif-history-link"
+            >History</a
+          >
         </div>
       </div>
     </div>
@@ -174,9 +182,11 @@
             <div class="submenu" id="submenu-masterdata">
               {% if perms.units.view_unit %} {% endif %}
               <a href="{% url 'uom_list' %}" data-module="uoms">Units</a>
-              <a href="{% url 'category_list' %}" data-module="categories"
-                >Categories</a
-              >
+               {% if perms.categories.view_categories %} {% endif %}
+               <a href="{% url 'category_list' %}" data-module="categories"
+               >Categories</a
+               >
+               {% if perms.products.view_products %} {% endif %}
               <a href="{% url 'product_list' %}" data-module="products"
                 >Products</a
               >
@@ -203,8 +213,14 @@
               <a href=" {% url 'stock_list' %}" data-module="stock-list"
                 >Stocks</a
               >
-              <a href="{% url 'adjustment_history' %}" data-module="stock-adjustments">Adjustments</a>
-              <a href="{% url 'wastage_list' %}" data-module="wastage">Wastage</a>
+              <a
+                href="{% url 'adjustment_history' %}"
+                data-module="stock-adjustments"
+                >Adjustments</a
+              >
+              <a href="{% url 'wastage_list' %}" data-module="wastage"
+                >Wastage</a
+              >
               <!-- <a href="{" data-module="stock-in">Stock In</a>
             <a href="{}" data-module="stock-out">Stock Out</a>
             <a href="" data-module="stock-adjustment">Stock Adjustment</a>
@@ -223,9 +239,12 @@
               <a href="{% url 'po_list' %}" data-module="purchase-order"
                 >Purchase Orders</a
               >
-            <a href="#" data-module="purchase-invoice">Purchase Invoice</a>
-            <a href="{% url 'purchase_return_list' %}" data-module="purchase-return">Purchase Return</a>
-            <a href="#" data-module="supplier-payment">Supplier Payments</a>
+              <a href="#" data-module="purchase-invoice">Purchase Invoice</a>
+              <a
+                href="{% url 'purchase_return_list' %}"
+                data-module="purchase-return"
+                >Purchase Return</a
+              >
             </div>
           </div>
 
@@ -237,22 +256,23 @@
               <i class="chevron fa-solid fa-chevron-down"></i>
             </a>
             <div class="submenu active-submenu" id="submenu-sales">
-              <a href="{% url 'sales_invoice' %}" data-module="sales_invoice">Sales Invoice</a>
+              <a href="{% url 'sales_invoice' %}" data-module="sales_invoice"
+                >Sales Invoice</a
+              >
               <a href="#" data-module="counter-invoice">Counter Invoice</a>
-              <a href="{% url 'sales_return_list' %}" data-module="sales-return">Sales Return</a>
+              <a href="{% url 'sales_return_list' %}" data-module="sales-return"
+                >Sales Return</a
+              >
               <a href="#" data-module="receipt">Receipt</a>
-              <a href="#" data-module="payment">Payment</a>
-              <a href="#" data-module="journal">Journal</a>
-              <a href="#" data-module="ledger-voucher">Ledger Voucher</a>
             </div>
           </div>
-
+          
           <div class="menu-item has-children">
             <a
-              href="#"
+            href="#"
               class="menu-link parent-link"
               data-toggle="products-stock"
-            >
+              >
               <i class="menu-icon fa-solid fa-box"></i>
               <span class="label">Products & Stock</span>
               <i class="chevron fa-solid fa-chevron-down"></i>
@@ -271,16 +291,20 @@
               <i class="chevron fa-solid fa-chevron-down"></i>
             </a>
             <div class="submenu" id="submenu-reports">
-              <a href="{% url 'sales_list' %}" data-module="sales-report">Sales Report</a>
-              <a href="{% url 'crm_reports' %}" data-module="crm-report">Customer Report</a>
+              <a href="{% url 'sales_list' %}" data-module="sales-report"
+                >Sales Report</a
+                >
+              <a href="{% url 'crm_reports' %}" data-module="crm-report"
+                >Customer Report</a
+              >
               <a href="#" data-module="purchase-report">Purchase Report</a>
               <a href="#" data-module="inventory_batch-report"
-                >Inventory Report</a
+              >Inventory Report</a
               >
               <a href="#" data-module="low-stock-report">Low Stock Report</a>
             </div>
           </div>
-
+          
           <div class="menu-item has-children">
             <a href="#" class="menu-link parent-link" data-toggle="accounting">
               <i class="menu-icon fa-solid fa-calculator"></i>
@@ -288,9 +312,23 @@
               <i class="chevron fa-solid fa-chevron-down"></i>
             </a>
             <div class="submenu" id="submenu-accounting">
-              <a href="#" data-module="chart-accounts">Chart of Accounts</a>
-              <a href="{% url 'journal_view' %}" data-module="journal">Journal</a>
-              <a href="{% url 'fiscal_year_list' %}" data-module="fiscal-year">Fiscal Year</a>
+              <a href="{% url 'chart_of_accounts' %}" data-module="chart-accounts">Chart of Accounts</a>
+              <a href="{% url 'journal_view' %}" data-module="journal"
+              >Journal</a
+              >
+              <a href="{% url 'general_ledger' %}" data-module="general-ledger"
+              >General Ledger</a
+              >
+              <a href="{% url 'trial_balance' %}" data-module="trial-balance"
+              >Trial Balance</a
+              >
+              <a href="{% url 'payment_history' %}" data-module="payment">Payment</a>
+              
+              <a href="#" data-module="ledger-voucher">Ledger Voucher</a>
+              <a href="{% url 'fiscal_year_list' %}" data-module="fiscal-year"
+              >Fiscal Year</a
+              >
+              <a href="{% url 'expense_list' %}" data-module="expenses">Expenses</a>
             </div>
           </div>
 
@@ -331,136 +369,144 @@
 
       <!-- ================= MAIN CONTENT AREA ================= -->
       <div class="main">
-      {% comment %} <div class="top-nav-tabs">
-        <a href="{% url 'sales_invoice' %}" class="tab-item">
-          <i class="fa-regular fa-file-lines"></i> Sales Invoice
-        </a>
-        <a href="{% url 'dashboard' %}" class="tab-item">Dashboard</a>
-        
-        
-      </div> {% endcomment %}
-      <main class="content-body">{% block content %} {% endblock %}</main>
+        {% comment %}
+        <div class="top-nav-tabs">
+          <a href="{% url 'sales_invoice' %}" class="tab-item">
+            <i class="fa-regular fa-file-lines"></i> Sales Invoice
+          </a>
+          <a href="{% url 'dashboard' %}" class="tab-item">Dashboard</a>
+        </div>
+        {% endcomment %}
+        <main class="content-body">{% block content %} {% endblock %}</main>
+      </div>
     </div>
-  </div>
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-      const toggleBtn = document.getElementById("header-actions-toggle");
-      const drawer = document.getElementById("header-right-drawer");
-      const overlay = document.getElementById("drawer-overlay");
+        const toggleBtn = document.getElementById("header-actions-toggle");
+        const drawer = document.getElementById("header-right-drawer");
+        const overlay = document.getElementById("drawer-overlay");
 
-      function toggleDrawer(e) {
-        if (e) e.stopPropagation();
-        if (drawer) drawer.classList.toggle("open");
-        if (overlay) overlay.classList.toggle("show");
-      }
+        function toggleDrawer(e) {
+          if (e) e.stopPropagation();
+          if (drawer) drawer.classList.toggle("open");
+          if (overlay) overlay.classList.toggle("show");
+        }
 
-      function closeDrawer() {
-        if (drawer) drawer.classList.remove("open");
-        if (overlay) overlay.classList.remove("show");
-      }
+        function closeDrawer() {
+          if (drawer) drawer.classList.remove("open");
+          if (overlay) overlay.classList.remove("show");
+        }
 
-      if (toggleBtn) {
-        toggleBtn.addEventListener("click", toggleDrawer);
-      }
+        if (toggleBtn) {
+          toggleBtn.addEventListener("click", toggleDrawer);
+        }
 
-      if (overlay) {
-        overlay.addEventListener("click", closeDrawer);
-      }
+        if (overlay) {
+          overlay.addEventListener("click", closeDrawer);
+        }
 
-      // Dismiss floating alerts
-      const alertContainer = document.querySelector(".alert-messages");
-      if (alertContainer) {
-        alertContainer.addEventListener("click", function (e) {
-          const btn = e.target.closest(".alert-close");
-          if (!btn) return;
-          const item = btn.closest(".alert-item");
-          if (item) {
-            item.style.opacity = '0';
-            item.style.transform = 'scale(0.95)';
-            setTimeout(() => item.remove(), 200);
-          }
-        });
+        // Dismiss floating alerts
+        const alertContainer = document.querySelector(".alert-messages");
+        if (alertContainer) {
+          alertContainer.addEventListener("click", function (e) {
+            const btn = e.target.closest(".alert-close");
+            if (!btn) return;
+            const item = btn.closest(".alert-item");
+            if (item) {
+              item.style.opacity = "0";
+              item.style.transform = "scale(0.95)";
+              setTimeout(() => item.remove(), 200);
+            }
+          });
 
-        const items = alertContainer.querySelectorAll(".alert-item");
-        items.forEach(function (item) {
-          setTimeout(function () {
-            item.style.opacity = '0';
-            item.style.transform = 'scale(0.95)';
-            setTimeout(() => item.remove(), 200);
-          }, 5000);
-        });
-      }
+          const items = alertContainer.querySelectorAll(".alert-item");
+          items.forEach(function (item) {
+            setTimeout(function () {
+              item.style.opacity = "0";
+              item.style.transform = "scale(0.95)";
+              setTimeout(() => item.remove(), 200);
+            }, 5000);
+          });
+        }
       });
 
-    document.addEventListener("DOMContentLoaded", function () {
-      const notifBtn = document.getElementById("notification-bell-btn");
-      const modalOverlay = document.getElementById("notifModalOverlay");
-      const closeBtn = document.getElementById("notifCloseBtn");
-      const notifList = document.getElementById("notifListContainer");
-      const badge = document.getElementById("notifBadge");
+      document.addEventListener("DOMContentLoaded", function () {
+        const notifBtn = document.getElementById("notification-bell-btn");
+        const modalOverlay = document.getElementById("notifModalOverlay");
+        const closeBtn = document.getElementById("notifCloseBtn");
+        const notifList = document.getElementById("notifListContainer");
+        const badge = document.getElementById("notifBadge");
 
-      // Toggle Popup
-      if (notifBtn) {
-        notifBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          modalOverlay.classList.add("active");
-          fetchRecentNotifications();
-        });
-      }
-
-      if (closeBtn) {
-        closeBtn.addEventListener("click", function () {
-          modalOverlay.classList.remove("active");
-        });
-      }
-
-      // Close when clicking outside the modal content
-      if (modalOverlay) {
-        modalOverlay.addEventListener("click", function (e) {
-          if (e.target === modalOverlay) {
-            modalOverlay.classList.remove("active");
-          }
-        });
-      }
-
-      async function fetchRecentNotifications() {
-        try {
-          const response = await fetch("{% url 'recent_notifications_api' %}", {
-            headers: { "X-Requested-With": "XMLHttpRequest" }
+        // Toggle Popup
+        if (notifBtn) {
+          notifBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            modalOverlay.classList.add("active");
+            fetchRecentNotifications();
           });
-          if (!response.ok) throw new Error("Failed to load notifications");
-          
-          const data = await response.json();
-          renderNotifications(data.notifications);
-          
-          if (badge) {
-            badge.textContent = data.unread_count || 0;
-            badge.style.display = data.unread_count > 0 ? "inline-block" : "none";
-          }
-        } catch (err) {
-          console.error("Notification load error:", err);
-          if (notifList) {
-            notifList.innerHTML = `<li class="notif-empty">Unable to fetch notifications.</li>`;
-          }
-        }
-      }
-
-      function renderNotifications(items) {
-        if (!notifList) return;
-        if (!items || items.length === 0) {
-          notifList.innerHTML = `<li class="notif-empty">No new notifications.</li>`;
-          return;
         }
 
-        let html = "";
-        items.slice(0, 5).forEach(item => {
-          const iconClass = item.type === "danger" ? "fa-triangle-exclamation" :
-                            item.type === "warning" ? "fa-circle-exclamation" : "fa-bell";
-          
-          html += `
-            <a href="${item.link || '#'}" class="notif-item ${item.is_read ? '' : 'unread'}">
-              <div class="notif-icon ${item.type || 'info'}">
+        if (closeBtn) {
+          closeBtn.addEventListener("click", function () {
+            modalOverlay.classList.remove("active");
+          });
+        }
+
+        // Close when clicking outside the modal content
+        if (modalOverlay) {
+          modalOverlay.addEventListener("click", function (e) {
+            if (e.target === modalOverlay) {
+              modalOverlay.classList.remove("active");
+            }
+          });
+        }
+
+        async function fetchRecentNotifications() {
+          try {
+            const response = await fetch(
+              "{% url 'recent_notifications_api' %}",
+              {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+              },
+            );
+            if (!response.ok) throw new Error("Failed to load notifications");
+
+            const data = await response.json();
+            renderNotifications(data.notifications);
+
+            if (badge) {
+              badge.textContent = data.unread_count || 0;
+              badge.style.display =
+                data.unread_count > 0 ? "inline-block" : "none";
+            }
+          } catch (err) {
+            console.error("Notification load error:", err);
+            if (notifList) {
+              notifList.innerHTML = `<li class="notif-empty">Unable to fetch notifications.</li>`;
+            }
+          }
+        }
+
+        function renderNotifications(items) {
+          if (!notifList) return;
+          if (!items || items.length === 0) {
+            notifList.innerHTML = `<li class="notif-empty">No new notifications.</li>`;
+            return;
+          }
+
+          let html = "";
+          items.slice(0, 5).forEach((item) => {
+            const iconClass =
+              item.type === "danger"
+                ? "fa-triangle-exclamation"
+                : item.type === "warning"
+                  ? "fa-circle-exclamation"
+                  : "fa-bell";
+
+            html += `
+            <a href="${item.link || "#"}" class="notif-item ${item.is_read ? "" : "unread"}">
+              <div class="notif-icon ${item.type || "info"}">
                 <i class="fa-solid ${iconClass}"></i>
               </div>
               <div class="notif-content">
@@ -470,10 +516,10 @@
               </div>
             </a>
           `;
-        });
-        notifList.innerHTML = html;
-      }
-    });
+          });
+          notifList.innerHTML = html;
+        }
+      });
     </script>
     {% block extra_js %}
     <script src="{% static 'js/dashboard.js' %}"></script>

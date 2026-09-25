@@ -1,0 +1,323 @@
+GREEN SUPERMARKET MANAGEMENT SYSTEM
+FULL SYSTEM REVIEW
+
+Review date: 2026-09-25
+Review scope: Django project configuration, applications, models, services, views, URLs, middleware, migrations, tests, requirements, and database documentation.
+
+1. EXECUTIVE SUMMARY
+
+Green Supermarket Management System (GSMS) is a modular Django application intended to run the operational and financial activities of a supermarket. It has substantially more functionality than the original relational schema document suggests. The live code includes product variants, batch-level inventory, FEFO stock selection, purchasing, supplier portal access, point of sale, VAT, customer discounts, payment tracking, returns and refunds, expenses, wastage, accounting, fiscal years, Nepali dates, reporting, notifications, role permissions, and audit logging.
+
+The project is a strong functional foundation, but it is not yet production-ready. The largest immediate risks are:
+
+- The automated test suite cannot build a test database because migrations fail with MySQL error 1824: a migration references product_variant before the referenced table exists.
+- Sale.save() is declared twice. The second definition replaces the first, disabling fiscal-year closed checks and sales-account assignment in that model method.
+- Production-insecure settings are committed: DEBUG=True, an exposed SECRET_KEY, empty ALLOWED_HOSTS, and database credentials in source code.
+- Authorization is implemented in several places, but coverage must be verified for every view and action. Suppliers are restricted by middleware, while normal role permissions depend on decorators being applied consistently.
+- The live Django models and relational_database.txt describe different schemas and naming conventions. The SQL document is not a reliable deployment source.
+- Several critical models allow invalid states because they lack database constraints or model validation.
+
+Recommended order: make migrations and tests reliable, fix the confirmed Sale.save() defect, move secrets and environment settings out of source, audit permissions, then strengthen accounting/inventory invariants before adding new business features.
+
+2. WHAT THE SYSTEM CAN DO TODAY
+
+2.1 Authentication, users, and access control
+
+- Uses a custom user model with username, email, phone, status, active/staff/superuser flags, and a Role relation.
+- Defines ADMIN, MANAGER, STAFF, and SUPPLIER roles.
+- Provides login, logout, profile, user creation/editing, and user management URLs.
+- Provides module permissions for view, add, edit, and delete operations.
+- Routes authenticated users to the dashboard and supplier users to the supplier portal.
+- Restricts supplier accounts through SupplierModuleGuardMiddleware.
+- Records request activity, data access, denied requests, mutations, and server errors through AuditLogMiddleware.
+
+2.2 Master data
+
+- Units of measure.
+- Product categories.
+- Products and product variants.
+- SKU/variant code generation.
+- Suppliers, supplier contact details, PAN/VAT number, address, and organic certification fields.
+- Customers, customer codes, contact data, and customer discount schemes.
+
+2.3 Purchasing and suppliers
+
+- Purchase orders with supplier, order, delivery, receipt, VAT, TDS, freight, payable, paid, and due amounts.
+- Purchase order detail lines with ordered and received quantities, agreed and actual prices, batches, and expiry information.
+- Supplier responses such as pending, accepted, or not available.
+- Supplier portal listing and actions for supplier-owned orders.
+- Vendor purchase receipts.
+- Supplier payment summaries and purchase payment records.
+- Purchase returns linked to inventory batches and stock adjustments.
+
+2.4 Inventory
+
+- Inventory is stored at product-variant and batch level.
+- Tracks received quantity, current quantity, unit cost, supplier, purchase detail, manufacture/harvest/expiry dates, and status.
+- Supports active, exhausted, expired, and quarantined batch states.
+- Uses expiry-first ordering in sales stock selection, which supports FEFO behavior.
+- Supports stock adjustments for expiry, damage, theft, correction, returns, and wastage.
+- Includes notifications for inventory conditions through a management command.
+- Includes wastage records and loss values.
+
+2.5 Point of sale and sales
+
+- Creates invoices with fiscal-year-scoped invoice numbers.
+- Supports customers, buyer names, product variants, quantities, prices, line discounts, bill discounts, VAT, taxable/non-taxable amounts, rounding, narration, and Nepali dates.
+- Validates available stock inside a database transaction.
+- Supports cash, card, bank transfer, Fonepay and other configured payment methods, including partial, credit, and split payments.
+- Has idempotency-key support to reduce duplicate sale creation.
+- Records sale items and payment summaries.
+- Provides product search, next-invoice-number endpoint, payment initiation, invoice/history/search/export views, and expiry reports.
+
+2.6 Returns and refunds
+
+- Sales returns use an RMA workflow: draft, received, inspected, approved, credited, refunded, or cancelled.
+- Tracks requested and received quantities.
+- Supports inventory return receipts and item conditions such as resalable, damaged, or expired.
+- Supports credit memos and payment refunds.
+
+2.7 Payments
+
+- Records sale and purchase payments with amount, method, internal/provider references, status, gateway data, expiry, verification, failure reason, and creator.
+- Includes refund records and payment receipt/voucher models.
+- Supports payment history and settlement services.
+
+2.8 Accounting and finance
+
+- Chart of accounts with account types, parent accounts, and active state.
+- Fiscal years with Nepali date fields, active/closed states, and single-active-year behavior.
+- Journal entries, journal items, posting status, reversal status, immutability checks, and reference types.
+- Automated accounting services for sales, payments, expenses, inventory, adjustments, returns, and other transactions.
+- Expense records and expense posting to configured account codes.
+- Cost records and cost categories.
+- Accounting reports and balance calculations.
+
+2.9 Reporting and dashboard
+
+- Dashboard view with sales trend API and notification support.
+- Sales history and export.
+- Expiry reporting.
+- Activity log view.
+- Accounting reports and payment history.
+
+3. CONFIRMED BUGS AND RISKS
+
+Severity labels: Critical blocks a core workflow or creates serious production risk; High can corrupt financial, inventory, or authorization behavior; Medium affects reliability or maintainability; Low is cleanup or documentation quality.
+
+3.1 Critical: test database migrations fail
+
+Evidence: running `python manage.py test --noinput` fails while applying migrations with MySQL error 1824, "Failed to open the referenced table 'product_variant'". This means the normal test suite cannot execute against a clean database.
+
+Likely cause: migration dependency/order mismatch or a migration that adds a foreign key to ProductVariant before the ProductVariant table migration has been applied. Inspect migration dependencies and creation order in products, inventory, sales, purchases, and related apps. Rebuild only the affected migration history after preserving production data and validating the generated SQL.
+
+Fix:
+
+1. Identify the first failing migration with `python manage.py migrate --plan` and verbose migration output.
+2. Ensure the migration that creates ProductVariant is in the dependency graph before every foreign-key migration.
+3. Test from a clean MySQL database and run all tests.
+4. Add a CI job that runs migrations from zero.
+
+3.2 Critical: insecure production configuration
+
+Evidence: gsms/settings.py contains DEBUG=True, a hard-coded SECRET_KEY, empty ALLOWED_HOSTS, and a database username/password/port in source code.
+
+Impact: secrets can be exposed through source control; debug pages can disclose internals; host validation is incomplete; deployment behavior is unsafe.
+
+Fix: read SECRET_KEY, DEBUG, ALLOWED_HOSTS, database credentials, and payment credentials from environment variables. Add separate development and production settings. Set secure cookies, CSRF trusted origins, HTTPS redirect/HSTS settings, and a real allowed-host list for production. Rotate the exposed secret and database password.
+
+3.3 High: Sale.save() is overridden twice
+
+Evidence: sales/models.py defines Sale.save() once with fiscal-year validation and sales-account assignment, then defines another Sale.save() later for amount-in-words generation. In Python, the second method replaces the first.
+
+Impact: saving a Sale can bypass the model-level closed-fiscal-year check and can fail to assign sales_ac through the first method. The service layer may catch some cases, but direct saves and future code paths are unsafe.
+
+Fix: merge both save implementations into one method, call the required validation explicitly, preserve update_fields behavior, and add tests for closed fiscal years and automatic sales account assignment.
+
+3.4 High: invoice number generation is not robust under concurrency
+
+Evidence: InvoiceNumberService finds the last invoice by ordering invoice_no and parses the suffix. The service is called twice in SaleService.create_sale before the sale is created. There is no database constraint scoped to fiscal year plus sequence, and concurrent transactions can calculate the same next number.
+
+Impact: duplicate invoice attempts, integrity errors, or incorrect sequencing under simultaneous cashiers.
+
+Fix: use a dedicated fiscal-year sequence row locked with select_for_update, or a database-backed sequence strategy. Call the generator once. Add a unique constraint for the intended invoice identity and a concurrency test.
+
+3.5 High: payment model permits invalid ownership states
+
+Evidence: payments.Payment has nullable sale and purchase foreign keys with no model clean method or database CheckConstraint requiring exactly one of them.
+
+Impact: a payment can be attached to neither a sale nor a purchase, or to both. This can break summaries and accounting reconciliation.
+
+Fix: add validation and a database constraint equivalent to XOR: exactly one of sale_id and purchase_id must be non-null. Also require positive amounts and validate that refund amounts do not exceed the original payment or credit memo.
+
+3.6 High: purchase deletion behavior can leave broken references
+
+Evidence: purchases.PurchaseOrder and PurchaseDetail use DO_NOTHING for important foreign keys.
+
+Impact: deleting suppliers, users, or purchase records can produce database integrity failures or orphaned business records, depending on database constraints. Financial records should normally be protected or reversed rather than deleted.
+
+Fix: use PROTECT for posted financial records, SET_NULL where historical ownership can be retained without the user, and an explicit cancellation/reversal workflow instead of deletion.
+
+3.7 High: financial and inventory values need stronger constraints
+
+Evidence: several models rely mainly on form/service validation. Important fields such as quantities, prices, discounts, VAT, payment amounts, and return quantities do not consistently have database CheckConstraints.
+
+Impact: invalid data can enter through admin, scripts, imports, or future APIs that bypass forms.
+
+Fix: add database constraints for non-negative monetary values, positive sale/purchase quantities, non-negative stock, discount limits, valid date ranges, and return quantities not exceeding sold/received quantities. Use service transactions for every stock and ledger mutation.
+
+3.8 High: authorization coverage is difficult to prove
+
+Evidence: RBAC exists in accounts.decorators.rbac_required, but the project also uses mixins, supplier middleware, login checks, and view-specific logic. A permission system is only effective where every sensitive view and mutation is covered.
+
+Impact: an authenticated user could reach a module or action if a view omits the expected decorator/mixin. Supplier middleware raises PermissionDenied for many paths, but it is a broad path-based control and should not be the only authorization boundary.
+
+Fix: create a permission matrix for every URL and action. Apply one consistent authorization mechanism at the view boundary and repeat ownership checks in services. Add tests for anonymous, staff, manager, admin, and supplier users for every high-risk action.
+
+3.9 Medium: schema documentation is stale and conflicts with Django models
+
+Evidence: relational_database.txt describes older tables such as product, inventory_batch with one row per product, sales, and purchase, while live models use product variants, batch records, Sale, SaleItem, PurchaseOrder, JournalEntry, and additional workflow tables.
+
+Impact: a developer or operator could create the wrong database schema or misunderstand data relationships.
+
+Fix: generate schema documentation from current migrations or maintain a clearly labeled architecture document. Mark relational_database.txt as legacy or replace it with an up-to-date ERD and migration instructions.
+
+3.10 Medium: requirements file is misspelled and version alignment is unclear
+
+Evidence: the dependency file is named `requrements.txt`, while settings state Django 6.0.7 and the file pins Django 6.1.
+
+Impact: automated deployment tools expecting requirements.txt may not install dependencies, and environment drift can produce different behavior.
+
+Fix: rename to requirements.txt, document the supported Python/Django versions, pin compatible production dependencies, and add a reproducible install/check command.
+
+3.11 Medium: time handling is inconsistent
+
+Evidence: settings use USE_TZ=False, while parts of the application use timezone.now(), zoneinfo, and custom naive Kathmandu timestamps.
+
+Impact: payment expiry, audit ordering, and date boundaries can be wrong when servers, workers, or integrations use different timezone assumptions.
+
+Fix: use USE_TZ=True with UTC storage and convert to Asia/Kathmandu for display and Nepali-date conversion. Standardize date/time helpers and add boundary tests around midnight and expiry.
+
+3.12 Medium: audit logging can create operational noise and data exposure
+
+Evidence: middleware logs many data-access and mutation requests and captures forwarded IP headers directly. Exceptions are swallowed around message extraction and log persistence.
+
+Impact: logs may be incomplete, oversized, or spoofable behind an untrusted proxy; logging every detail view may affect performance. Audit failures are not visible to the request owner.
+
+Fix: configure trusted proxy handling, normalize client IP extraction, define retention and access policy, avoid sensitive values in descriptions, use structured logs, and add tests for audit behavior.
+
+3.13 Low: duplicated imports and inconsistent module comments
+
+Evidence: gsms/urls.py repeats imports of django.contrib.admin and login_required, and setting_app/middleware.py has a stale module comment referring to accounts/middleware.py.
+
+Impact: no direct business failure, but it signals merge drift and makes maintenance harder.
+
+Fix: remove duplicate imports and update stale module documentation during normal cleanup.
+
+4. TEST AND QUALITY ASSESSMENT
+
+The Django system check passes with no reported issues. That confirms import/configuration basics only; it does not validate migrations, permissions, accounting, or workflows.
+
+The test suite currently has meaningful tests in accounting, customers, dashboard, expenses, inventory, purchases, sales, and wastage. It has little or no test coverage in accounts, categories, costs, payments, products, reports, setting_app, suppliers, and units. The migration failure prevents the suite from reaching normal test execution against a clean database.
+
+Minimum regression suite to add after migration repair:
+
+- Fresh database migration test.
+- User role and module permission matrix tests.
+- Supplier isolation tests for every supplier URL and object ownership boundary.
+- Closed fiscal-year tests for sales, purchases, expenses, inventory adjustments, payments, and journals.
+- Concurrent invoice-number test.
+- Sale calculation tests for VAT, discounts, rounding, split payment, credit, pending gateway payment, and change.
+- FEFO tests proving the oldest non-expired batch is consumed and quantities cannot go negative.
+- Purchase receipt tests for partial receipt, over-receipt, return, and payment reconciliation.
+- Payment ownership, duplicate reference, refund-limit, and webhook idempotency tests.
+- Return workflow tests proving a sale item cannot be returned more than once beyond its sold quantity.
+- Audit log tests for denied access, mutation, IP handling, and failure behavior.
+
+5. RECOMMENDED NEW FEATURES
+
+5.1 Highest-value operational features
+
+- Barcode scanner support for product lookup and rapid checkout.
+- Receipt printing and configurable invoice templates for thermal printers.
+- Cash drawer opening/closing, cashier shifts, cash counts, and variance reports.
+- Purchase receiving screen with barcode/batch capture and partial delivery handling.
+- Reorder suggestions based on reorder levels, lead time, sales velocity, and expiry risk.
+- Stocktake sessions with blind counts, variance approval, and locked counted batches.
+- Product price history and scheduled promotions with start/end dates.
+- Customer loyalty points, membership tiers, store credit, and promotional coupons.
+
+5.2 Finance and compliance features
+
+- Complete payment gateway callback/webhook verification and replay protection.
+- Tax invoice configuration, VAT registration details, tax-period reports, and export formats required by the local authority.
+- Bank reconciliation and payment settlement matching.
+- Budgeting by expense category and department.
+- Period close checklist with approval, lock, and reversal controls.
+- Immutable export of journal, sales, purchase, and audit data for backup and review.
+
+5.3 Management and analytics features
+
+- Gross margin by product, category, supplier, cashier, and date.
+- Inventory valuation using the chosen costing method, such as weighted average or batch cost.
+- Dead-stock, shrinkage, wastage, expiry-loss, and supplier-performance dashboards.
+- Sales forecasting and demand-based purchase recommendations.
+- Scheduled email/PDF reports and role-specific dashboards.
+- Import/export tools with validation preview for products, opening stock, customers, and suppliers.
+
+5.4 Platform and usability features
+
+- REST API with token-based access for mobile, external accounting, and e-commerce integrations.
+- Mobile-friendly POS and offline queueing for temporary network outages.
+- Multi-branch support with branch-specific stock, users, pricing, and accounting dimensions.
+- Document attachments for invoices, supplier certificates, receipts, and expense evidence.
+- Notification preferences through in-app, email, and SMS channels.
+- Centralized error monitoring, backup automation, restore drills, and health checks.
+
+6. PRIORITIZED DELIVERY PLAN
+
+Phase 1 - Stabilize before expansion
+
+1. Repair migration dependencies and make the clean test database build.
+2. Merge the duplicate Sale.save() methods.
+3. Move all secrets and deployment settings to environment configuration; rotate exposed credentials.
+4. Add constraints and validation for payments, quantities, amounts, discounts, and fiscal-year state.
+5. Audit every URL for authentication, role permission, and supplier/object ownership checks.
+6. Rename and correct the dependency file and document installation.
+
+Phase 2 - Protect business correctness
+
+1. Replace invoice-number generation with a concurrency-safe sequence.
+2. Complete sale, purchase, payment, return, refund, and inventory integration tests.
+3. Standardize timezone handling.
+4. Add stocktake, cashier shifts, and receiving workflows.
+5. Define accounting period close and reversal procedures.
+
+Phase 3 - Improve business value
+
+1. Barcode POS and thermal receipt printing.
+2. Reorder and expiry-loss analytics.
+3. Loyalty/promotions and customer credit controls.
+4. Tax/compliance exports and bank reconciliation.
+5. Multi-branch or external API support, depending on the business roadmap.
+
+7. PRODUCTION READINESS CHECKLIST
+
+- Clean database migration succeeds from zero.
+- Full automated test suite passes against the supported MySQL version.
+- DEBUG is disabled in production.
+- SECRET_KEY, database credentials, gateway credentials, and email credentials are externalized and rotated.
+- ALLOWED_HOSTS, CSRF origins, HTTPS, secure cookies, and HSTS are configured.
+- Database backups and a tested restore process exist.
+- Authorization tests cover every sensitive URL and state transition.
+- Accounting entries are balanced and immutable after posting.
+- Inventory mutations are transactional and auditable.
+- Payment callbacks are authenticated and idempotent.
+- Error monitoring and log retention are configured.
+- Current ERD, setup guide, user roles, and operational procedures are documented.
+
+8. FINAL ASSESSMENT
+
+GSMS already covers the core lifecycle of a supermarket: master data, supplier purchasing, receiving, batch stock, checkout, payments, returns, expenses, accounting, and reporting. Its architecture has good domain separation and several thoughtful controls, including transactions, idempotency, fiscal years, FEFO ordering, journal immutability, supplier isolation, and activity logs.
+
+The system should currently be treated as a development or pre-production application. The migration failure, duplicate Sale.save() implementation, exposed configuration secrets, and incomplete automated coverage must be fixed before relying on it for live financial and inventory operations. Once those foundations are repaired, the best next features are barcode/POS workflow improvements, cashier shift control, stocktaking, reorder intelligence, and stronger tax/payment reconciliation.

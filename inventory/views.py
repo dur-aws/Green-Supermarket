@@ -1,13 +1,14 @@
 # Create your views here.
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.core.paginator import Paginator
 from .forms import StockAdjustmentForm
-
-
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.template.loader import render_to_string
 from .services import process_stock_adjustment
 from accounts.mixins import RBACPermissionMixin
 from django.views.generic import ListView, FormView
@@ -24,7 +25,43 @@ class InventoryStockListView(RBACPermissionMixin, ListView):
     
 
     def get_queryset(self):
-        return InventoryBatch.objects.select_related('variant', 'supplier').order_by('batch_id')
+        return InventoryBatch.objects.select_related('variant', 'supplier').order_by('-batch_id', '-batch_number')
+class InventoryStockSearchView(RBACPermissionMixin, LoginRequiredMixin,  ListView):
+    model = InventoryBatch
+    template_name = 'inventory/stock_list.html'
+    module_name = 'inventory'
+    required_permission = 'view'
+
+
+
+    def get_queryset(self):
+        queryset = InventoryBatch.objects.all()
+        query = self.request.GET.get('q', '').strip()
+
+        if query:
+            queryset = queryset.filter(
+                Q(batch_number__icontains=query) | 
+                Q(variant__product__product_name__icontains=query) |
+                Q(variant__variant_name__icontains=query)
+            )
+
+        return queryset.order_by('-batch_id','-batch_number')
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest' or self.request.GET.get('format') == 'json':
+            queryset = self.get_queryset()
+            rows_html = render_to_string(
+                'inventory/stock_rows.html', 
+                {'batches': queryset}, 
+                request=self.request
+            )
+            return JsonResponse({
+                'rows_html': rows_html,
+                
+            })
+
+        return super().render_to_response(context, **response_kwargs)
+
 
 class StockAdjustmentCreateView(RBACPermissionMixin, FormView):
     template_name = 'inventory/stock_adjustment_form.html'

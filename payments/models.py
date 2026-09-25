@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from decimal import Decimal
 from django.conf import settings
 from .choices import PAYMENT_METHOD_CHOICES, PAYMENT_STATUS_CHOICES
@@ -72,6 +73,24 @@ class Payment(models.Model):
 
     class Meta:
         db_table = 'payment'
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (Q(sale__isnull=False) & Q(purchase__isnull=True))
+                    | (Q(sale__isnull=True) & Q(purchase__isnull=False))
+                ),
+                name='payment_exactly_one_party',
+            ),
+            models.CheckConstraint(condition=Q(amount__gt=0), name='payment_positive_amount'),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if bool(self.sale_id) == bool(self.purchase_id):
+            raise ValidationError('A payment must belong to exactly one sale or purchase.')
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError('Payment amount must be greater than zero.')
         
 
     def __str__(self):
@@ -81,81 +100,6 @@ class Payment(models.Model):
 
 
 
-
-   
-class FonepayTransaction(models.Model):
-
-    STATUS_CHOICES = [
-        ("CREATED", "Created"),
-        ("PENDING", "Pending"),
-        ("SUCCESS", "Success"),
-        ("FAILED", "Failed"),
-        ("EXPIRED", "Expired"),
-    ]
-
-    fonepay_id = models.BigAutoField(primary_key=True)
-
-    payment = models.OneToOneField(
-        Payment,
-        on_delete=models.CASCADE,
-        related_name="fonepay_transaction"
-    )
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
-    merchant_code = models.CharField(
-        max_length=100
-    )
-
-    transaction_reference = models.CharField(
-        max_length=150,
-        unique=True
-    )
-
-    provider_transaction_id = models.CharField(
-        max_length=150,
-        blank=True,
-        null=True
-    )
-
-    amount = models.DecimalField(
-        max_digits=12,
-        decimal_places=2
-    )
-
-    qr_payload = models.TextField(
-        blank=True,
-        null=True
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default="CREATED"
-    )
-
-    response_code = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True
-    )
-
-    response_message = models.TextField(
-        blank=True,
-        null=True
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True
-    )
-
-    class Meta:
-        db_table = "fonepay_transaction"
-
-    def __str__(self):
-        return self.transaction_reference
 
 
 class PaymentRefund(models.Model):

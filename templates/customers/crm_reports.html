@@ -2,17 +2,16 @@
 <link rel="stylesheet" href="{% static 'css/master.css' %}" />
 <div class="master-container">
   <div class="sticky-header-panel">
-    <h3>{{ title }}</h3>
-    <div>
-      <a href="{% url 'crm_reports' %}?type=spending" class="btn bg-success"
+    <div class="filter-bar">
+      <h3>{{ title }}</h3> 
+      <a href="{% url 'crm_reports' %}?type=spending" class="btn btn-secondary"
         >Spending</a
       >
       <a
         href="{% url 'crm_reports' %}?type=transactions"
-        class="btn bg-success"
+        class="btn btn-secondary"
         >Transactions</a
       >
-      
       
     </div>
   </div>

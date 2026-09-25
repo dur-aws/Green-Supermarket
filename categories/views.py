@@ -41,7 +41,7 @@ def stats():
     }
 
 # 2 search view
-class CategorySearchView(RBACPermissionMixin, LoginRequiredMixin, View):
+class CategorySearchView(RBACPermissionMixin, LoginRequiredMixin, ListView):
     model = Category
     template_name = 'categories/category_list.html'
     context_object_name = 'categories'
@@ -61,7 +61,7 @@ class CategorySearchView(RBACPermissionMixin, LoginRequiredMixin, View):
                 Q(category_name__icontains=query) | Q(parent__category_name__icontains=query)
             )
 
-        return queryset.order_by('category_name')
+        return queryset.order_by('-category_name')
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest' or self.request.GET.get('format') == 'json':

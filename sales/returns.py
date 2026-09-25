@@ -180,8 +180,8 @@ def receive_and_inspect_return(*, rma_id, inspections, user):
             reference_id=rma.pk,
             fiscal_year=rma.sale.fiscal_year,
             items=[
-                {'account_code': '1200', 'debit': total_resalable_cost, 'credit': MONEY_ZERO},
-                {'account_code': '4010', 'debit': MONEY_ZERO, 'credit': total_resalable_cost},
+                {'account_code': '1310', 'debit': total_resalable_cost, 'credit': MONEY_ZERO},
+                {'account_code': '5100', 'debit': MONEY_ZERO, 'credit': total_resalable_cost},
             ],
             created_by=user,
         )
@@ -201,8 +201,8 @@ def receive_and_inspect_return(*, rma_id, inspections, user):
         reference_id=credit_memo.pk,
         fiscal_year=rma.sale.fiscal_year,
         items=[
-            {'account_code': '3010', 'debit': total_refund, 'credit': MONEY_ZERO},
-            {'account_code': '1110', 'debit': MONEY_ZERO, 'credit': total_refund},
+            {'account_code': '4100', 'debit': total_refund, 'credit': MONEY_ZERO},
+            {'account_code': '1220', 'debit': MONEY_ZERO, 'credit': total_refund},
         ],
         created_by=user,
     )
@@ -232,7 +232,7 @@ def create_refund(*, credit_memo_id, method, user):
         raise ValidationError('This credit memo cannot be refunded.')
     if hasattr(credit_memo, 'payment_refund'):
         raise ValidationError('A refund already exists for this credit memo.')
-    if method not in {'CASH_ON_HAND', 'QR_BANK_ACCOUNT'}:
+    if method not in {'CASH_ON_HAND', 'QR_ACCOUNT'}:
         raise ValidationError('Select a valid refund method.')
 
     payment = credit_memo.sale.payment_transactions.filter(status='PAID').order_by('transaction_id').first()
@@ -261,7 +261,7 @@ def confirm_refund(*, refund_id, user):
         raise ValidationError('Only pending credit memo refunds can be confirmed.')
 
     credit_memo = CreditMemo.objects.select_for_update().get(pk=refund.credit_memo_id)
-    account_code = '1010' if refund.refund_method == 'CASH_ON_HAND' else '1030'
+    account_code = '1110' if refund.refund_method == 'CASH_ON_HAND' else '1130'
     entry = AccountingService.create_journal_entry(
         entry_date=timezone.now().date(),
         bs_date=credit_memo.sale.bs_date,
@@ -270,7 +270,7 @@ def confirm_refund(*, refund_id, user):
         reference_id=refund.pk,
         fiscal_year=credit_memo.sale.fiscal_year,
         items=[
-            {'account_code': '1110', 'debit': refund.amount, 'credit': MONEY_ZERO},
+            {'account_code': '1220', 'debit': refund.amount, 'credit': MONEY_ZERO},
             {'account_code': account_code, 'debit': MONEY_ZERO, 'credit': refund.amount},
         ],
         created_by=user,

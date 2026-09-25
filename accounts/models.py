@@ -51,8 +51,11 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
 
-        # force ADMIN role - all superusers to be ADMIN
-        admin_role = Role.objects.get(role_name="ADMIN")
+        # Superuser creation must work on a fresh database after seed data is absent.
+        admin_role, _ = Role.objects.get_or_create(
+            role_name=Role.ADMIN,
+            defaults={'role_name': Role.ADMIN},
+        )
         return self.create_user(username, email, password=password, role_name=admin_role, **extra_fields)
 
 
@@ -112,6 +115,7 @@ class ModulePermission(models.Model):
         ('customers', 'Customers'),
         ('sales', 'Sales'),
         ('inventory', 'Inventory'),
+        ('accounting', 'Accounting'),
     ]
 
     role = models.ForeignKey(Role,  on_delete=models.SET_NULL, null=True, related_name='permissions')

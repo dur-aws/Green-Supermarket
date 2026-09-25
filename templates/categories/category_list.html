@@ -4,8 +4,9 @@
 
     <link rel="stylesheet" href="{% static 'css/master.css' %}" />
 
-    <div class="container">
+    <div class="master-container">
         <!-- Filter Bar -->
+        <div class="sticky-header-panel"> 
         <div class="filter-bar">
             <div class="search-box">
                 <span class="search-icon">&#128269;</span>
@@ -20,7 +21,7 @@
             </div>
             <div class="filter-right">
                 <a href="{% url 'category_add' %}" class="btn btn-primary btn-add">+ Add Category</a>
-                <a href="#" class="btn btn-export">&#8595; Export</a>
+                <a href="#" class="btn btn-secondary">&#8595; Export</a>
             </div>
         </div>
 
@@ -31,9 +32,9 @@
                 <strong id="showing-count">{{ categories|length }}</strong>
             </div>
         </div>
-
-        <div class="table-card">
-            <div class="table-responsive">
+        </div>
+        <div class="scrollable-table-card">
+            
                 <table class="data-table styled-table">
                     <thead>
                         <tr>
@@ -50,7 +51,7 @@
                         {% include 'categories/category_rows.html' %}
                     </tbody>
                 </table>
-            </div>
+          
         </div>
     </div>
 

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+<style>
+  .trial-header { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+  .trial-filters { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin: 15px 0; }
+  .trial-filters label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .trial-filters input, .trial-filters select { min-height: 34px; padding: 5px 8px; }
+  .trial-summary { display: flex; gap: 12px; flex-wrap: wrap; margin: 15px 0; }
+  .trial-card { padding: 12px 16px; border: 1px solid #d1d5db; background: #fff; min-width: 150px; }
+  .trial-card strong { display: block; font-size: 18px; margin-top: 4px; }
+  .trial-status { padding: 4px 8px; font-weight: 700; font-size: 12px; }
+  .trial-balanced { background: #dcfce7; color: #166534; }
+  .trial-unbalanced { background: #fee2e2; color: #991b1b; }
+</style>
+<div class="master-container">
+  <div class="trial-header">
+    <div>
+      <h2>Trial Balance</h2>
+      <p>Internal accounting report based on posted journal entries.</p>
+    </div>
+    <div>
+      <a class="btn btn-secondary" href="{% url 'trial_balance_pdf' %}?{{ filter_query }}" target="_blank">Export PDF</a>
+      <button class="btn btn-print" type="button" onclick="window.print()">Print</button>
+    </div>
+  </div>
+  <form class="trial-filters" method="get">
+    <div><label for="fiscal_year">Fiscal Year</label><select id="fiscal_year" name="fiscal_year"><option value="">Active fiscal year</option>{% for fy in fiscal_years %}<option value="{{ fy.pk }}" {% if fiscal_year.pk == fy.pk %}selected{% endif %}>{{ fy.name }}</option>{% endfor %}</select></div>
+    <div><label for="from_date">From B.S. date</label><input id="from_date" name="from_date" value="{{ from_date }}" placeholder="YYYY-MM-DD"></div>
+    <div><label for="to_date">To B.S. date</label><input id="to_date" name="to_date" value="{{ to_date }}" placeholder="YYYY-MM-DD"></div>
+    <div><label for="q">Account search</label><input id="q" name="q" value="{{ search }}" placeholder="Code or name"></div>
+    <div><label for="account_type">Account type</label><select id="account_type" name="account_type"><option value="">All types</option>{% for value,label in account_types %}<option value="{{ value }}" {% if account_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <button class="btn btn-filter" type="submit">Filter</button>
+    <a class="btn btn-clear" href="{% url 'trial_balance' %}">Clear</a>
+  </form>
+  <div class="trial-summary">
+    <div class="trial-card">Total Debit<strong>{{ total_debit|floatformat:2 }}</strong></div>
+    <div class="trial-card">Total Credit<strong>{{ total_credit|floatformat:2 }}</strong></div>
+    <div class="trial-card">Difference<strong>{{ difference|floatformat:2 }}</strong></div>
+    <div class="trial-card"><span class="trial-status {% if is_balanced %}trial-balanced{% else %}trial-unbalanced{% endif %}">{% if is_balanced %}Balanced{% else %}Unbalanced{% endif %}</span></div>
+  </div>
+  <div class="scrollable-table-card">
+    <table class="styled-table">
+      <thead><tr><th>Code</th><th>Account</th><th>Parent</th><th>Type</th><th>Opening</th><th>Period Debit</th><th>Period Credit</th><th>Closing Debit</th><th>Closing Credit</th></tr></thead>
+      <tbody id="trial-balance-rows">{% include 'accounting/_trial_balance_rows.html' %}</tbody>
+    </table>
+  </div>
+  <div class="pagination-footer">
+    <span>Total {{ page_obj.paginator.count }}</span>
+    {% if is_paginated %}<span>{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&{{ filter_query }}">&lt;</a>{% endif %} Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&{{ filter_query }}">&gt;</a>{% endif %}</span>{% endif %}
+  </div>
+</div>
+{% endblock %}

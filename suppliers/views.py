@@ -52,10 +52,12 @@ class SupplierPurchaseOrderListView(RBACPermissionMixin, SupplierAccessMixin, Li
         return queryset.order_by('-order_date')
 
 
+
+
 class SupplierPayablesSummaryView(RBACPermissionMixin, SupplierAccessMixin, ListView):
     """View for supplier to track account payables and invoice statuses."""
     model = PurchaseOrder
-    template_name = 'suppliers/admin/payables_summary.html'
+    template_name = 'suppliers/payables_summary.html'
     context_object_name = 'invoices'
 
     # RBAC Settings
@@ -66,23 +68,30 @@ class SupplierPayablesSummaryView(RBACPermissionMixin, SupplierAccessMixin, List
     def get_queryset(self):
         supplier = self.get_supplier()
         if supplier:
-            return PurchaseOrder.objects.filter(
-                supplier=supplier
-            ).exclude(payment_status='PAID').order_by('order_date')
+            return (
+                PurchaseOrder.objects
+                .filter(supplier=supplier)
+                .exclude(payment_status='PAID')
+                .order_by('order_date')
+            )
         return PurchaseOrder.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         supplier = self.get_supplier()
         if supplier:
-            unpaid_orders = PurchaseOrder.objects.filter(supplier=supplier).exclude(payment_status='PAID')
-            total_payable = unpaid_orders.aggregate(total=Sum('net_payable_amount'))['total'] or 0
-            context['total_payable'] = total_payable
-            context['order_count'] = PurchaseOrder.objects.filter(supplier=supplier).count()
-            context['paid_count'] = PurchaseOrder.objects.filter(supplier=supplier, payment_status='PAID').count()
+            base_qs = PurchaseOrder.objects.filter(supplier=supplier)
+
+            unpaid_orders = base_qs.exclude(payment_status='PAID')
+            aggregates = unpaid_orders.aggregate(
+                total_payable=Sum('net_payable_amount')
+            )
+
+            context['total_payable'] = aggregates['total_payable'] or 0
+            context['order_count'] = base_qs.count()
+            context['paid_count'] = base_qs.filter(payment_status='PAID').count()
+            context['unpaid_count'] = unpaid_orders.count()
         return context
-
-
 class SupplierPurchaseOrderActionView(RBACPermissionMixin, SupplierAccessMixin, View):
     """Apply supplier actions only to a PO owned by the logged-in supplier."""
 

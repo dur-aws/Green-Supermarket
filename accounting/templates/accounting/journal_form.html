@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="master-container">
+  <h2>{% if entry.pk %}Edit Draft Journal Entry{% else %}New Journal Entry{% endif %}</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="form-group">
+        {{ field.label_tag }}
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <h3>Journal Lines</h3>
+    {{ formset.management_form }}
+    {{ formset.non_form_errors }}
+    <table class="styled-table">
+      <thead><tr><th>Account</th><th>Debit</th><th>Credit</th><th>Remove</th></tr></thead>
+      <tbody>
+        {% for line in formset %}
+          <tr>
+            <td>{{ line.account }}{{ line.account.errors }}</td>
+            <td>{{ line.debit }}{{ line.debit.errors }}</td>
+            <td>{{ line.credit }}{{ line.credit.errors }}</td>
+            <td>{% if line.instance.pk %}{{ line.DELETE }}{% endif %}</td>
+          </tr>
+          {{ line.non_field_errors }}
+        {% endfor %}
+      </tbody>
+    </table>
+    <button class="btn btn-secondary" type="submit" name="action" value="draft">Save Draft</button>
+    <button class="btn btn-primary" type="submit" name="action" value="post" onclick="return confirm('Post this journal entry?')">Post Journal Entry</button>
+    {% if entry.pk %}
+      <a class="btn btn-outline" href="{% url 'journal_view' %}">Cancel</a>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

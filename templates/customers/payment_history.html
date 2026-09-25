@@ -3,11 +3,13 @@
 <link rel="stylesheet" href="{% static 'css/master.css' %}">
 <div class="master-container">
   <div class="sticky-header-panel">
+    <div class="filter-bar">
     <h3>Payment History: {{ customer.customer_name }}</h3>
 
-    <a href="{% url 'customer_profile' customer.pk %}" class="btn bg-success"
+    <a href="{% url 'customer_profile' customer.pk %}" class="btn btn-secondary"
       >Customer Detail</a
     >
+    </div>
   </div>
   <div class="scrollable-table-card">
   <table class="styled-table">
@@ -17,7 +19,8 @@
         <th>Date</th>
         <th>Method</th>
         <th class="text-center">Status</th>
-        <th class="text-end">Amount</th>
+        <th class="text-end">Received</th>
+        <th class="text-end">Due</th>
         <th>Reference</th>
       </tr>
     </thead>
@@ -27,8 +30,9 @@
         <td>{{ payment.sale.invoice_no }}</td>
         <td>{{ payment.created_at }}</td>
         <td>{{ payment.payment_method }}</td>
-        <td class="text-center">{{ payment.status }}</td>
-        <td class="text-end">{{ payment.amount }}</td>
+        <td class="text-center">{{ payment.sale.payment_status }}</td>
+        <td class="text-end">{{ payment.sale.paid_amount }}</td>
+        <td class="text-end">{{ payment.sale.due_amount }}</td>
         <td>{{ payment.internal_reference|default:'-' }}</td>
       </tr>
       {% empty %}

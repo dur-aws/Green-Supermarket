@@ -27,7 +27,8 @@ class InvoiceNumberService:
         Example: 2083/84-001, 2083/84-002
         """
         with transaction.atomic():
-            qs = Sale.objects.select_for_update().filter(fiscal_year=fiscal_year)
+            locked_fy = FiscalYear.objects.select_for_update().get(pk=fiscal_year.pk)
+            qs = Sale.objects.filter(fiscal_year=locked_fy)
 
             last_sale = qs.order_by('-invoice_no').first()
 
@@ -59,7 +60,7 @@ class SaleService:
         tender_amount='', 
         received_amount='', 
         change_amount='', 
-        buyer_pan='',
+        
         bs_date='', 
         overall_discount_amount=Decimal('0.00'),
         overall_discount_percent=Decimal('0.00')
@@ -71,7 +72,7 @@ class SaleService:
 
         if not items_data:
             raise InvalidQuantityError("Cart is empty")
-
+        
         # --- 1. DYNAMICALLY RESOLVE & VALIDATE FISCAL YEAR ---
         active_fy = None
         if isinstance(fiscal_year, FiscalYear):
@@ -129,6 +130,8 @@ class SaleService:
             
             if quantity <= Decimal('0.000'):
                 raise InvalidQuantityError("Quantity must be greater than zero")
+            if discount < Decimal('0.00'):
+                raise InvalidDiscountError("Discount cannot be negative")
 
             if 'variant_id' in item:
                 variant = ProductVariant.objects.get(pk=item['variant_id'])
@@ -151,7 +154,7 @@ class SaleService:
             available_stock = sum(b.current_quantity for b in batches)
             if available_stock < quantity:
                 raise InsufficientStockError(
-                    f"Insufficient stock for {variant.variant_name}. Available: {available_stock}"
+                    f"Insufficient stock for {variant.product.product_name} {variant.variant_name}. Available: {available_stock}"
                 )
 
             line_gross = (unit_price * quantity).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
@@ -196,10 +199,20 @@ class SaleService:
         # --- CALCULATE OVERALL BILL DISCOUNT ---
         overall_disc = Decimal(str(overall_discount_amount or '0.00'))
         overall_pct = Decimal(str(overall_discount_percent or '0.00'))
+
+        if overall_disc < Decimal('0.00'):
+            raise InvalidDiscountError("Bill discount cannot be negative")
+        if overall_pct < Decimal('0.00') or overall_pct > MAX_DISCOUNT_PERCENT:
+            raise InvalidDiscountError(
+                f"Bill discount percentage must be between 0 and {MAX_DISCOUNT_PERCENT}%"
+            )
         
         if overall_pct > Decimal('0.00'):
             net_before_bill_discount = taxable_amount + non_taxable_amount
             overall_disc = (net_before_bill_discount * overall_pct / Decimal('100.00')).quantize(Decimal('0.01'))
+
+        if overall_disc > taxable_amount + non_taxable_amount:
+            raise InvalidDiscountError("Bill discount cannot exceed the bill value")
 
         total_final_discount = (item_discount_total + overall_disc).quantize(Decimal('0.01'))
         if overall_disc > Decimal('0.00'):
@@ -227,58 +240,103 @@ class SaleService:
         grand_total = raw_grand_total.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
         round_off = (grand_total - raw_grand_total).quantize(Decimal('0.01'))
 
-        customer_pan = str(buyer_pan or getattr(customer, 'pan_vat_number', '') or '').strip()
-        if grand_total > Decimal('5000.00') and not customer_pan:
-            raise SaleError("IRD Mandate: Customer PAN/VAT number is required for billing above NPR 5,000.")
-
+        
         # --- 2. GENERATE INVOICE NUMBER BASED ON ACTIVE FY ---
         invoice_no = InvoiceNumberService.generate_next_number(fiscal_year=active_fy)
 
+        # --- PAYMENT VALIDATION / SALE PAYMENT STATE ---
         tender_val = Decimal(str(tender_amount or '0.00'))
         received_val = Decimal(str(received_amount or '0.00'))
         if received_val == Decimal('0.00') and tender_val > Decimal('0.00'):
             received_val = tender_val
 
-        change_val = max(Decimal('0.00'), (received_val - grand_total).quantize(Decimal('0.01')))
-        payment_mode = payments_data[0].get("method", "CASH").upper() if payments_data else "CASH"
-        if len(payments_data) > 1:
-            payment_mode = 'SPLIT'
         valid_payment_methods = {choice[0] for choice in PAYMENT_METHOD_CHOICES}
-        if any(str(payment.get('method', '')).upper() not in valid_payment_methods for payment in payments_data):
-            raise SaleError("Unsupported payment method.")
-        default_sales_ac = Account.objects.filter(account_code='3010').first()
-    
+        normalized_payments = []
+        for raw_payment in payments_data or []:
+            method = str(raw_payment.get('method', '')).upper().strip()
+            if method not in valid_payment_methods:
+                raise SaleError(f'Unsupported payment method: {method or "(empty)"}')
+            try:
+                amount = Decimal(str(raw_payment.get('amount', '0.00'))).quantize(Decimal('0.01'))
+            except Exception as exc:
+                raise SaleError('Payment amount must be a valid number.') from exc
+            if amount < Decimal('0.00'):
+                raise SaleError('Payment amount cannot be negative.')
+            # CREDIT describes the unpaid portion; it is not an actual
+            # settlement account and must never create a CREDIT Payment row.
+            if method == 'CREDIT' and amount > Decimal('0.00'):
+                
+                method = 'CASH'
+            normalized_payments.append({**raw_payment, 'method': method, 'amount': amount})
+
+        payments_data = normalized_payments
+        pending_methods = {'FONEPAY'}
+        has_pending_payment = any(p['method'] in pending_methods and p['amount'] > 0 for p in payments_data)
+
+        # Ignore zero-value CREDIT markers. Actual settlement rows only contain
+        # CASH/CARD/BANK_TRANSFER/FONEPAY/etc.
+        settlement_payments = [p for p in payments_data if p['method'] != 'CREDIT' and p['amount'] > 0]
+        paid_sum = sum((p['amount'] for p in settlement_payments if p['method'] not in pending_methods), Decimal('0.00'))
+
+        if paid_sum > grand_total:
+            raise PaymentMismatchError(
+                f'Payment received ({paid_sum}) cannot exceed grand total ({grand_total}).'
+            )
+
+        if len(settlement_payments) > 1:
+            payment_mode = 'SPLIT'
+        elif settlement_payments:
+            payment_mode = settlement_payments[0]['method']
+        else:
+            payment_mode = 'CREDIT'
+
+        if len(settlement_payments) > 1:
+            methods = [p['method'] for p in settlement_payments]
+            if methods.count('CASH') != 1:
+                raise SaleError('Split payment must contain exactly one Cash payment.')
+
+        default_sales_ac = Account.objects.filter(account_code='4100').first()
         if not default_sales_ac:
-            # Fallback if COA isn't seeded yet
             from accounting.services import ChartOfAccountsService
             accounts = ChartOfAccountsService.ensure_default_accounts()
-            default_sales_ac = accounts.get('3010')
+            default_sales_ac = accounts.get('4100')
         if not default_sales_ac:
-            raise SaleError("Sales revenue account 3010 is not configured.")
-        pending_methods = {'FONEPAY'}
-        has_pending_payment = any(
-            str(payment.get('method', '')).upper() in pending_methods
-            for payment in payments_data
-        )
+            raise SaleError('Sales revenue account 4100 is not configured.')
+
         if has_pending_payment:
-            sale_status = "PENDING"
-            payment_status = "PENDING"
+            sale_status = 'PENDING'
+            payment_status = 'PENDING'
+        elif paid_sum < grand_total:
+            # A single actual settlement with an outstanding balance is a
+            # partial credit sale. The accounting service will debit the
+            # received account and customer A/R for the unpaid balance.
+            sale_status = 'COMPLETED'
+            payment_status = 'PARTIAL' if paid_sum > Decimal('0.00') else 'PENDING'
+            if len(settlement_payments) <= 1:
+                payment_mode = 'CREDIT'
         else:
-            sale_status = "COMPLETED"
-            payment_status = "PAID"
+            sale_status = 'COMPLETED'
+            payment_status = 'PAID'
+
+        # For a full cash payment, tender may be greater than the invoice and
+        # the difference is change. For credit/partial sales, no change exists.
+        if payment_mode == 'CREDIT':
+            change_val = Decimal('0.00')
+            received_val = paid_sum
+        else:
+            change_val = max(Decimal('0.00'), (received_val - grand_total).quantize(Decimal('0.01')))
 
         sale = Sale.objects.create(
             invoice_no=invoice_no,
             fiscal_year=active_fy,
             customer=customer,
-            customer_pan=customer_pan or None,
-            buyer_name=getattr(customer, 'customer_name', 'Walk-in Customer'),
+            buyer_name=getattr(customer, 'customer_name'),
             user=cashier,
             bs_date=bs_date,
             taxable_amount=taxable_amount,
             non_taxable_amount=non_taxable_amount,
             subtotal=subtotal,
-            discount_total=total_final_discount, 
+            discount_total=total_final_discount,
             vat_total=vat_total,
             round_off=round_off,
             grand_total=grand_total,
@@ -326,37 +384,41 @@ class SaleService:
                 line_total=vi['line_total'],
             )
 
-        paid_sum = Decimal('0.00')
-        for p in payments_data:
-            method = str(p.get('method', '')).upper()
-            amount = Decimal(str(p.get('amount', '0.00')))
-            if amount < Decimal('0.00'):
-                raise SaleError("Payment amount cannot be negative.")
-            
-            if method == 'BANK_TRANSFER' and not p.get('reference_no'):
-                raise SaleError(f"Reference/Transaction ID is required for {method} payment.")
-
+        # Create only real settlement payments. A CREDIT balance is represented
+        # by Sale.due_amount/customer A/R, never by a fake CREDIT payment row.
+        for p in settlement_payments:
             Payment.objects.create(
                 sale=sale,
-                payment_method=method,
-                amount=amount,
+                payment_method=p['method'],
+                amount=p['amount'],
                 provider_reference=p.get('reference_no', ''),
-                status='PENDING' if method in pending_methods else 'PAID',
+                status='PENDING' if p['method'] in pending_methods else 'PAID',
             )
-            if method not in pending_methods:
-                paid_sum += amount
 
         sale.paid_amount = paid_sum
         sale.due_amount = max(Decimal('0.00'), grand_total - paid_sum)
-        sale.save(update_fields=['paid_amount', 'due_amount'])
-
-        if not has_pending_payment and paid_sum != grand_total:
-            raise PaymentMismatchError(
-                f"Payment received ({paid_sum}) does not equal grand total ({grand_total})"
+        if payment_mode == 'CREDIT':
+            sale.received_amount = paid_sum
+            sale.change_amount = Decimal('0.00')
+            sale.payment_status = 'PAID' if sale.due_amount == 0 else (
+                'PARTIAL' if paid_sum > Decimal('0.00') else 'PENDING'
             )
-        if sale.sale_status == "COMPLETED":
+        sale.save(update_fields=[
+            'paid_amount', 'due_amount', 'received_amount',
+            'change_amount', 'payment_status'
+        ])
+
+        if not has_pending_payment and paid_sum != grand_total and payment_mode not in {'CREDIT', 'SPLIT'}:
+            raise PaymentMismatchError(
+                f'Payment received ({paid_sum}) does not equal grand total ({grand_total}).'
+            )
+
+        if sale.sale_status == 'COMPLETED':
             from accounting.services import AccountingService
-            AccountingService.post_sale_journal_entry(sale)
+            journal_entry = AccountingService.post_sale_journal_entry(sale)
+            if sale.journal_entry_id != journal_entry.entry_id:
+                sale.journal_entry = journal_entry
+                sale.save(update_fields=['journal_entry'])
 
 
         return sale, True

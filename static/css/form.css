@@ -384,15 +384,17 @@ input[readonly] {
 #items-table th:nth-child(5),
 #items-table td:nth-child(5),
 #items-table th:nth-child(6),
-#items-table td:nth-child(6) { width: 9%; }
+#items-table td:nth-child(6),
 #items-table th:nth-child(7),
-#items-table td:nth-child(7),
+#items-table td:nth-child(7){ width: 9%; }
 #items-table th:nth-child(8),
 #items-table td:nth-child(8),
 #items-table th:nth-child(9),
-#items-table td:nth-child(9) { width: 10%; }
+#items-table td:nth-child(9),
 #items-table th:nth-child(10),
-#items-table td:nth-child(10) { width: 6%; }
+#items-table td:nth-child(10){ width: 10%; }
+#items-table th:nth-child(11),
+#items-table td:nth-child(11) { width: 6%; }
 
 #items-table th {
     font-size: 0.85rem;

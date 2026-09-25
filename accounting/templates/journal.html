@@ -1,9 +1,21 @@
 {% extends "base.html" %} {% load static %} {% block content %}
 
 <link rel="stylesheet" href="{% static 'css/master.css' %}" />
+<style>
+  .badge-status { padding: 3px 7px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+  .badge-draft { background: #fef3c7; color: #92400e; }
+  .badge-posted { background: #dcfce7; color: #166534; }
+  .badge-reversed { background: #fee2e2; color: #991b1b; }
+  .link-button { border: 0; background: none; color: #2563eb; cursor: pointer; padding: 0; }
+</style>
 
 <div class="master-container">
   <div class="sticky-header-panel">
+    <div style="margin-bottom: 12px;">
+      {% if perms.accounting.add_journalentry %}
+        <a href="{% url 'journal_create' %}" class="btn btn-primary">+ New Journal Entry</a>
+      {% endif %}
+    </div>
     <!-- ================= FILTER BAR ================= -->
     <div class="filter-bar">
       <form method="GET">
@@ -41,10 +53,10 @@
 
         <a
           href="{}?from_date={{ from_date }}&to_date={{ to_date }}"
-          class="btn btn-export"
+          class="btn btn-secondary"
           target="_blank"
         >
-          📄 Export PDF
+           Export PDF
         </a>
       </div>
     </div>
@@ -61,6 +73,8 @@
           <th>Account</th>
           <th>Debit NPR</th>
           <th>Credit NPR</th>
+          <th>Status</th>
+          <th>Actions</th>
         </tr>
       </thead>
 
@@ -71,7 +85,7 @@
               {% if forloop.first %}
                 <!-- Only render entry_id once, spanning all item rows -->
                 <td rowspan="{{ gj.items.count }}">{{ gj.entry_id }}</td>
-                <td rowspan="{{ gj.items.count }}">{{ gj.entry_date|date:"Y-m-d" }}</td>
+                <td rowspan="{{ gj.items.count }}">{{ gj.created_at|date:"Y-m-d h-i" }}</td>
                 <td rowspan="{{ gj.items.count }}">JV-{{ gj.entry_id }}</td>
                 <td rowspan="{{ gj.items.count }}">{{ gj.description }}</td>
               {% endif %}
@@ -83,11 +97,33 @@
               <td class="text-right">
                 {% if item.credit %} {{ item.credit }} {% else %} - {% endif %}
               </td>
+              {% if forloop.first %}
+                <td rowspan="{{ gj.items.count }}">
+                  <span class="badge-status badge-{{ gj.status|lower }}">{{ gj.get_status_display }}</span>
+                </td>
+                <td rowspan="{{ gj.items.count }}">
+                  {% if gj.status == 'DRAFT' and perms.accounting.change_journalentry %}
+                    <a href="{% url 'journal_edit' gj.entry_id %}">Edit</a>
+                    <form method="post" action="{% url 'journal_post' gj.entry_id %}" style="display:inline" onsubmit="return confirm('Post this journal entry?')">
+                      {% csrf_token %}<button type="submit" class="link-button">Post</button>
+                    </form>
+                    {% if perms.accounting.delete_journalentry %}
+                      <form method="post" action="{% url 'journal_delete' gj.entry_id %}" style="display:inline" onsubmit="return confirm('Delete this draft journal entry?')">
+                        {% csrf_token %}<button type="submit" class="link-button">Delete</button>
+                      </form>
+                    {% endif %}
+                  {% elif gj.status == 'POSTED' and perms.accounting.change_journalentry %}
+                    <form method="post" action="{% url 'journal_reverse' gj.entry_id %}" onsubmit="return confirm('Reverse this posted journal entry?')">
+                      {% csrf_token %}<button type="submit" class="link-button">Reverse</button>
+                    </form>
+                  {% endif %}
+                </td>
+              {% endif %}
             </tr>
           {% endfor %}
         {% empty %}
           <tr>
-            <td colspan="7" class="empty-row">No journal entries found.</td>
+            <td colspan="9" class="empty-row">No journal entries found.</td>
           </tr>
         {% endfor %}
       </tbody>
@@ -98,7 +134,7 @@
   <div class="pagination-footer">
     
             <div>
-                Total {{ page_obj.paginator.count|default:journals|length }} records
+                Total {{ page_obj.paginator.count|default:journals.count }} records
             </div>
     
             {% if is_paginated %}

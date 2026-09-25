@@ -3,9 +3,9 @@
 <link rel="stylesheet" href="{% static 'css/master.css' %}">
 <div class="master-container">
     <div class="sticky-header-panel">
-  <div class="page-header">
+  <div class="filter-bar">
     <h3>Purchase History: {{ customer.customer_name }}</h3>
-    <a href="{% url 'customer_profile' customer.pk %}" class="btn btn-add"
+    <a href="{% url 'customer_profile' customer.pk %}" class="btn btn-secondary"
       >Customer Detail</a
     >
   </div>

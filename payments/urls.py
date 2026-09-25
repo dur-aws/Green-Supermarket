@@ -1,9 +1,15 @@
 from django.urls import path
 
-from .views import create_fonepay_payment, payment_status, PaymentVerificationView
+from .views import (
+    PaymentHistoryView,
+    PaymentVerificationView,
+    create_fonepay_payment,
+    payment_status,
+)
 
 
 urlpatterns = [
+    path("history/", PaymentHistoryView.as_view(), name="payment_history"),
 
     path("fonepay/create/", create_fonepay_payment, name="create_fonepay_payment"),
 

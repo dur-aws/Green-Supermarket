@@ -1,0 +1,11 @@
+Django==6.1
+PyMySQL==1.2.0
+nepali-datetime==1.0.8.5
+bikram-sambat==0.2.0
+num2words==0.5.14
+openpyxl==3.1.5
+Pillow==12.3.0
+pytz==2026.3.post1
+tzdata==2026.3
+sqlparse==0.5.5
+asgiref==3.12.1

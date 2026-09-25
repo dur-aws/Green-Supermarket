@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from django.test import SimpleTestCase
 
 from .forms import PurchaseOrderForm, PurchaseReturnForm
-from .services import calculate_po_totals
+from .services import calculate_po_totals, get_variant_vat_percent
 
 
 class PurchaseReturnFormTests(SimpleTestCase):
@@ -26,6 +26,14 @@ class PurchaseReturnFormTests(SimpleTestCase):
 		self.assertEqual(totals['total_amount'], Decimal('251.00'))
 		self.assertEqual(totals['tds_amount'], Decimal('3.00'))
 		self.assertEqual(totals['net_payable_amount'], Decimal('248.00'))
+
+	def test_vatable_variant_uses_the_variant_vat_status(self):
+		variant = SimpleNamespace(is_vatable=True, vat_status='13')
+		self.assertEqual(get_variant_vat_percent(variant), Decimal('13'))
+
+	def test_non_vatable_variant_has_zero_vat(self):
+		variant = SimpleNamespace(is_vatable=False, vat_status='13')
+		self.assertEqual(get_variant_vat_percent(variant), Decimal('0.00'))
 
 	def test_negative_freight_is_clamped(self):
 		totals = calculate_po_totals(

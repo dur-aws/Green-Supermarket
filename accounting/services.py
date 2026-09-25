@@ -1,5 +1,328 @@
 import nepali_datetime
-from .models import FiscalYear
+from decimal import Decimal
+
+from django.db.models import Prefetch, Q, Sum
+from .models import FiscalYear, JournalEntry
+from .models import Account, JournalItem
+
+
+class GeneralLedgerError(ValueError):
+    """Raised when General Ledger filters cannot be validated."""
+
+
+class TrialBalanceError(ValueError):
+    """Raised when Trial Balance filters cannot be validated."""
+
+
+class GeneralLedgerService:
+    """Build an account-wise General Ledger from balanced JournalEntry/JournalItem data."""
+
+    ZERO = Decimal('0.00')
+
+    @staticmethod
+    def _valid_bs_date(value, label):
+        """Validate a Nepali B.S. date in YYYY-MM-DD format."""
+        if not value:
+            return None
+
+        value = str(value).strip()
+
+        if (
+            len(value) != 10
+            or value[4] != '-'
+            or value[7] != '-'
+            or not value[:4].isdigit()
+            or not value[5:7].isdigit()
+            or not value[8:10].isdigit()
+        ):
+            raise GeneralLedgerError(f'{label} must use YYYY-MM-DD format.')
+
+        try:
+            year, month, day = map(int, value.split('-'))
+            parsed = nepali_datetime.date(year, month, day)
+        except (TypeError, ValueError):
+            raise GeneralLedgerError(
+                f'{label} must be a valid Nepali date in YYYY-MM-DD format.'
+            )
+
+        if parsed.isoformat() != value:
+            raise GeneralLedgerError(f'{label} must use YYYY-MM-DD format.')
+
+        return value
+
+    @staticmethod
+    def _balance_side(balance, normal_balance):
+        balance = Decimal(balance or '0.00')
+        if normal_balance == 'debit':
+            return 'Dr' if balance >= Decimal('0.00') else 'Cr'
+        return 'Cr' if balance >= Decimal('0.00') else 'Dr'
+
+    @classmethod
+    def get_report(
+        cls, *, fiscal_year_id=None, account_id=None,
+        from_date='', to_date='', search=''
+    ):
+        fiscal_year = (
+            FiscalYear.objects.filter(pk=fiscal_year_id).first()
+            if fiscal_year_id
+            else FiscalYear.objects.filter(is_active=True).first()
+        )
+
+        if fiscal_year is None:
+            fiscal_year = FiscalYear.objects.order_by('-start_date_bs').first()
+
+        if fiscal_year is None:
+            raise GeneralLedgerError(
+                'Create a Fiscal Year before opening the General Ledger.'
+            )
+
+        from_date = cls._valid_bs_date(from_date, 'From Date') or fiscal_year.start_date_bs
+        to_date = cls._valid_bs_date(to_date, 'To Date') or fiscal_year.end_date_bs
+
+        if from_date < fiscal_year.start_date_bs or to_date > fiscal_year.end_date_bs:
+            raise GeneralLedgerError(
+                'The selected dates must be inside the selected Fiscal Year.'
+            )
+
+        if from_date > to_date:
+            raise GeneralLedgerError('From Date cannot be later than To Date.')
+
+        account = (
+            Account.objects.filter(pk=account_id, is_active=True).first()
+            if account_id else None
+        )
+        if account is None:
+            raise GeneralLedgerError('Select an account to open the General Ledger.')
+
+        # Do not apply search here. Opening balance must include every
+        # transaction before From Date, even when a search is active.
+        items = (
+            JournalItem.objects
+            .filter(entry__fiscal_year=fiscal_year, entry__status=JournalEntry.STATUS_POSTED, account=account)
+            .select_related('account', 'entry', 'entry__fiscal_year')
+            .prefetch_related(
+                Prefetch(
+                    'entry__items',
+                    queryset=JournalItem.objects.only(
+                        'entry_id', 'debit', 'credit'
+                    ),
+                    to_attr='ledger_entry_items',
+                )
+            )
+            .order_by('entry__entry_date', 'entry_id', 'item_id')
+        )
+
+        search = (search or '').strip()
+        normal_balance = (
+            'credit'
+            if str(account.account_type).upper()
+            in {'LIABILITY', 'EQUITY', 'REVENUE'}
+            else 'debit'
+        )
+
+        opening = cls.ZERO
+        period_rows = []
+
+        for item in items:
+            entry = item.entry
+            entry_lines = getattr(entry, 'ledger_entry_items', [])
+
+            total_debit = sum(
+                (Decimal(line.debit or cls.ZERO) for line in entry_lines),
+                cls.ZERO
+            )
+            total_credit = sum(
+                (Decimal(line.credit or cls.ZERO) for line in entry_lines),
+                cls.ZERO
+            )
+
+            # Only balanced journal entries are treated as posted ledger data.
+            if total_debit != total_credit:
+                continue
+
+            date_bs = (
+                entry.bs_date
+                or nepali_datetime.date
+                .from_datetime_date(entry.entry_date)
+                .isoformat()
+            )
+
+            debit = Decimal(item.debit or cls.ZERO)
+            credit = Decimal(item.credit or cls.ZERO)
+
+            if date_bs < from_date:
+                movement = debit - credit
+                opening += movement if normal_balance == 'debit' else -movement
+                continue
+
+            if date_bs > to_date:
+                continue
+
+            # Search only affects visible period rows, never the opening balance.
+            if search:
+                searchable = ' '.join([
+                    str(entry.entry_id or ''),
+                    str(entry.reference_id or ''),
+                    str(entry.reference_type or ''),
+                    str(entry.description or ''),
+                ]).lower()
+
+                if search.lower() not in searchable:
+                    continue
+
+            period_rows.append({
+                'item': item,
+                'entry': entry,
+                'date_bs': date_bs,
+                'journal_no': f'JV-{entry.entry_id}',
+                'reference': (
+                    f'{entry.get_reference_type_display()} #{entry.reference_id}'
+                    if entry.reference_id
+                    else entry.get_reference_type_display()
+                ),
+                'particulars': entry.description,
+                'debit': debit,
+                'credit': credit,
+            })
+
+        running = opening
+
+        for row in period_rows:
+            movement = row['debit'] - row['credit']
+            running += movement if normal_balance == 'debit' else -movement
+            row['running_balance'] = abs(running)
+            row['running_side'] = cls._balance_side(running, normal_balance)
+
+        total_debit = sum(
+            (row['debit'] for row in period_rows), cls.ZERO
+        )
+        total_credit = sum(
+            (row['credit'] for row in period_rows), cls.ZERO
+        )
+
+        return {
+            'fiscal_year': fiscal_year,
+            'account': account,
+            'accounts': Account.objects.filter(
+                is_active=True
+            ).order_by('account_code'),
+            'from_date': from_date,
+            'to_date': to_date,
+            'search': search,
+            'normal_balance': normal_balance,
+            'opening_balance': abs(opening),
+            'opening_side': cls._balance_side(opening, normal_balance),
+            'rows': period_rows,
+            'total_debit': total_debit,
+            'total_credit': total_credit,
+            'closing_balance': abs(running),
+            'closing_side': cls._balance_side(running, normal_balance),
+        }
+
+
+class TrialBalanceService:
+    """Build a Trial Balance from posted journal items only."""
+
+    ZERO = Decimal('0.00')
+
+    @classmethod
+    def get_report(cls, *, fiscal_year_id=None, from_date='', to_date='', search='', account_type=''):
+        fiscal_year = (
+            FiscalYear.objects.filter(pk=fiscal_year_id).first()
+            if fiscal_year_id else FiscalYear.objects.filter(is_active=True).first()
+        ) or FiscalYear.objects.order_by('-start_date_bs').first()
+        if fiscal_year is None:
+            raise TrialBalanceError('Create a Fiscal Year before opening the Trial Balance.')
+
+        from_date = GeneralLedgerService._valid_bs_date(from_date, 'From Date') or fiscal_year.start_date_bs
+        to_date = GeneralLedgerService._valid_bs_date(to_date, 'To Date') or fiscal_year.end_date_bs
+        if from_date < fiscal_year.start_date_bs or to_date > fiscal_year.end_date_bs:
+            raise TrialBalanceError('The selected dates must be inside the selected Fiscal Year.')
+        if from_date > to_date:
+            raise TrialBalanceError('From Date cannot be later than To Date.')
+
+        accounts = Account.objects.filter(is_active=True).select_related('parent_account').order_by('account_code')
+        search = (search or '').strip()
+        if search:
+            accounts = accounts.filter(Q(account_code__icontains=search) | Q(account_name__icontains=search))
+        if account_type:
+            accounts = accounts.filter(account_type=account_type)
+
+        posted_items = JournalItem.objects.filter(
+            entry__fiscal_year=fiscal_year,
+            entry__status=JournalEntry.STATUS_POSTED,
+        )
+        dated_items = posted_items.filter(
+            entry__bs_date__gte=fiscal_year.start_date_bs,
+            entry__bs_date__lte=fiscal_year.end_date_bs,
+        )
+        opening = dated_items.filter(entry__bs_date__lt=from_date).values('account_id').annotate(
+            debit=Sum('debit'), credit=Sum('credit')
+        )
+        period = dated_items.filter(entry__bs_date__gte=from_date, entry__bs_date__lte=to_date).values('account_id').annotate(
+            debit=Sum('debit'), credit=Sum('credit')
+        )
+        opening_map = {row['account_id']: row for row in opening}
+        period_map = {row['account_id']: row for row in period}
+
+        # Older automatic journals may have an empty B.S. date. Convert their
+        # Gregorian entry date using the same convention as General Ledger.
+        legacy_items = posted_items.filter(
+            Q(entry__bs_date='') | Q(entry__bs_date__isnull=True)
+        ).select_related('entry')
+        for item in legacy_items:
+            date_bs = nepali_datetime.date.from_datetime_date(item.entry.entry_date).isoformat()
+            target = opening_map if date_bs < from_date else period_map if date_bs <= to_date else None
+            if target is None:
+                continue
+            row = target.setdefault(item.account_id, {'debit': cls.ZERO, 'credit': cls.ZERO})
+            row['debit'] += Decimal(item.debit or cls.ZERO)
+            row['credit'] += Decimal(item.credit or cls.ZERO)
+
+        rows = []
+        total_debit = cls.ZERO
+        total_credit = cls.ZERO
+        for account in accounts:
+            opening_row = opening_map.get(account.account_id, {})
+            period_row = period_map.get(account.account_id, {})
+            opening_debit = Decimal(opening_row.get('debit') or cls.ZERO)
+            opening_credit = Decimal(opening_row.get('credit') or cls.ZERO)
+            period_debit = Decimal(period_row.get('debit') or cls.ZERO)
+            period_credit = Decimal(period_row.get('credit') or cls.ZERO)
+            opening_net = opening_debit - opening_credit
+            closing_net = opening_net + period_debit - period_credit
+            final_debit = max(closing_net, cls.ZERO)
+            final_credit = max(-closing_net, cls.ZERO)
+            total_debit += final_debit
+            total_credit += final_credit
+            rows.append({
+                'account': account,
+                'parent_account': account.parent_account,
+                'opening_debit': opening_debit,
+                'opening_credit': opening_credit,
+                'opening_balance': abs(opening_net),
+                'opening_side': 'Dr' if opening_net >= cls.ZERO else 'Cr',
+                'period_debit': period_debit,
+                'period_credit': period_credit,
+                'closing_debit': final_debit,
+                'closing_credit': final_credit,
+            })
+
+        difference = (total_debit - total_credit).quantize(cls.ZERO)
+        return {
+            'fiscal_year': fiscal_year,
+            'from_date': from_date,
+            'to_date': to_date,
+            'search': search,
+            'account_type': account_type,
+            'account_types': Account.ACCOUNT_TYPE_CHOICES,
+            'rows': rows,
+            'total_debit': total_debit,
+            'total_credit': total_credit,
+            'difference': difference,
+            'is_balanced': difference == cls.ZERO,
+        }
+
 
 class FiscalYearService:
 
@@ -72,24 +395,44 @@ class AccountingError(Exception):
 class ChartOfAccountsService:
     @staticmethod
     def ensure_default_accounts():
-        """Auto-seeds essential Chart of Accounts for GSMS IRD engine."""
+        """Ensure the hierarchical GSMS Chart of Accounts exists."""
         accounts = [
-            ('1010', 'Cash in Hand', 'ASSET', None),
-            ('1020', 'Bank Account / Card Clearing', 'ASSET', None),
-            ('1030', 'Digital Wallet Clearing (Fonepay)', 'ASSET', None),
-            ('1100', 'Accounts Receivable (Customers)', 'ASSET', None),
-            ('1110', 'Refund Clearing / Customer Credit', 'ASSET', None),
-            ('1200', 'Inventory Asset Account', 'ASSET', None),
-            ('1210', 'GRN Clearing Account', 'LIABILITY', None),
-            ('2010', 'Accounts Payable (Suppliers)', 'LIABILITY', None),
-            ('2040', 'TDS Payable', 'LIABILITY', None),
-            ('2020', 'Output VAT Payable', 'LIABILITY', None),
-            ('2030', 'Input VAT Credit', 'LIABILITY', None),
-            ('3010', 'Sales Revenue', 'REVENUE', None),
-            ('3020', 'Sales Discounts Allowed', 'EXPENSE', None),
-            ('3030', 'Round Off Gain/Loss', 'EXPENSE', None),
-            ('4010', 'Cost of Goods Sold (COGS)', 'EXPENSE', None),
-            ('4020', 'Inventory Wastage / Loss', 'EXPENSE', None),
+            ('1000', 'ASSETS', 'ASSET', None),
+            ('1100', 'Cash & Bank', 'ASSET', '1000'),
+            ('1110', 'Cash in Hand', 'ASSET', '1100'),
+            ('1120', 'Bank Account', 'ASSET', '1100'),
+            ('1130', 'Fonepay / Digital Wallet', 'ASSET', '1100'),
+            ('1200', 'Receivables', 'ASSET', '1000'),
+            ('1210', 'Accounts Receivable', 'ASSET', '1200'),
+            ('1220', 'Refund Clearing', 'ASSET', '1200'),
+            ('1300', 'Inventory', 'ASSET', '1000'),
+            ('1310', 'Inventory Asset', 'ASSET', '1300'),
+            ('2000', 'LIABILITIES', 'LIABILITY', None),
+            ('2100', 'Accounts Payable', 'LIABILITY', '2000'),
+            ('2200', 'VAT Payable', 'LIABILITY', '2000'),
+            ('2300', 'TDS Payable', 'LIABILITY', '2000'),
+            ('3000', 'EQUITY', 'EQUITY', None),
+            ('3100', "Owner's Capital", 'EQUITY', '3000'),
+            ('3200', 'Retained Earnings', 'EQUITY', '3000'),
+            ('4000', 'REVENUE', 'REVENUE', None),
+            ('4100', 'Sales Revenue', 'REVENUE', '4000'),
+            ('5000', 'COST OF SALES', 'EXPENSE', None),
+            ('5100', 'Cost of Goods Sold', 'EXPENSE', '5000'),
+            ('6000', 'EXPENSES', 'EXPENSE', None),
+            ('6010', 'Rent Expense', 'EXPENSE', '6000'),
+            ('6020', 'Salary Expense', 'EXPENSE', '6000'),
+            ('6030', 'Electricity Expense', 'EXPENSE', '6000'),
+            ('6040', 'Internet Expense', 'EXPENSE', '6000'),
+            ('6050', 'Packaging Expense', 'EXPENSE', '6000'),
+            ('6060', 'Delivery Expense', 'EXPENSE', '6000'),
+            ('6070', 'Bank Charges', 'EXPENSE', '6000'),
+            ('6080', 'Marketing Expense', 'EXPENSE', '6000'),
+            ('6090', 'Depreciation Expense', 'EXPENSE', '6000'),
+            ('6100', 'Inventory Wastage / Loss', 'EXPENSE', '6000'),
+            ('6200', 'Sales Discounts', 'EXPENSE', '6000'),
+            ('6300', 'Round-off Loss', 'EXPENSE', '6000'),
+            ('7000', 'OTHER INCOME', 'REVENUE', None),
+            ('7100', 'Round-off Gain', 'REVENUE', '7000'),
         ]
         
         created_accounts = {}
@@ -109,7 +452,22 @@ class ChartOfAccountsService:
 
 
 class AccountingService:
+    ZERO = Decimal("0.00")
 
+    @staticmethod
+    def _money(value):
+        return Decimal(str(value or "0.00")).quantize(Decimal("0.01"))
+
+    @staticmethod
+    def _get_customer_receivable_account(customer):
+        """Return the customer's A/R account; never fall back to parent 1210."""
+        if customer is None:
+            raise AccountingError("Customer is required for an Accounts Receivable transaction.")
+        account = getattr(customer, "account", None)
+        if account is None:
+            raise AccountingError(f"Customer {customer} does not have an Accounts Receivable account configured.")
+        return account
+    
     @staticmethod
     def _get_account(code):
         acc = Account.objects.filter(account_code=code).first()
@@ -124,7 +482,7 @@ class AccountingService:
     def create_journal_entry(entry_date, bs_date, description, reference_type, reference_id, fiscal_year, items, created_by=None):
         """
         Creates a balanced GL Journal Entry.
-        items: list of dicts -> [{'account_code': '1010', 'debit': Decimal('100'), 'credit': Decimal('0')}]
+        items: list of dicts -> [{'account_code': '1110', 'debit': Decimal('100'), 'credit': Decimal('0')}]
         """
         if not items:
             raise AccountingError("Cannot post empty journal voucher.")
@@ -159,7 +517,50 @@ class AccountingService:
                     debit=Decimal(str(item.get('debit', '0.00'))).quantize(Decimal('0.01')),
                     credit=Decimal(str(item.get('credit', '0.00'))).quantize(Decimal('0.01'))
                 )
+            AccountingService.post_journal_entry(entry, user=created_by)
             return entry
+
+    @classmethod
+    @transaction.atomic
+    def post_journal_entry(cls, entry, user=None):
+        entry = JournalEntry.objects.select_for_update().get(pk=entry.pk)
+        if entry.status == JournalEntry.STATUS_POSTED:
+            return entry
+        if entry.status == JournalEntry.STATUS_REVERSED:
+            raise AccountingError('A reversed journal entry cannot be posted.')
+        lines = list(entry.items.all())
+        if not lines:
+            raise AccountingError('A journal entry must contain at least one line.')
+        total_debit = sum((Decimal(line.debit or '0.00') for line in lines), Decimal('0.00'))
+        total_credit = sum((Decimal(line.credit or '0.00') for line in lines), Decimal('0.00'))
+        if total_debit.quantize(Decimal('0.01')) != total_credit.quantize(Decimal('0.01')):
+            raise AccountingError('Journal entry debit and credit totals must balance before posting.')
+        entry.status = JournalEntry.STATUS_POSTED
+        entry.posted_by = user or entry.created_by
+        entry.posted_at = timezone.now()
+        entry.save(update_fields=['status', 'posted_by', 'posted_at'])
+        return entry
+
+    @classmethod
+    @transaction.atomic
+    def reverse_journal_entry(cls, entry, user=None):
+        entry = JournalEntry.objects.select_for_update().prefetch_related('items').get(pk=entry.pk)
+        if entry.status != JournalEntry.STATUS_POSTED:
+            raise AccountingError('Only posted journal entries can be reversed.')
+        reversal = JournalEntry.objects.create(
+            entry_date=timezone.now().date(), bs_date=entry.bs_date,
+            description=f'Reversal of JV-{entry.entry_id}: {entry.description}',
+            reference_type='MANUAL', reference_id=entry.entry_id,
+            fiscal_year=entry.fiscal_year, created_by=user,
+        )
+        for line in entry.items.all():
+            JournalItem.objects.create(entry=reversal, account=line.account, debit=line.credit, credit=line.debit)
+        cls.post_journal_entry(reversal, user=user)
+        entry.status = JournalEntry.STATUS_REVERSED
+        entry.reversed_by = user
+        entry.reversed_at = timezone.now()
+        entry.save(update_fields=['status', 'reversed_by', 'reversed_at'])
+        return reversal
 
     @classmethod
     def post_inventory_loss_journal_entry(
@@ -188,8 +589,8 @@ class AccountingService:
             reference_id=reference_id,
             fiscal_year=fiscal_year,
             items=[
-                {'account_code': '4020', 'debit': amount, 'credit': Decimal('0.00')},
-                {'account_code': '1200', 'debit': Decimal('0.00'), 'credit': amount},
+                {'account_code': '6100', 'debit': amount, 'credit': Decimal('0.00')},
+                {'account_code': '1310', 'debit': Decimal('0.00'), 'credit': amount},
             ],
             created_by=created_by,
         )
@@ -221,8 +622,8 @@ class AccountingService:
             reference_id=reference_id,
             fiscal_year=fiscal_year,
             items=[
-                {'account_code': '2010', 'debit': amount, 'credit': Decimal('0.00')},
-                {'account_code': '1200', 'debit': Decimal('0.00'), 'credit': amount},
+                {'account_code': '2100', 'debit': amount, 'credit': Decimal('0.00')},
+                {'account_code': '1310', 'debit': Decimal('0.00'), 'credit': amount},
             ],
             created_by=created_by,
         )
@@ -253,20 +654,20 @@ class AccountingService:
             reference_id=purchase.purchase_id,
             fiscal_year=fiscal_year,
             items=[
-                {'account_code': '1200', 'debit': inventory_value, 'credit': 0},
-                {'account_code': '1210', 'debit': 0, 'credit': inventory_value},
+                {'account_code': '1310', 'debit': inventory_value, 'credit': 0},
+                {'account_code': '2100', 'debit': 0, 'credit': inventory_value},
             ],
             created_by=created_by or purchase.received_by_user,
         )
 
         items = [
-            {'account_code': '1210', 'debit': inventory_value, 'credit': 0},
-            {'account_code': '2010', 'debit': 0, 'credit': payable},
+            {'account_code': '2100', 'debit': inventory_value, 'credit': 0},
+            {'account_code': '2100', 'debit': 0, 'credit': payable},
         ]
         if vat > 0:
-            items.append({'account_code': '2030', 'debit': vat, 'credit': 0})
+            items.append({'account_code': '2200', 'debit': vat, 'credit': 0})
         if tds > 0:
-            items.append({'account_code': '2040', 'debit': 0, 'credit': tds})
+            items.append({'account_code': '2300', 'debit': 0, 'credit': tds})
 
         entry = cls.create_journal_entry(
             entry_date=purchase.received_date or purchase.order_date or timezone.now().date(),
@@ -305,7 +706,7 @@ class AccountingService:
             fiscal_year=fiscal_year,
             items=[
                 {'account_code': cls._resolve_payment_account(payment.payment_method), 'debit': amount, 'credit': 0},
-                {'account_code': '2010', 'debit': 0, 'credit': amount},
+                {'account_code': '2100', 'debit': 0, 'credit': amount},
             ],
             created_by=created_by or payment.created_by,
         )
@@ -313,153 +714,307 @@ class AccountingService:
     @classmethod
     @transaction.atomic
     def post_sale_journal_entry(cls, sale):
+        """Post sale revenue/tax/settlement and COGS journals.
+
+        CREDIT supports partial settlement:
+            Dr actual settlement accounts
+            Dr customer A/R for the unpaid balance
+                Cr Sales Revenue / VAT / round-off as applicable
+
+        CREDIT is never treated as a settlement account.
         """
-        Posts complete Revenue, Discounts, VAT Output, Payments, and COGS GL Entries for a completed sale.
-        """
-        existing_entry = JournalEntry.objects.filter(
+        fiscal_year = (
+            getattr(sale, 'fiscal_year', None)
+            or FiscalYear.objects.filter(is_active=True).first()
+        )
+        if fiscal_year is None:
+            raise AccountingError(
+                'No fiscal year is available for the sales journal.'
+            )
+        if getattr(fiscal_year, 'is_closed', False):
+            raise AccountingError(
+                f'Cannot post to closed Fiscal Year {fiscal_year.name}.'
+            )
+
+        gross_sales = cls._money(getattr(sale, 'subtotal', 0))
+        discount = cls._money(getattr(sale, 'discount_total', 0))
+        vat = cls._money(getattr(sale, 'vat_total', 0))
+        grand_total = cls._money(getattr(sale, 'grand_total', 0))
+
+        description = f"Sales Invoice #{sale.invoice_no} ({sale.buyer_name})"
+
+        # Posted journals must not be deleted/rebuilt.
+        existing = JournalEntry.objects.filter(
             reference_type='SALE',
             reference_id=sale.pk,
-            description=f"Sales Invoice #{sale.invoice_no} ({sale.buyer_name})",
+            description=description,
         ).first()
-        if existing_entry:
-            return existing_entry
-
-        try:
-            fiscal_year = sale.fiscal_year
-        except FiscalYear.DoesNotExist:
-            fiscal_year = FiscalYear.objects.filter(is_active=True).first()
-        if fiscal_year is None:
-            raise AccountingError("No fiscal year is available for the sales journal.")
+        if existing:
+            if getattr(sale, 'journal_entry_id', None) != existing.entry_id:
+                sale.journal_entry = existing
+                sale.save(update_fields=['journal_entry'])
+            return existing
 
         items = []
-        gross_sales = (sale.subtotal or Decimal('0.00')).quantize(Decimal('0.01'))
-        discount = (sale.discount_total or Decimal('0.00')).quantize(Decimal('0.01'))
-        vat = (sale.vat_total or Decimal('0.00')).quantize(Decimal('0.01'))
-        grand_total = (sale.grand_total or Decimal('0.00')).quantize(Decimal('0.01'))
+        mode = str(
+            getattr(sale, 'payment_mode', '') or ''
+        ).strip().upper()
 
-        # 1. DEBIT: Payment Accounts / Accounts Receivable
-        if sale.payment_mode == 'SPLIT':
+        settlement_methods = {
+            'CASH', 'CARD', 'BANK_TRANSFER', 'FONEPAY'
+        }
+
+        # ---------------------------------------------------------
+        # DEBIT: settlement accounts + customer-specific A/R
+        # ---------------------------------------------------------
+        if mode in {'CREDIT', 'SPLIT'}:
+            receivable = cls._get_customer_receivable_account(
+                getattr(sale, 'customer', None)
+            )
+
+            paid = Decimal('0.00')
+
             for payment in sale.payment_transactions.filter(status='PAID'):
-                p_acc_code = cls._resolve_payment_account(payment.payment_method)
+                method = str(
+                    getattr(payment, 'payment_method', '') or ''
+                ).strip().upper()
+                amount = cls._money(getattr(payment, 'amount', 0))
+
+                if amount <= Decimal('0.00'):
+                    continue
+
+                # CREDIT is the outstanding portion, not a settlement.
+                if method == 'CREDIT':
+                    continue
+
+                if method not in settlement_methods:
+                    raise AccountingError(
+                        f'Unsupported settlement method: {method}'
+                    )
+
                 items.append({
-                    'account_code': p_acc_code,
-                    'debit': payment.amount,
-                    'credit': Decimal('0.00')
+                    'account_code': cls._resolve_payment_account(method),
+                    'debit': amount,
+                    'credit': Decimal('0.00'),
                 })
-        else:
-            acc_code = cls._resolve_payment_account(sale.payment_mode)
-            # If sale is on Credit or customer ledger exists
-            if sale.payment_status != 'PAID' and sale.customer and sale.customer.account:
+                paid += amount
+
+            due = cls._money(grand_total - paid)
+
+            if due < Decimal('0.00'):
+                raise AccountingError(
+                    f'Payment amount exceeds invoice total. '
+                    f'Invoice total: {grand_total}, paid: {paid}.'
+                )
+
+            if due > Decimal('0.00'):
                 items.append({
-                    'account_obj': sale.customer.account,
-                    'debit': grand_total,
-                    'credit': Decimal('0.00')
-                })
-            else:
-                items.append({
-                    'account_code': acc_code,
-                    'debit': grand_total,
-                    'credit': Decimal('0.00')
+                    'account_obj': receivable,
+                    'debit': due,
+                    'credit': Decimal('0.00'),
                 })
 
-        # 2. DEBIT: Sales Discounts Allowed
+        elif mode in settlement_methods:
+            items.append({
+                'account_code': cls._resolve_payment_account(mode),
+                'debit': grand_total,
+                'credit': Decimal('0.00'),
+            })
+        else:
+            raise AccountingError(
+                f'Unsupported sale payment mode: {mode or "EMPTY"}'
+            )
+
+        # Sales discount
         if discount > Decimal('0.00'):
             items.append({
-                'account_code': '3020',
+                'account_code': '6200',
                 'debit': discount,
-                'credit': Decimal('0.00')
+                'credit': Decimal('0.00'),
             })
 
-        # Legacy sales rows may contain the old text value "SALES A/C" in this FK column.
-        sales_account = cls._get_account('3010')
-        try:
-            if sale.sales_ac_id:
-                sales_account = sale.sales_ac
-        except (Account.DoesNotExist, TypeError, ValueError):
-            pass
-
-        # 3. CREDIT: Sales Revenue
+        # Sales revenue
         items.append({
-            'account_obj': sales_account,
+            'account_obj': cls._get_account('4100'),
             'debit': Decimal('0.00'),
-            'credit': gross_sales
+            'credit': gross_sales,
         })
 
-        # 4. CREDIT: Output VAT Payable (Liability)
+        # Output VAT
         if vat > Decimal('0.00'):
             items.append({
-                'account_code': '2020',
+                'account_code': '2200',
                 'debit': Decimal('0.00'),
-                'credit': vat
+                'credit': vat,
             })
 
-        # Reconcile legacy invoices whose stored round_off is stale or zero.
-        round_off = (
+        # Round-off
+        round_off = cls._money(
             grand_total + discount - gross_sales - vat
-        ).quantize(Decimal('0.01'))
+        )
         if round_off > Decimal('0.00'):
             items.append({
-                'account_code': '3030',
+                'account_code': '7100',
                 'debit': Decimal('0.00'),
                 'credit': round_off,
             })
         elif round_off < Decimal('0.00'):
             items.append({
-                'account_code': '3030',
+                'account_code': '6300',
                 'debit': abs(round_off),
                 'credit': Decimal('0.00'),
             })
 
-        # --- POST REVENUE & TAX JOURNAL ENTRY ---
-        rev_entry = cls.create_journal_entry(
+        entry = cls.create_journal_entry(
             entry_date=timezone.now().date(),
-            bs_date=sale.bs_date,
-            description=f"Sales Invoice #{sale.invoice_no} ({sale.buyer_name})",
+            bs_date=getattr(sale, 'bs_date', '') or '',
+            description=description,
             reference_type='SALE',
             reference_id=sale.pk,
             fiscal_year=fiscal_year,
             items=items,
-            created_by=sale.user
+            created_by=getattr(sale, 'user', None),
         )
 
-        # --- POST COGS & INVENTORY ASSET ENTRY ---
-        cogs_items = []
+        # COGS / Inventory Asset
         total_cogs = Decimal('0.00')
-
         for item in sale.items.all():
-            cost_price = getattr(item.variant, 'cost_price', Decimal('0.00')) or Decimal('0.00')
-            total_cogs += (cost_price * item.quantity).quantize(Decimal('0.01'))
+            cost = cls._money(
+                getattr(getattr(item, 'variant', None), 'cost_price', 0)
+            )
+            qty = Decimal(str(getattr(item, 'quantity', 0) or 0))
+            total_cogs += (
+                cost * qty
+            ).quantize(
+                Decimal('0.01'),
+                rounding=ROUND_HALF_UP
+            )
 
         if total_cogs > Decimal('0.00'):
-            cogs_items = [
-                {'account_code': '4010', 'debit': total_cogs, 'credit': Decimal('0.00')}, # Dr COGS
-                {'account_code': '1200', 'debit': Decimal('0.00'), 'credit': total_cogs}  # Cr Inventory Asset
-            ]
+            cogs_desc = f"COGS Deduction for Invoice #{sale.invoice_no}"
             if not JournalEntry.objects.filter(
                 reference_type='SALE',
                 reference_id=sale.pk,
-                description=f"COGS Deduction for Invoice #{sale.invoice_no}",
+                description=cogs_desc,
             ).exists():
                 cls.create_journal_entry(
                     entry_date=timezone.now().date(),
-                    bs_date=sale.bs_date,
-                    description=f"COGS Deduction for Invoice #{sale.invoice_no}",
+                    bs_date=getattr(sale, 'bs_date', '') or '',
+                    description=cogs_desc,
                     reference_type='SALE',
                     reference_id=sale.pk,
                     fiscal_year=fiscal_year,
-                    items=cogs_items,
-                    created_by=sale.user
+                    items=[
+                        {
+                            'account_code': '5100',
+                            'debit': total_cogs,
+                            'credit': Decimal('0.00'),
+                        },
+                        {
+                            'account_code': '1310',
+                            'debit': Decimal('0.00'),
+                            'credit': total_cogs,
+                        },
+                    ],
+                    created_by=getattr(sale, 'user', None),
                 )
 
-        return rev_entry
+        sale.journal_entry = entry
+        sale.save(update_fields=['journal_entry'])
+        return entry
+
+    @classmethod
+    @transaction.atomic
+    def post_sale_payment_journal_entry(cls, payment, created_by=None):
+        """Post a later customer settlement against customer-specific A/R."""
+        existing = JournalEntry.objects.filter(
+            reference_type='PAYMENT',
+            reference_id=payment.pk
+        ).first()
+        if existing:
+            return existing
+
+        sale = getattr(payment, 'sale', None)
+        if sale is None:
+            raise AccountingError(
+                'A sale payment must reference a sale.'
+            )
+
+        fiscal_year = (
+            getattr(sale, 'fiscal_year', None)
+            or FiscalYear.objects.filter(is_active=True).first()
+        )
+        if fiscal_year is None:
+            raise AccountingError(
+                'No fiscal year is available for the payment journal.'
+            )
+        if getattr(fiscal_year, 'is_closed', False):
+            raise AccountingError(
+                f'Cannot post to closed Fiscal Year {fiscal_year.name}.'
+            )
+
+        amount = cls._money(getattr(payment, 'amount', 0))
+        if amount <= Decimal('0.00'):
+            raise AccountingError(
+                'Customer payment amount must be greater than zero.'
+            )
+
+        method = str(
+            getattr(payment, 'payment_method', '') or ''
+        ).strip().upper()
+        if method == 'CREDIT':
+            raise AccountingError(
+                'A customer settlement cannot use CREDIT. '
+                'Use CASH, CARD, BANK_TRANSFER, or FONEPAY.'
+            )
+
+        receivable = cls._get_customer_receivable_account(
+            getattr(sale, 'customer', None)
+        )
+
+        return cls.create_journal_entry(
+            entry_date=timezone.now().date(),
+            bs_date=getattr(sale, 'bs_date', '') or '',
+            description=f'Customer payment for invoice #{sale.invoice_no}',
+            reference_type='PAYMENT',
+            reference_id=payment.pk,
+            fiscal_year=fiscal_year,
+            items=[
+                {
+                    'account_code': cls._resolve_payment_account(method),
+                    'debit': amount,
+                    'credit': Decimal('0.00'),
+                },
+                {
+                    'account_obj': receivable,
+                    'debit': Decimal('0.00'),
+                    'credit': amount,
+                },
+            ],
+            created_by=created_by or getattr(payment, 'created_by', None),
+        )
 
     @staticmethod
     def _resolve_payment_account(method):
+        """Return only real settlement accounts; CREDIT is customer A/R."""
         mapping = {
-            'CASH': '1010',
-            'CARD': '1020',
-            'BANK_TRANSFER': '1020',
-            'FONEPAY': '1030',
-            'CREDIT': '1100',
+            'CASH': '1110',
+            'CARD': '1120',
+            'BANK_TRANSFER': '1120',
+            'FONEPAY': '1130',
         }
-        return mapping.get(str(method).upper(), '1010')
+        normalized = str(method or '').strip().upper()
+
+        if normalized == 'CREDIT':
+            raise AccountingError(
+                'CREDIT is not a settlement account. '
+                'Use the customer A/R account.'
+            )
+
+        account_code = mapping.get(normalized)
+        if not account_code:
+            raise AccountingError(
+                f'Unsupported payment method: {method}'
+            )
+        return account_code
+

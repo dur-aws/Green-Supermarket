@@ -60,7 +60,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='payment',
             name='payment_method',
-            field=models.CharField(choices=[('FONEPAY', 'Fonepay'), ('CARD', 'Card'), ('BANK', 'Bank Transfer')], max_length=20),
+            field=models.CharField(choices=[('FONEPAY', 'Fonepay'), ('CARD', 'Card')], max_length=20),
         ),
         migrations.AlterField(
             model_name='payment',

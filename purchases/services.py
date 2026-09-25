@@ -6,6 +6,13 @@ from .models import VendorPurchaseReceipt
 TWO_PLACES = Decimal('0.01')
 
 
+def get_variant_vat_percent(variant):
+    """Return the stored variant VAT rate used by every purchase calculation."""
+    if not variant or not getattr(variant, 'is_vatable', False):
+        return Decimal('0.00')
+    return Decimal(str(getattr(variant, 'vat_status', '0') or '0'))
+
+
 def calculate_po_totals(line_items, tds_rate=Decimal('0.00'), freight_charge=Decimal('0.00')):
     """
     line_items: list of dicts like [{'quantity': ..., 'unit_price': ..., 'vat_percent': ...}, ...].

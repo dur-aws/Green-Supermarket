@@ -15,7 +15,7 @@
             <h2>Roles &amp; permissions</h2>
             <p class="page-muted">Manage module access for every account role.</p>
         </div>
-        <a href="{% url 'user_list' %}" class="btn btn-export">View Users</a>
+        <a href="{% url 'user_list' %}" class="btn btn-secondary">View Users</a>
     </div>
 
     <div class="role-grid">
@@ -33,7 +33,7 @@
                 <a href="{% url 'manage_role_permissions' role.role_id %}" class="btn btn-primary btn-add">
                     <i class="fa-solid fa-key"></i> Check permissions
                 </a>
-                <a href="{% url 'user_list' %}?role={{ role.role_name }}" class="btn btn-export">
+                <a href="{% url 'user_list' %}?role={{ role.role_name }}" class="btn btn-secondary">
                     <i class="fa-solid fa-users"></i> View users
                 </a>
             </div>

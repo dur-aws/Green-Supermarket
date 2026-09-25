@@ -125,7 +125,7 @@
             <tr>
                 <td class="text-center">{{ forloop.counter }}</td>
                 <td>
-                    {{ item.variant.product.product_name }} - {{ item.variant.variant_name }}
+                    {{ item.variant.product.product_name }} {{ item.variant.variant_name }}
                 </td>
                 <td class="text-center">{{ item.quantity }}</td>
                 <td class="text-right">{{ item.unit_price|floatformat:2 }}</td>
@@ -171,12 +171,12 @@
                     </tr>
                     {% endif %}
                     <tr>
-                        <td class="text-right bold">Taxable Amount:</td>
-                        <td class="text-right">{{ sale.taxable_amount|floatformat:2 }}</td>
-                    </tr>
-                    <tr>
                         <td class="text-right bold">Non-Taxable Amount:</td>
                         <td class="text-right">{{ sale.non_taxable_amount|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-right bold">Taxable Amount:</td>
+                        <td class="text-right">{{ sale.taxable_amount|floatformat:2 }}</td>
                     </tr>
                     <tr>
                         <td class="text-right bold">VAT (13%):</td>
@@ -187,9 +187,17 @@
                         <td class="text-right">{{ sale.round_off|floatformat:2 }}</td>
                     </tr>
                     <tr style="font-size: 13px; border-top: 1px solid #000;">
-                        <td class="text-right bold">Grand Total (NPR):</td>
-                        <td class="text-right bold">{{ sale.grand_total|floatformat:2 }}</td>
+                        <td class="text-right bold">Paid (NPR):</td>
+                        <td class="text-right bold">{{ sale.paid_amount|floatformat:2 }}</td>
                     </tr>
+                    {% if sale.due_amount %}
+                    
+                    <tr style="font-size: 13px; border-top: 1px solid #000;">
+                        <td class="text-right bold">Due (NPR):</td>
+                        <td class="text-right bold">{{ sale.due_amount|floatformat:2 }}</td>
+                    </tr>
+                    
+                    {% endif %}
                 </table>
             </td>
         </tr>

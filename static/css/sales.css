@@ -58,16 +58,20 @@
 }
 
 /* 2. Metadata Input Grid */
+
+
+
 .invoice-meta-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px 16px;
-}
+} 
 
 .form-group {
   display: flex;
   align-items: center;
   gap: 8px;
+
 }
 
 .form-group label {
@@ -205,7 +209,7 @@
 
 /* 4. Invoice Items Table */
 .table-responsive {
-  width: 100%;
+  flex: 1 1 auto;
   overflow-x: auto;
 }
 

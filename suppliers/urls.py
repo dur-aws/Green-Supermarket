@@ -8,7 +8,7 @@ from .views import (
 
 urlpatterns = [
     path('orders/', SupplierPurchaseOrderListView.as_view(), name='supplier_po_list'),
-    path('payables/', SupplierPayablesSummaryView.as_view(), name='supplier_payables'),
+    path('orders/payables/', SupplierPayablesSummaryView.as_view(), name='supplier_payables'),
     path('orders/<int:pk>/<str:action>/', SupplierPurchaseOrderActionView.as_view(), name='supplier_po_action'),
     path('orders/<int:pk>/items/<int:detail_id>/<str:response>/', SupplierPurchaseDetailResponseView.as_view(), name='supplier_po_item_response'),
     path('orders/<int:pk>/receipt/', SupplierVendorReceiptView.as_view(), name='supplier_vendor_receipt'),

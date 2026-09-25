@@ -1,0 +1,15 @@
+{% for row in page_obj.object_list %}
+<tr>
+    <td>{{ row.date_bs }}</td>
+    <td>{{ row.journal_no }}</td>
+    <td>{{ row.reference }}</td>
+    <td>{{ row.particulars }}</td>
+    <td class="text-end">{% if row.debit %}{{ row.debit|floatformat:2 }}{% else %}-{% endif %}</td>
+    <td class="text-end">{% if row.credit %}{{ row.credit|floatformat:2 }}{% else %}-{% endif %}</td>
+    <td class="text-end"><strong>{{ row.running_balance|floatformat:2 }} {{ row.running_side }}</strong></td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="7" class="text-center py-4 text-muted">No posted journal transactions found for this selection.</td>
+</tr>
+{% endfor %}

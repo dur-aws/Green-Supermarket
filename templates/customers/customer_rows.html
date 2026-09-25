@@ -9,6 +9,9 @@
         <a href="#" class="customer-name-link" data-code="{{ customer.customer_code }}" data-name="{{ customer.customer_name }}" data-phone="{{ customer.phone|default:'-' }}" data-email="{{ customer.email|default:'-' }}" data-type="{{ customer.get_customer_type_display }}" data-status="{{ customer.status }}">{{ customer.customer_name }}</a>
     </td>
     <td>
+        <span class="truncate-cell" data-full="{{ customer.pan_vat_number|default:'-' }}">{{ customer.pan_vat_number|default:"-" }}</span>
+    </td>
+    <td>
         <span class="truncate-cell" data-full="{{ customer.phone|default:'-' }}">{{ customer.phone|default:"-" }}</span>
     </td>
     <td>

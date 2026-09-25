@@ -1,8 +1,5 @@
   
-{% load static %}
-<div class="container">
 
-    <link rel="stylesheet" href="{% static 'css/master.css' %}" />
     {% for cat in categories %}
     <tr>
       <td class="mono">{{ cat.category_id }}</td>
@@ -47,5 +44,5 @@
     <tr>
       <td colspan="11" class="empty-row">No categories found.</td>
     </tr>
-  </div>
+
   {% endfor %}

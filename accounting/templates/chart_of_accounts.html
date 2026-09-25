@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chart of Accounts{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/master.css' %}">
+<style>
+    .chart-page .chart-header { padding: 1rem 1.25rem; }
+    .chart-page .chart-header h2 { margin: 0 0 .25rem; }
+    .chart-page .chart-header p { margin: 0; color: #64748b; }
+    .chart-account-name { display: inline-block; }
+    .chart-account-code { min-width: 80px; display: inline-block; font-weight: 700; color: #166534; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="master-container chart-page" id="chart-of-accounts-page">
+    <div class="sticky-header-panel chart-header">
+        <h2>Chart of Accounts</h2>
+        <p>Hierarchical accounts used by sales, purchases, payments, expenses, and the General Ledger.</p>
+    </div>
+    <div class="scrollable-table-card">
+        <table class="styled-table" id="chart-of-accounts-table">
+            <thead>
+                <tr><th>Account Code</th><th>Account Name</th><th>Type</th><th>Parent Account</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for row in chart_rows %}
+                <tr>
+                    <td><span class="chart-account-code">{{ row.account.account_code }}</span></td>
+                    <td><span class="chart-account-name" style="padding-left: {{ row.depth }}rem">{% if row.depth %}- {% endif %}{{ row.account.account_name }}</span></td>
+                    <td>{{ row.account.get_account_type_display }}</td>
+                    <td>{{ row.account.parent_account.account_code|default:'-' }}</td>
+                    <td><span class="badge bg-success">Active</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center py-4 text-muted">No accounts configured.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

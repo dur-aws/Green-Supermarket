@@ -13,7 +13,7 @@
             <h4>Permissions for <strong>{{ role.get_role_name_display }}</strong></h4>
             <p>Choose which actions this role can perform in each module.</p>
         </div>
-        <a href="{% url 'role_list' %}" class="btn btn-export">Back to Roles</a>
+        <a href="{% url 'role_list' %}" class="btn btn-secondary">Back to Roles</a>
     </div>
     
     <form method="post">
@@ -43,7 +43,7 @@
         </table>
         </div>
         <div>
-            <a href="{% url 'role_list' %}" class="btn btn-export">Cancel</a>
+            <a href="{% url 'role_list' %}" class="btn btn-secondary">Cancel</a>
             <button type="submit" class="btn btn-primary btn-add">Save Permissions</button>
         </div>
     </form>

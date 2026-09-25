@@ -10,16 +10,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='fiscalyear',
-            name='bs_year',
-        ),
-        migrations.RemoveField(
-            model_name='fiscalyear',
-            name='end_date',
-        ),
-        migrations.RemoveField(
-            model_name='fiscalyear',
-            name='start_date',
-        ),
+        
     ]

@@ -7,8 +7,10 @@ from .views import (
     product_search_api,
     checkout_api,
     SalesHistoryView,
+    SaleSearchView,
     print_invoice,
     expiry_report_view,
+    record_sale_payment,
     
 )
 from .returns_views import (
@@ -26,6 +28,7 @@ urlpatterns = [
     path('invoice/', SalesInvoiceView.as_view(), name='sales_invoice'),
     
     path('report/',SalesHistoryView.as_view(), name='sales_list'),
+    path('search/',SaleSearchView.as_view(), name='sales_search'),
     path('export/',export_sales_record, name='export_sales_record'),
     path('expiry-report/', expiry_report_view, name='expiry_report'),
     path('returns/', SalesReturnListView.as_view(), name='sales_return_list'),
@@ -37,6 +40,7 @@ urlpatterns = [
     path('returns/credit-memo/<int:pk>/refund/', RefundCreateView.as_view(), name='refund_create'),
     path('returns/credit-memo/<int:pk>/refund/confirm/', RefundConfirmView.as_view(), name='refund_confirm'),
     path('invoice/view/<int:pk>/', SalesInvoiceDetailView.as_view(), name='sale_detail_view'),
+    path('invoice/<int:sales_id>/payment/', record_sale_payment, name='record_sale_payment'),
     # Internal JSON APIs consumed by saleinterface JavaScript
     path('api/next-invoice-no/', get_next_invoice_no, name='sales_next_invoice_no'),
     path('api/product-search/', product_search_api, name='sales_product_search'),

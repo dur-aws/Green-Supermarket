@@ -2,7 +2,6 @@
 PAYMENT_METHOD_CHOICES = (
     ('CASH', 'Cash'),
     ('CARD', 'Card / POS'),
-    ('BANK_TRANSFER', 'Bank Transfer'),
     ('FONEPAY', 'Fonepay QR'),
     ('CREDIT', 'On Credit'),
     ('SPLIT', 'Split Payment'),

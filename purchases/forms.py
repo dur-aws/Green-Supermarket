@@ -11,11 +11,7 @@ from django.core.exceptions import ValidationError
 
 class PurchaseOrderForm(forms.ModelForm):
     """Master form for Purchase Order header metadata and Tax/TDS calculations."""
-    ORDER_STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('RECEIVED', 'Received'),
-        ('CANCELLED', 'Cancelled'),
-    ]
+    ORDER_STATUS_CHOICES = PurchaseOrder.ORDER_STATUS_CHOICES
 
     PAYMENT_STATUS_CHOICES = [
         ('UNPAID', 'Unpaid'),

@@ -8,12 +8,12 @@
         <div class="filter-bar">
             <div class="search-box">
                 <span class="search-icon">&#128269;</span>
-                <input type="text" id="po-search" placeholder="Search by Invoice No or Supplier..." value="{{ query }}"
+                <input type="text" id="inventory-search" placeholder="Search by Invoice No or Supplier..." value="{{ query }}"
                     class="search-input" autocomplete="off" />
             </div>
             <div>
-                <a href="{% url 'po_list' %}" class="btn btn-primary">
-                    &larr; Back to Purchases
+                <a href="{% url 'po_list' %}" class="btn btn-secondary">
+                    &larr; Purchases
                 </a>
             </div>
             
@@ -28,7 +28,7 @@
                 <table class="styled-table">
                     <thead>
                         <tr>
-                            <th>Batch #</th>
+                            <th>PO Batch</th>
                             <th>Product Variant</th>
                             <th>Supplier</th>
                             <th>Batch NO</th>
@@ -42,59 +42,8 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                     <tbody id="po-table-body">
-                        {% for batch in batches %}
-                        <tr>
-                            <td>
-                                <strong>{{ batch.batch_number }}</strong>
-                            </td>
-                            <td>
-                                {{ batch.variant.product.product_name }}  {{ batch.variant.variant_name }}
-                            </td>
-                           
-                            <td>{{ batch.supplier.supplier_name|default:"--" }}</td>
-                            <td>
-                                {{ batch.batch_no }}
-                            </td>
-                            <td>
-                                {{ batch.manufacture_date|date:"Y-m-d" }}
-                            </td>
-                            <td>
-                               {{ batch.harvest_date|date:"Y-m-d" }}
-                            </td>
-                            <td>
-                                {{ batch.expiry_date|date:"Y-m-d" }}
-                            </td>
-                            <td class="text-end">Rs. {{ batch.unit_cost_price|floatformat:2 }}/{{batch.variant.primary_uom.notation}}</td>
-                            <td class="text-end">{{ batch.received_quantity|floatformat:3 }}</td>
-                            <td class="text-end fw-bold text-dark">
-                                {{ batch.current_quantity|floatformat:3 }}
-                            </td>
-                            <td class="text-center">
-                                {% if batch.batch_status == 'ACTIVE' %}
-                                    <span class="badge bg-success">Active</span>
-                                {% elif batch.batch_status == 'EXHAUSTED' %}
-                                    <span class="badge bg-secondary">Exhausted</span>
-                                {% elif batch.batch_status == 'EXPIRED' %}
-                                    <span class="badge bg-danger">Expired</span>
-                                {% else %}
-                                    <span class="badge bg-warning text-dark">{{ batch.batch_status }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center ">
-                                <a class="btn btn-sm btn-outline-primary" href="{% url 'adjust_stock' batch.batch_id %}">Adjust</a>
-                                <a class="btn btn-sm btn-outline-danger" href="{% url 'wastage_create' batch.batch_id %}">Wastage</a>
-                                <a class="btn btn-sm btn-outline-danger" href="{% url 'purchase_return_create' batch.batch_id %}">Returns</a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="12" class="text-center text-muted py-5">
-                                <i class="bi bi-box-seam display-6 d-block mb-2"></i>
-                                No active inventory batches found.
-                            </td>
-                        </tr>
-                        {% endfor %}
+                     <tbody id="inventory-table-body">
+                       {% include 'inventory/stock_rows.html' %}
                     </tbody>
                 </table>
         
@@ -123,5 +72,45 @@
         {% endif %}
     </div>
 </div>
+<script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("inventory-search");
+        const tableBody = document.getElementById("inventory-table-body");
+
+        let debounceTimer = null;
+        const searchApiUrl = "{% url 'inventory_search' %}";
+        
+        function runSearch() {
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) {
+                params.set('q', searchInput.value.trim());
+            }
+
+            // Send request with JSON format flag
+            fetch(searchApiUrl + '?' + params.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (res) {
+                    return res.json();
+                })
+                .then(function (data) {
+                    tableBody.innerHTML = data.rows_html;
+                   
+                })
+                .catch(function (error) {
+                    console.error("AJAX Search Error:", error);
+                });
+        }
+
+        // Debounced keystroke input listener
+        searchInput.addEventListener("input", function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, 250);
+        });
+    });
+</script>
 {% endblock %}
 

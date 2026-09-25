@@ -103,7 +103,13 @@ class StockAdjustment(models.Model):
 
     adjustment_id = models.AutoField(primary_key=True)
     batch = models.ForeignKey(InventoryBatch, on_delete=models.CASCADE, related_name='adjustments')
-    adjusted_by_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    adjusted_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text='User responsible for the adjustment; legacy rows may be unknown.',
+    )
     
     quantity_change = models.DecimalField(
         max_digits=10, 

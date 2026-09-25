@@ -313,10 +313,10 @@ def update_purchase_return(return_id, user, quantity, notes='', reason='Supplier
         entry = purchase_return.journal_entry
         if entry:
             for item in entry.items.select_related('account'):
-                if item.account.account_code == '2010':
+                if item.account.account_code == '2100':
                     item.debit = total_value
                     item.credit = Decimal('0.00')
-                elif item.account.account_code == '1200':
+                elif item.account.account_code == '1310':
                     item.debit = Decimal('0.00')
                     item.credit = total_value
                 item.save(update_fields=['debit', 'credit'])

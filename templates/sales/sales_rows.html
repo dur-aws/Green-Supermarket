@@ -1,0 +1,43 @@
+
+{% for sale in sales %}
+                <tr>
+                    <td><input type="checkbox" name="sales_id" value="{{ sale.sales_id }}"></td>
+                    <td>
+                        <a href="{% url 'sale_detail_view' sale.sales_id %}" class="invoice-link">
+                            INV-{{ sale.invoice_no }}
+                        </a>
+                    </td>
+                    <td>{{ sale.sale_date|date:"d M Y" }}</td>
+                    <td>{{ sale.buyer_name }}</td>
+                    <td class="text-end">{{ sale.total_quantity|default:"0.000"|floatformat:3 }}</td>
+                    <td class="text-end">{{ sale.subtotal }}</td>
+                    <td class="text-end">{{ sale.vat_total }}</td>
+                    <td class="text-end"><strong>{{ sale.grand_total }}</strong></td>
+                    <td class="text-end amount-received {% if sale.grand_total > 0 %}paid{% else %}zero{% endif %}">
+                        {{ sale.tender_amount|default:sale.grand_total }}
+                    </td>
+                    <td class="text-center">
+                        {% if sale.payment_status == 'PAID' %}
+                            <span class="badge bg-success">Paid</span>
+                        {% elif sale.payment_status == 'PARTIAL' %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% else %}
+                            <span class="badge bg-danger">Unpaid</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ sale.user.username }}</td>
+                    <td class="text-center">
+                        <div class="action-btn-group">
+                           
+                            <a href="{% url 'sales_invoice_print' sale.sales_id %}" class="btn-icon-action secondary">
+                            <i class="fa-solid fa-print"></i>
+                            </a>                            
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="12" class="text-center py-4 text-muted">No sales records found.</td>
+                </tr>
+                {% endfor %}
+         

@@ -57,6 +57,14 @@ class FiscalYear(models.Model):
         return f"FY {self.name}"
 
 class JournalEntry(models.Model):
+    STATUS_DRAFT = 'DRAFT'
+    STATUS_POSTED = 'POSTED'
+    STATUS_REVERSED = 'REVERSED'
+    STATUS_CHOICES = (
+        (STATUS_DRAFT, 'Draft'),
+        (STATUS_POSTED, 'Posted'),
+        (STATUS_REVERSED, 'Reversed'),
+    )
     REFERENCE_TYPE_CHOICES = (
         ('SALE', 'Sales Invoice'),
         ('PURCHASE', 'Purchase Order'),
@@ -81,6 +89,17 @@ class JournalEntry(models.Model):
         blank=True,
         related_name='journal_entries'
     )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    posted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='posted_journal_entries'
+    )
+    posted_at = models.DateTimeField(null=True, blank=True)
+    reversed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reversed_journal_entries'
+    )
+    reversed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'journal_entry'
@@ -88,6 +107,26 @@ class JournalEntry(models.Model):
     def clean(self):
         if self.fiscal_year and self.fiscal_year.is_closed:
             raise ValidationError(f"Cannot post journal entries to closed Fiscal Year {self.fiscal_year.name}.")
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = type(self).objects.get(pk=self.pk)
+            if previous.status == self.STATUS_DRAFT and self.status not in {self.STATUS_DRAFT, self.STATUS_POSTED}:
+                raise ValidationError('A draft journal entry can only be saved or posted.')
+            if previous.status == self.STATUS_POSTED and self.status not in {self.STATUS_POSTED, self.STATUS_REVERSED}:
+                raise ValidationError('A posted journal entry can only be reversed.')
+            if previous.status == self.STATUS_REVERSED and self.status != self.STATUS_REVERSED:
+                raise ValidationError('A reversed journal entry cannot change status.')
+            if previous.status in {self.STATUS_POSTED, self.STATUS_REVERSED}:
+                protected = {'entry_date', 'bs_date', 'description', 'reference_type', 'reference_id', 'fiscal_year_id', 'created_by_id'}
+                if any(getattr(self, field) != getattr(previous, field) for field in protected):
+                    raise ValidationError('Posted and reversed journal entries are immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.status != self.STATUS_DRAFT:
+            raise ValidationError('Only draft journal entries can be deleted.')
+        return super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"JV-{self.entry_id} ({self.reference_type} #{self.reference_id})"
@@ -108,6 +147,19 @@ class JournalItem(models.Model):
             raise ValidationError("Debit and Credit values cannot be negative.")
         if self.debit > 0 and self.credit > 0:
             raise ValidationError("A single line item cannot contain both debit and credit amounts.")
+
+    def save(self, *args, **kwargs):
+        if self.entry_id and JournalEntry.objects.filter(
+            pk=self.entry_id
+        ).exclude(status=JournalEntry.STATUS_DRAFT).exists():
+            raise ValidationError('Only draft journal entries can be edited.')
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.entry.status != JournalEntry.STATUS_DRAFT:
+            raise ValidationError('Only draft journal entries can be edited.')
+        return super().delete(*args, **kwargs)
 
 # ==============================================================================
 # 2. NECESSARY ADDITIONS FOR NEPALESE RETAIL COMPLIANCE & SETTLEMENTS

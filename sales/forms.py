@@ -40,5 +40,5 @@ class ReturnInspectionForm(forms.Form):
 class RefundForm(forms.Form):
     method = forms.ChoiceField(choices=(
         ('CASH_ON_HAND', 'Cash On Hand'),
-        ('QR_BANK_ACCOUNT', 'QR / Bank Account'),
+        ('QR_ACCOUNT', 'QR Account'),
     ))

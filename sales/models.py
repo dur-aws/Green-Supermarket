@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.db import models
+from django.db.models import Q
 import uuid
 from django.conf import settings
 from products.models import ProductVariant
@@ -42,16 +43,37 @@ class Sale(models.Model):
     sale_status = models.CharField(max_length=20, choices=SALE_STATUS_CHOICES, default='DRAFT')
 
     # Fiscal & Accounting
-    fiscal_year = models.ForeignKey('accounting.FiscalYear', on_delete=models.PROTECT)
+    fiscal_year = models.ForeignKey(
+        'accounting.FiscalYear',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text='Required for new sales; legacy rows are backfilled during migration.',
+    )
     sales_ac = models.ForeignKey('accounting.Account', on_delete=models.PROTECT, related_name='sale_records', null=True, blank=True)
+    journal_entry = models.ForeignKey(
+        'accounting.JournalEntry',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='sales',
+    )
     bs_date = models.CharField(max_length=10)
     sale_date = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
 
     class Meta:
-            
-            db_table = 'sale'
-            ordering = ['-sale_date']
+        db_table = 'sale'
+        ordering = ['-sale_date']
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(subtotal__gte=0) & Q(discount_total__gte=0)
+                & Q(taxable_amount__gte=0) & Q(non_taxable_amount__gte=0)
+                & Q(vat_total__gte=0) & Q(grand_total__gte=0)
+                & Q(paid_amount__gte=0) & Q(due_amount__gte=0),
+                name='sale_non_negative_totals',
+            ),
+        ]
     
     def __str__(self):
         return f"{self.invoice_no} - {self.grand_total}"
@@ -60,17 +82,6 @@ class Sale(models.Model):
         # Prevent saving invoices in closed fiscal years.
         if self.fiscal_year_id and self.fiscal_year.is_closed:
             raise ValidationError(f"Cannot save invoice: Fiscal Year {self.fiscal_year.name} is closed.")
-
-    def save(self, *args, **kwargs):
-        if self.sales_ac_id is None:
-            from accounting.services import AccountingService
-            self.sales_ac = AccountingService._get_account('3010')
-        if self._state.adding:
-            self.full_clean()
-        else:
-            self.clean()
-        return super().save(*args, **kwargs)
-    
 
     def update_payment_summary(self):
         """Recalculates paid & due totals from all SUCCESSFUL payments."""
@@ -103,9 +114,16 @@ class Sale(models.Model):
         return words
 
     def save(self, *args, **kwargs):
+        if self.sales_ac_id is None:
+            from accounting.services import AccountingService
+            self.sales_ac = AccountingService._get_account('4100')
         if self.grand_total:
             self.grand_total_in_words = self.number_to_words(self.grand_total)
-        super().save(*args, **kwargs)
+        if self._state.adding:
+            self.full_clean()
+        else:
+            self.clean()
+        return super().save(*args, **kwargs)
 
 
 class SaleItem(models.Model):
@@ -127,8 +145,14 @@ class SaleItem(models.Model):
     line_total = models.DecimalField(max_digits=12, decimal_places=2)
 
     class Meta:
-        
         db_table = 'sale_item'
+        constraints = [
+            models.CheckConstraint(condition=Q(quantity__gt=0), name='sale_item_positive_quantity'),
+            models.CheckConstraint(condition=Q(unit_price__gte=0), name='sale_item_non_negative_price'),
+            models.CheckConstraint(condition=Q(discount_amount__gte=0), name='sale_item_non_negative_discount'),
+            models.CheckConstraint(condition=Q(vat_percent__gte=0), name='sale_item_non_negative_vat_percent'),
+            models.CheckConstraint(condition=Q(net_subtotal__gte=0) & Q(line_total__gte=0), name='sale_item_non_negative_totals'),
+        ]
 
     def __str__(self):
         return f"{self.variant.variant_name} x {self.quantity}"

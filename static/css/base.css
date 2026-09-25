@@ -15,9 +15,9 @@
   --text-main: #202936;
   --text-muted: #6b7280;
   --border-color: #e5e7eb;
-  --sidebar-width: 240px;
+  --sidebar-width: 200px;
   --sidebar-collapsed-width: 60px;
-  --header-height: 56px;
+  --header-height: 56px;  
 }
 
 * {
@@ -426,14 +426,13 @@ a {
 /* Floating Alerts Container (Positioned right under user-profile) */
 .alert-messages {
   position: absolute;
-  /* top: calc(var(--header-height) - 8px); */
+  top: var(--header-height);
   right: 12px;
   width: 260px; /* Reduced width */
   max-height: 250px; /* Capped height for ~5 items max */
   display: flex;
-  
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   z-index: 1050;
   overflow: hidden;
   pointer-events: none; /* Allows clicking behind empty spaces */

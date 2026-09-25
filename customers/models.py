@@ -50,11 +50,11 @@ class Customer(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
-        # Auto-create Ledger Account under Accounts Receivable (1100)
+        # Auto-create the customer ledger under Accounts Receivable (1210).
         if not self.account:
-            parent_ar = Account.objects.filter(account_code='1100').first()
+            parent_ar = Account.objects.filter(account_code='1210').first()
             acc, _ = Account.objects.get_or_create(
-                account_code=f"1100.{self.customer_code}",
+                account_code=f"1210.{self.customer_code}",
                 defaults={
                     'account_name': f"Customer - {self.customer_name}",
                     'account_type': 'ASSET',

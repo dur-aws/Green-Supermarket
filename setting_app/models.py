@@ -1,15 +1,11 @@
 
-from datetime import datetime
 from django.db import models
 from django.conf import settings
-from zoneinfo import ZoneInfo
+from django.utils import timezone
 import nepali_datetime
 
-KATHMANDU_TZ = ZoneInfo("Asia/Kathmandu")
-
-
 def kathmandu_now():
-    return datetime.now(KATHMANDU_TZ).replace(tzinfo=None)
+    return timezone.now()
 
 
 class ActivityLog(models.Model):
@@ -48,7 +44,7 @@ class ActivityLog(models.Model):
         ordering = ['-timestamp']
 
     def save(self, *args, **kwargs):
-        local_dt = self.timestamp.replace(tzinfo=KATHMANDU_TZ)
+        local_dt = timezone.localtime(self.timestamp)
         nepali_dt = nepali_datetime.datetime.from_datetime_datetime(local_dt)
         self.nepali_time = nepali_dt.strftime("%Y-%m-%d %H:%M:%S")
         super().save(*args, **kwargs)
